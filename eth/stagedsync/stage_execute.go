@@ -508,6 +508,7 @@ Loop:
 		shouldUpdateProgress := batch.BatchSize() >= int(cfg.batchSize)
 		if shouldUpdateProgress {
 			logger.Info("Committed State", "gas reached", currentStateGas, "gasTarget", gasState)
+			logger.Debug("Committed State", "batch.BatchSize", datasize.ByteSize(batch.BatchSize()), "cfg.batchSize", cfg.batchSize)
 			currentStateGas = 0
 			if err = batch.Flush(ctx, txc.Tx); err != nil {
 				return err
