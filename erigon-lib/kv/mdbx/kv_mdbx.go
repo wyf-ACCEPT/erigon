@@ -267,16 +267,13 @@ func (opts MdbxOpts) Open(ctx context.Context) (kv.RwDB, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = env.SetDebug(mdbx.LogLvlDebug, mdbx.DbgDoNotChange, mdbx.LoggerDoNotChange) // temporary disable error, because it works if call it 1 time, but returns error if call it twice in same process (what often happening in tests)
-	if err != nil {
-		return nil, fmt.Errorf("db verbosity set: %w", err)
+	if opts.verbosity != -1 {
+		log.Warn("[dbg] setting mdbx log", "lvl", mdbx.LogLvl(opts.verbosity))
+		err = env.SetDebug(mdbx.LogLvl(opts.verbosity), mdbx.DbgDoNotChange, mdbx.LoggerDoNotChange) // temporary disable error, because it works if call it 1 time, but returns error if call it twice in same process (what often happening in tests)
+		if err != nil {
+			return nil, fmt.Errorf("db verbosity set: %w", err)
+		}
 	}
-	//if opts.verbosity != -1 {
-	//	err = env.SetDebug(mdbx.LogLvl(opts.verbosity), mdbx.DbgDoNotChange, mdbx.LoggerDoNotChange) // temporary disable error, because it works if call it 1 time, but returns error if call it twice in same process (what often happening in tests)
-	//	if err != nil {
-	//		return nil, fmt.Errorf("db verbosity set: %w", err)
-	//	}
-	//}
 	if err = env.SetOption(mdbx.OptMaxDB, 200); err != nil {
 		return nil, err
 	}
