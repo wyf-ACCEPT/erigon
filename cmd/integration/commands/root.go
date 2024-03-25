@@ -74,6 +74,7 @@ func dbCfg(label kv.Label, path string) kv2.MdbxOpts {
 }
 
 func openDB(opts kv2.MdbxOpts, applyMigrations bool, logger log.Logger) (kv.RwDB, error) {
+	log.Warn("[dbg] see2 --database.verbosity", "v", fmt.Sprintf("%#v", opts))
 	db := opts.MustOpen()
 	if applyMigrations {
 		migrator := migrations.NewMigrator(opts.GetLabel())
@@ -90,8 +91,7 @@ func openDB(opts kv2.MdbxOpts, applyMigrations bool, logger log.Logger) (kv.RwDB
 			}
 			db.Close()
 			db = opts.MustOpen()
-			log.Warn("[dbg] see --database.verbosity", "v", fmt.Sprintf("%#v", opts))
-
+			log.Warn("[dbg] see3 --database.verbosity", "v", fmt.Sprintf("%#v", opts))
 		}
 	}
 
