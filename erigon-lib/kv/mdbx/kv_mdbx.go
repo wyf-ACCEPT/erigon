@@ -230,6 +230,7 @@ func PathDbMap() map[string]kv.RoDB {
 var ErrDBDoesNotExists = fmt.Errorf("can't create database - because opening in `Accede` mode. probably another (main) process can create it")
 
 func (opts MdbxOpts) Open(ctx context.Context) (kv.RwDB, error) {
+	log.Warn("[dbg] opts1", "opts", fmt.Sprintf("%#v", opts))
 	if dbg.WriteMap() {
 		opts = opts.WriteMap() //nolint
 	}
@@ -262,14 +263,14 @@ func (opts MdbxOpts) Open(ctx context.Context) (kv.RwDB, error) {
 		}
 
 	}
+	log.Warn("[dbg] opts2", "opts", fmt.Sprintf("%#v", opts))
 
 	env, err := mdbx.NewEnv()
 	if err != nil {
 		return nil, err
 	}
 	if opts.verbosity != -1 {
-		log.Warn("[dbg] setting mdbx log", "lvl", mdbx.LogLvl(opts.verbosity))
-		err = env.SetDebug(mdbx.LogLvl(opts.verbosity), mdbx.DbgDoNotChange, mdbx.LoggerDoNotChange) // temporary disable error, because it works if call it 1 time, but returns error if call it twice in same process (what often happening in tests)
+		err = env.SetDebug(mdbx.LogLvlVerbose, mdbx.DbgDoNotChange, mdbx.LoggerDoNotChange) // temporary disable error, because it works if call it 1 time, but returns error if call it twice in same process (what often happening in tests)
 		if err != nil {
 			return nil, fmt.Errorf("db verbosity set: %w", err)
 		}
