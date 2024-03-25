@@ -90,6 +90,8 @@ func openDB(opts kv2.MdbxOpts, applyMigrations bool, logger log.Logger) (kv.RwDB
 			}
 			db.Close()
 			db = opts.MustOpen()
+			log.Warn("[dbg] see --database.verbosity", "v", fmt.Sprintf("%#v", opts))
+
 		}
 	}
 
