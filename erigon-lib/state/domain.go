@@ -721,6 +721,14 @@ func (w *domainBufferedWriter) SetTxNum(v uint64) {
 }
 
 func (dc *DomainContext) newWriter(tmpdir string, discard bool) *domainBufferedWriter {
+	discardHist := false
+	if dbg.DiscardCommitmentHistory && dc.d.filenameBase == "commitment" {
+		discardHist = true
+	}
+	if dbg.DiscardHistory() {
+		discardHist = true
+	}
+
 	w := &domainBufferedWriter{
 		discard:   discard,
 		aux:       make([]byte, 0, 128),
@@ -729,7 +737,7 @@ func (dc *DomainContext) newWriter(tmpdir string, discard bool) *domainBufferedW
 		keys:      etl.NewCollector(dc.d.keysTable, tmpdir, etl.NewSortableBuffer(WALCollectorRAM), dc.d.logger),
 		values:    etl.NewCollector(dc.d.valsTable, tmpdir, etl.NewSortableBuffer(WALCollectorRAM), dc.d.logger),
 
-		h: dc.hc.newWriter(tmpdir, discard),
+		h: dc.hc.newWriter(tmpdir, discardHist),
 	}
 	w.keys.LogLvl(log.LvlTrace)
 	w.values.LogLvl(log.LvlTrace)

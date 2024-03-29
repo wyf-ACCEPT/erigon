@@ -927,8 +927,11 @@ Loop:
 								return err
 							}
 						}
-
 						t3 = time.Since(tt)
+						if dbg.ExitAfterPrune && t3 > 5*time.Second {
+							log.Info("Exit after prune")
+							os.Exit(0)
+						}
 
 						applyTx, err = cfg.db.BeginRw(context.Background()) //nolint
 						if err != nil {
