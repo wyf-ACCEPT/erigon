@@ -770,6 +770,7 @@ func (ac *AggregatorV3Context) PruneSmallBatches(ctx context.Context, timeout ti
 		pruneLimit = 100_000
 		withWarmup = true
 	}
+	withWarmup = false
 
 	started := time.Now()
 	localTimeout := time.NewTicker(timeout)
