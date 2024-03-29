@@ -907,7 +907,13 @@ Loop:
 
 						t2 = time.Since(tt)
 						if blocksFreezeCfg.Produce {
-							agg.BuildFilesInBackground(outputTxNum.Load())
+							if dbg.BlockingBuild {
+								if err := agg.BuildFiles(outputTxNum.Load()); err != nil {
+									return err
+								}
+							} else {
+								agg.BuildFilesInBackground(outputTxNum.Load())
+							}
 						}
 
 						if dbg.ExitBeforePrune {

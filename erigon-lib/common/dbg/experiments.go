@@ -62,6 +62,8 @@ var (
 
 	ExitAfterPrune  = EnvBool("EXIT_AFTER_PRUNE", false)
 	ExitBeforePrune = EnvBool("EXIT_BEFORE_PRUNE", false)
+
+	BlockingBuild = EnvBool("BLOCKING_BUILD", false)
 )
 
 func ReadMemStats(m *runtime.MemStats) {
