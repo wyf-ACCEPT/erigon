@@ -910,6 +910,11 @@ Loop:
 							agg.BuildFilesInBackground(outputTxNum.Load())
 						}
 
+						if dbg.ExitBeforePrune {
+							log.Info("Exit before prune")
+							os.Exit(0)
+						}
+
 						tt = time.Now()
 						for haveMoreToPrune := true; haveMoreToPrune; {
 							if err := chainDb.Update(ctx, func(tx kv.RwTx) error {
@@ -928,7 +933,7 @@ Loop:
 							}
 						}
 						t3 = time.Since(tt)
-						if dbg.ExitAfterPrune && t3 > 5*time.Second {
+						if dbg.ExitAfterPrune {
 							log.Info("Exit after prune")
 							os.Exit(0)
 						}

@@ -60,7 +60,8 @@ var (
 	SnapshotMadvRnd = EnvBool("SNAPSHOT_MADV_RND", true)
 	OnlyCreateDB    = EnvBool("ONLY_CREATE_DB", false)
 
-	ExitAfterPrune = EnvBool("EXIT_AFTER_PRUNE", false)
+	ExitAfterPrune  = EnvBool("EXIT_AFTER_PRUNE", false)
+	ExitBeforePrune = EnvBool("EXIT_BEFORE_PRUNE", false)
 )
 
 func ReadMemStats(m *runtime.MemStats) {
