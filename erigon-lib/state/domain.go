@@ -2192,6 +2192,7 @@ func (dc *DomainContext) Prune(ctx context.Context, rwTx kv.RwTx, step, txFrom, 
 	}
 
 	seek := make([]byte, 0, 256)
+	k = common.Copy(k)
 	for k != nil {
 		if err != nil {
 			return stat, fmt.Errorf("iterate over %s domain keys: %w", dc.d.filenameBase, err)
@@ -2200,6 +2201,7 @@ func (dc *DomainContext) Prune(ctx context.Context, rwTx kv.RwTx, step, txFrom, 
 		is := ^binary.BigEndian.Uint64(v)
 		if is > step {
 			k, v, err = keysCursor.PrevNoDup()
+			k = common.Copy(k)
 			continue
 		}
 		if limit == 0 {
@@ -2215,6 +2217,7 @@ func (dc *DomainContext) Prune(ctx context.Context, rwTx kv.RwTx, step, txFrom, 
 		if err != nil {
 			return stat, fmt.Errorf("prune domain value: %w", err)
 		}
+		k = common.Copy(k)
 
 		// This DeleteCurrent needs to the last in the loop iteration, because it invalidates k and v
 		if _, _, err = keysCursorForDeletes.SeekBothExact(k, v); err != nil {
@@ -2229,6 +2232,7 @@ func (dc *DomainContext) Prune(ctx context.Context, rwTx kv.RwTx, step, txFrom, 
 		mxPruneSizeDomain.Inc()
 
 		k, v, err = keysCursor.Prev()
+		k = common.Copy(k)
 
 		select {
 		case <-ctx.Done():
