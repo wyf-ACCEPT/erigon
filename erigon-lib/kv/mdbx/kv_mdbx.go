@@ -262,7 +262,6 @@ func (opts MdbxOpts) Open(ctx context.Context) (kv.RwDB, error) {
 		}
 
 	}
-	log.Warn("[dbg] opts2", "opts", fmt.Sprintf("%#v", opts))
 
 	env, err := mdbx.NewEnv()
 	if err != nil {
