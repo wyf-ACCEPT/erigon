@@ -89,6 +89,8 @@ var DefaultFlags = []cli.Flag{
 	&AuthRpcWriteTimeoutFlag,
 	&AuthRpcIdleTimeoutFlag,
 	&EvmCallTimeoutFlag,
+	&OverlayGetLogsFlag,
+	&OverlayReplayBlockFlag,
 
 	&utils.SnapKeepBlocksFlag,
 	&utils.SnapStopFlag,
@@ -138,6 +140,7 @@ var DefaultFlags = []cli.Flag{
 	&utils.MinerExtraDataFlag,
 	&utils.MinerNoVerfiyFlag,
 	&utils.MinerSigningKeyFileFlag,
+	&utils.MinerRecommitIntervalFlag,
 	&utils.SentryAddrFlag,
 	&utils.SentryLogPeerInfoFlag,
 	&utils.DownloaderAddrFlag,
@@ -152,8 +155,9 @@ var DefaultFlags = []cli.Flag{
 	&utils.BorBlockPeriodFlag,
 	&utils.BorBlockSizeFlag,
 	&utils.WithHeimdallMilestones,
+	&utils.PolygonSyncFlag,
 	&utils.EthStatsURLFlag,
-	&utils.OverrideCancunFlag,
+	&utils.OverridePragueFlag,
 
 	&utils.LightClientDiscoveryAddrFlag,
 	&utils.LightClientDiscoveryPortFlag,

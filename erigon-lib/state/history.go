@@ -102,8 +102,8 @@ type histCfg struct {
 	withLocalityIndex  bool
 	withExistenceIndex bool // move to iiCfg
 
-	dontProduceFiles bool   // don't produce .v and .ef files. old data will be pruned anyway.
-	keepTxInDB       uint64 // When dontProduceFiles=true, keepTxInDB is used to keep this amount of tx in db before pruning
+	dontProduceHistoryFiles bool   // don't produce .v and .ef files. old data will be pruned anyway.
+	keepTxInDB              uint64 // When dontProduceHistoryFiles=true, keepTxInDB is used to keep this amount of tx in db before pruning
 }
 
 func NewHistory(cfg histCfg, aggregationStep uint64, filenameBase, indexKeysTable, indexTable, historyValsTable string, integrityCheck func(fromStep, toStep uint64) bool, logger log.Logger) (*History, error) {
@@ -115,7 +115,7 @@ func NewHistory(cfg histCfg, aggregationStep uint64, filenameBase, indexKeysTabl
 		indexList:          withHashMap,
 		integrityCheck:     integrityCheck,
 		historyLargeValues: cfg.historyLargeValues,
-		dontProduceFiles:   cfg.dontProduceFiles,
+		dontProduceFiles:   cfg.dontProduceHistoryFiles,
 		keepTxInDB:         cfg.keepTxInDB,
 	}
 	h.roFiles.Store(&[]ctxItem{})
@@ -529,6 +529,7 @@ func (hc *HistoryContext) newWriter(tmpdir string, discard bool) *historyBuffere
 		ii: hc.ic.newWriter(tmpdir, discard),
 	}
 	w.historyVals.LogLvl(log.LvlTrace)
+	w.historyVals.SortAndFlushInBackground(true)
 	return w
 }
 
@@ -1025,11 +1026,10 @@ func (hc *HistoryContext) statelessIdxReader(i int) *recsplit.IndexReader {
 }
 
 func (hc *HistoryContext) canPruneUntil(tx kv.Tx, untilTx uint64) (can bool, txTo uint64) {
-	minIdxTx := hc.ic.CanPruneFrom(tx)
-	maxIdxTx := hc.ic.highestTxNum(tx)
+	minIdxTx, maxIdxTx := hc.ic.smallestTxNum(tx), hc.ic.highestTxNum(tx)
 	//defer func() {
 	//	fmt.Printf("CanPrune[%s]Until(%d) noFiles=%t txTo %d idxTx [%d-%d] keepTxInDB=%d; result %t\n",
-	//		hc.h.filenameBase, untilTx, hc.h.dontProduceFiles, txTo, minIdxTx, maxIdxTx, hc.h.keepTxInDB, minIdxTx < txTo)
+	//		hc.h.filenameBase, untilTx, hc.h.dontProduceHistoryFiles, txTo, minIdxTx, maxIdxTx, hc.h.keepTxInDB, minIdxTx < txTo)
 	//}()
 
 	if hc.h.dontProduceFiles {
@@ -1038,11 +1038,22 @@ func (hc *HistoryContext) canPruneUntil(tx kv.Tx, untilTx uint64) (can bool, txT
 		}
 		txTo = min(maxIdxTx-hc.h.keepTxInDB, untilTx) // bound pruning
 	} else {
-		canPruneIdx := hc.ic.CanPruneUntil(tx, untilTx)
+		canPruneIdx := hc.ic.CanPrune(tx)
 		if !canPruneIdx {
 			return false, 0
 		}
 		txTo = min(hc.maxTxNumInFiles(false), untilTx)
+	}
+
+	switch hc.h.filenameBase {
+	case "accounts":
+		mxPrunableHAcc.Set(float64(txTo - minIdxTx))
+	case "storage":
+		mxPrunableHSto.Set(float64(txTo - minIdxTx))
+	case "code":
+		mxPrunableHCode.Set(float64(txTo - minIdxTx))
+	case "commitment":
+		mxPrunableHComm.Set(float64(txTo - minIdxTx))
 	}
 	return minIdxTx < txTo, txTo
 }

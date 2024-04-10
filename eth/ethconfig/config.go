@@ -46,8 +46,8 @@ import (
 )
 
 // AggregationStep number of transactions in smalest static file
-// const HistoryV3AggregationStep = 1_562_500 // = 100M / 64. Dividers: 2, 5, 10, 20, 50, 100, 500
-const HistoryV3AggregationStep = 1_562_500 / 10 // use this to reduce step size for dev/debug
+const HistoryV3AggregationStep = 1_562_500 // = 100M / 64. Dividers: 2, 5, 10, 20, 50, 100, 500
+//const HistoryV3AggregationStep = 1_562_500 / 10 // use this to reduce step size for dev/debug
 
 // FullNodeGPO contains default gasprice oracle settings for full node.
 var FullNodeGPO = gaspricecfg.Config{
@@ -233,11 +233,12 @@ type Config struct {
 
 	// URL to connect to Heimdall node
 	HeimdallURL string
-
 	// No heimdall service
 	WithoutHeimdall bool
 	// Heimdall services active
 	WithHeimdallMilestones bool
+	PolygonSync            bool
+
 	// Ethstats service
 	Ethstats string
 	// Consensus layer
@@ -248,7 +249,7 @@ type Config struct {
 	SentinelAddr                string
 	SentinelPort                uint64
 
-	OverrideCancunTime *big.Int `toml:",omitempty"`
+	OverridePragueTime *big.Int `toml:",omitempty"`
 
 	// Embedded Silkworm support
 	SilkwormExecution bool

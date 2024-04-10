@@ -167,7 +167,7 @@ func BuildTorrentFilesIfNeed(ctx context.Context, dirs datadir.Dirs, torrentFile
 	logEvery := time.NewTicker(20 * time.Second)
 	defer logEvery.Stop()
 
-	files, err := seedableFiles(dirs, chain)
+	files, err := SeedableFiles(dirs, chain)
 	if err != nil {
 		return err
 	}
@@ -308,7 +308,7 @@ func IsSnapNameAllowed(name string) bool {
 func addTorrentFile(ctx context.Context, ts *torrent.TorrentSpec, torrentClient *torrent.Client, db kv.RwDB, webseeds *WebSeeds) (t *torrent.Torrent, ok bool, err error) {
 	ts.ChunkSize = downloadercfg.DefaultNetworkChunkSize
 	ts.DisallowDataDownload = true
-	ts.DisableInitialPieceCheck = true
+	//ts.DisableInitialPieceCheck = true
 	//re-try on panic, with 0 ChunkSize (lib doesn't allow change this field for existing torrents)
 	defer func() {
 		rec := recover()
@@ -351,6 +351,7 @@ func _addTorrentFile(ctx context.Context, ts *torrent.TorrentSpec, torrentClient
 				return nil, false, fmt.Errorf("addTorrentFile %s: update failed: %w", ts.DisplayName, err)
 			}
 		} else {
+			t.AddWebSeeds(ts.Webseeds)
 			if err := db.Update(ctx, torrentInfoReset(ts.DisplayName, ts.InfoHash.Bytes(), 0)); err != nil {
 				return nil, false, fmt.Errorf("addTorrentFile %s: reset failed: %w", ts.DisplayName, err)
 			}

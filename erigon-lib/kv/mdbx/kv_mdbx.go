@@ -230,7 +230,6 @@ func PathDbMap() map[string]kv.RoDB {
 var ErrDBDoesNotExists = fmt.Errorf("can't create database - because opening in `Accede` mode. probably another (main) process can create it")
 
 func (opts MdbxOpts) Open(ctx context.Context) (kv.RwDB, error) {
-	log.Warn("[dbg] opts1", "opts", fmt.Sprintf("%#v", opts))
 	if dbg.WriteMap() {
 		opts = opts.WriteMap() //nolint
 	}
@@ -485,6 +484,7 @@ type MdbxKV struct {
 	leakDetector *dbg.LeakDetector
 }
 
+func (db *MdbxKV) Path() string     { return db.opts.path }
 func (db *MdbxKV) PageSize() uint64 { return db.opts.pageSize }
 func (db *MdbxKV) ReadOnly() bool   { return db.opts.HasFlag(mdbx.Readonly) }
 func (db *MdbxKV) Accede() bool     { return db.opts.HasFlag(mdbx.Accede) }
