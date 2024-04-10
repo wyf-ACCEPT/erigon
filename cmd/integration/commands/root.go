@@ -66,7 +66,6 @@ func dbCfg(label kv.Label, path string) kv2.MdbxOpts {
 	// to read all options from DB, instead of overriding them
 	opts = opts.Accede()
 
-	log.Warn("[dbg] see --database.verbosity", "v", databaseVerbosity)
 	if databaseVerbosity != -1 {
 		opts = opts.DBVerbosity(kv.DBVerbosityLvl(databaseVerbosity))
 	}
@@ -74,7 +73,6 @@ func dbCfg(label kv.Label, path string) kv2.MdbxOpts {
 }
 
 func openDB(opts kv2.MdbxOpts, applyMigrations bool, logger log.Logger) (kv.RwDB, error) {
-	log.Warn("[dbg] see2 --database.verbosity", "v", fmt.Sprintf("%#v", opts))
 	db := opts.MustOpen()
 	if applyMigrations {
 		migrator := migrations.NewMigrator(opts.GetLabel())
@@ -91,7 +89,6 @@ func openDB(opts kv2.MdbxOpts, applyMigrations bool, logger log.Logger) (kv.RwDB
 			}
 			db.Close()
 			db = opts.MustOpen()
-			log.Warn("[dbg] see3 --database.verbosity", "v", fmt.Sprintf("%#v", opts))
 		}
 	}
 

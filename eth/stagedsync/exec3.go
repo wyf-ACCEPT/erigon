@@ -907,18 +907,7 @@ Loop:
 
 						t2 = time.Since(tt)
 						if blocksFreezeCfg.Produce {
-							if dbg.BlockingBuild {
-								if err := agg.BuildFiles(outputTxNum.Load()); err != nil {
-									return err
-								}
-							} else {
-								agg.BuildFilesInBackground(outputTxNum.Load())
-							}
-						}
-
-						if dbg.ExitBeforePrune {
-							log.Info("Exit before prune")
-							os.Exit(0)
+							agg.BuildFilesInBackground(outputTxNum.Load())
 						}
 
 						tt = time.Now()
@@ -938,6 +927,7 @@ Loop:
 								return err
 							}
 						}
+
 						t3 = time.Since(tt)
 						if dbg.ExitAfterPrune {
 							log.Info("Exit after prune")
