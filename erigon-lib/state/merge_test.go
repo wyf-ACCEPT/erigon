@@ -19,7 +19,7 @@ func emptyTestInvertedIndex(aggStep uint64) *InvertedIndex {
 	logger := log.New()
 	return &InvertedIndex{iiCfg: iiCfg{salt: &salt, db: nil},
 		logger:       logger,
-		filenameBase: "test", aggregationStep: aggStep, files: btree2.NewBTreeG[*filesItem](filesItemLess)}
+		filenameBase: "test", aggregationStep: aggStep, dirtyFiles: btree2.NewBTreeG[*filesItem](filesItemLess)}
 }
 func TestFindMergeRangeCornerCases(t *testing.T) {
 	t.Run("> 2 unmerged files", func(t *testing.T) {
@@ -30,12 +30,12 @@ func TestFindMergeRangeCornerCases(t *testing.T) {
 			"v1-test.2-3.ef",
 			"v1-test.3-4.ef",
 		})
-		ii.files.Scan(func(item *filesItem) bool {
+		ii.dirtyFiles.Scan(func(item *filesItem) bool {
 			fName := ii.efFilePath(item.startTxNum/ii.aggregationStep, item.endTxNum/ii.aggregationStep)
 			item.decompressor = &seg.Decompressor{FileName1: fName}
 			return true
 		})
-		ii.reCalcRoFiles()
+		ii.reCalcVisibleFiles()
 
 		ic := ii.MakeContext()
 		defer ic.Close()
@@ -55,12 +55,12 @@ func TestFindMergeRangeCornerCases(t *testing.T) {
 			"v1-test.2-3.ef",
 			"v1-test.3-4.ef",
 		})
-		ii.files.Scan(func(item *filesItem) bool {
+		ii.dirtyFiles.Scan(func(item *filesItem) bool {
 			fName := ii.efFilePath(item.startTxNum/ii.aggregationStep, item.endTxNum/ii.aggregationStep)
 			item.decompressor = &seg.Decompressor{FileName1: fName}
 			return true
 		})
-		ii.reCalcRoFiles()
+		ii.reCalcVisibleFiles()
 		ic = ii.MakeContext()
 		defer ic.Close()
 
@@ -69,19 +69,19 @@ func TestFindMergeRangeCornerCases(t *testing.T) {
 		assert.Equal(t, 0, int(from))
 		assert.Equal(t, 2, int(to))
 
-		h := &History{InvertedIndex: ii, files: btree2.NewBTreeG[*filesItem](filesItemLess)}
+		h := &History{InvertedIndex: ii, dirtyFiles: btree2.NewBTreeG[*filesItem](filesItemLess)}
 		h.scanStateFiles([]string{
 			"v1-test.0-1.v",
 			"v1-test.1-2.v",
 			"v1-test.2-3.v",
 			"v1-test.3-4.v",
 		})
-		h.files.Scan(func(item *filesItem) bool {
+		h.dirtyFiles.Scan(func(item *filesItem) bool {
 			fName := h.vFilePath(item.startTxNum/ii.aggregationStep, item.endTxNum/ii.aggregationStep)
 			item.decompressor = &seg.Decompressor{FileName1: fName}
 			return true
 		})
-		h.reCalcRoFiles()
+		h.reCalcVisibleFiles()
 		ic.Close()
 
 		hc := h.MakeContext()
@@ -99,24 +99,24 @@ func TestFindMergeRangeCornerCases(t *testing.T) {
 			"v1-test.2-3.ef",
 			"v1-test.3-4.ef",
 		})
-		ii.files.Scan(func(item *filesItem) bool {
+		ii.dirtyFiles.Scan(func(item *filesItem) bool {
 			fName := ii.efFilePath(item.startTxNum/ii.aggregationStep, item.endTxNum/ii.aggregationStep)
 			item.decompressor = &seg.Decompressor{FileName1: fName}
 			return true
 		})
-		ii.reCalcRoFiles()
+		ii.reCalcVisibleFiles()
 
-		h := &History{InvertedIndex: ii, files: btree2.NewBTreeG[*filesItem](filesItemLess)}
+		h := &History{InvertedIndex: ii, dirtyFiles: btree2.NewBTreeG[*filesItem](filesItemLess)}
 		h.scanStateFiles([]string{
 			"v1-test.0-1.v",
 			"v1-test.1-2.v",
 		})
-		h.files.Scan(func(item *filesItem) bool {
+		h.dirtyFiles.Scan(func(item *filesItem) bool {
 			fName := h.vFilePath(item.startTxNum/ii.aggregationStep, item.endTxNum/ii.aggregationStep)
 			item.decompressor = &seg.Decompressor{FileName1: fName}
 			return true
 		})
-		h.reCalcRoFiles()
+		h.reCalcVisibleFiles()
 
 		hc := h.MakeContext()
 		defer hc.Close()
@@ -135,24 +135,24 @@ func TestFindMergeRangeCornerCases(t *testing.T) {
 			"v1-test.2-3.ef",
 			"v1-test.3-4.ef",
 		})
-		ii.files.Scan(func(item *filesItem) bool {
+		ii.dirtyFiles.Scan(func(item *filesItem) bool {
 			fName := ii.efFilePath(item.startTxNum/ii.aggregationStep, item.endTxNum/ii.aggregationStep)
 			item.decompressor = &seg.Decompressor{FileName1: fName}
 			return true
 		})
-		ii.reCalcRoFiles()
+		ii.reCalcVisibleFiles()
 
-		h := &History{InvertedIndex: ii, files: btree2.NewBTreeG[*filesItem](filesItemLess)}
+		h := &History{InvertedIndex: ii, dirtyFiles: btree2.NewBTreeG[*filesItem](filesItemLess)}
 		h.scanStateFiles([]string{
 			"v1-test.0-1.v",
 			"v1-test.1-2.v",
 		})
-		h.files.Scan(func(item *filesItem) bool {
+		h.dirtyFiles.Scan(func(item *filesItem) bool {
 			fName := h.vFilePath(item.startTxNum/ii.aggregationStep, item.endTxNum/ii.aggregationStep)
 			item.decompressor = &seg.Decompressor{FileName1: fName}
 			return true
 		})
-		h.reCalcRoFiles()
+		h.reCalcVisibleFiles()
 
 		hc := h.MakeContext()
 		defer hc.Close()
@@ -172,26 +172,26 @@ func TestFindMergeRangeCornerCases(t *testing.T) {
 			"v1-test.3-4.ef",
 			"v1-test.0-4.ef",
 		})
-		ii.files.Scan(func(item *filesItem) bool {
+		ii.dirtyFiles.Scan(func(item *filesItem) bool {
 			fName := ii.efFilePath(item.startTxNum/ii.aggregationStep, item.endTxNum/ii.aggregationStep)
 			item.decompressor = &seg.Decompressor{FileName1: fName}
 			return true
 		})
-		ii.reCalcRoFiles()
+		ii.reCalcVisibleFiles()
 
-		h := &History{InvertedIndex: ii, files: btree2.NewBTreeG[*filesItem](filesItemLess)}
+		h := &History{InvertedIndex: ii, dirtyFiles: btree2.NewBTreeG[*filesItem](filesItemLess)}
 		h.scanStateFiles([]string{
 			"v1-test.0-1.v",
 			"v1-test.1-2.v",
 			"v1-test.2-3.v",
 			"v1-test.3-4.v",
 		})
-		h.files.Scan(func(item *filesItem) bool {
+		h.dirtyFiles.Scan(func(item *filesItem) bool {
 			fName := h.vFilePath(item.startTxNum/ii.aggregationStep, item.endTxNum/ii.aggregationStep)
 			item.decompressor = &seg.Decompressor{FileName1: fName}
 			return true
 		})
-		h.reCalcRoFiles()
+		h.reCalcVisibleFiles()
 
 		hc := h.MakeContext()
 		defer hc.Close()
@@ -210,26 +210,26 @@ func TestFindMergeRangeCornerCases(t *testing.T) {
 		ii.scanStateFiles([]string{
 			"v1-test.0-4.ef",
 		})
-		ii.files.Scan(func(item *filesItem) bool {
+		ii.dirtyFiles.Scan(func(item *filesItem) bool {
 			fName := ii.efFilePath(item.startTxNum/ii.aggregationStep, item.endTxNum/ii.aggregationStep)
 			item.decompressor = &seg.Decompressor{FileName1: fName}
 			return true
 		})
-		ii.reCalcRoFiles()
+		ii.reCalcVisibleFiles()
 
-		h := &History{InvertedIndex: ii, files: btree2.NewBTreeG[*filesItem](filesItemLess)}
+		h := &History{InvertedIndex: ii, dirtyFiles: btree2.NewBTreeG[*filesItem](filesItemLess)}
 		h.scanStateFiles([]string{
 			"v1-test.0-1.v",
 			"v1-test.1-2.v",
 			"v1-test.2-3.v",
 			"v1-test.3-4.v",
 		})
-		h.files.Scan(func(item *filesItem) bool {
+		h.dirtyFiles.Scan(func(item *filesItem) bool {
 			fName := h.vFilePath(item.startTxNum/ii.aggregationStep, item.endTxNum/ii.aggregationStep)
 			item.decompressor = &seg.Decompressor{FileName1: fName}
 			return true
 		})
-		h.reCalcRoFiles()
+		h.reCalcVisibleFiles()
 
 		hc := h.MakeContext()
 		defer hc.Close()
@@ -248,26 +248,26 @@ func TestFindMergeRangeCornerCases(t *testing.T) {
 			"v1-test.0-1.ef",
 			"v1-test.1-2.ef",
 		})
-		ii.files.Scan(func(item *filesItem) bool {
+		ii.dirtyFiles.Scan(func(item *filesItem) bool {
 			fName := ii.efFilePath(item.startTxNum/ii.aggregationStep, item.endTxNum/ii.aggregationStep)
 			item.decompressor = &seg.Decompressor{FileName1: fName}
 			return true
 		})
-		ii.reCalcRoFiles()
+		ii.reCalcVisibleFiles()
 
 		// `kill -9` may leave small garbage files, but if big one already exists we assume it's good(fsynced) and no reason to merge again
-		h := &History{InvertedIndex: ii, files: btree2.NewBTreeG[*filesItem](filesItemLess)}
+		h := &History{InvertedIndex: ii, dirtyFiles: btree2.NewBTreeG[*filesItem](filesItemLess)}
 		h.scanStateFiles([]string{
 			"v1-test.0-1.v",
 			"v1-test.1-2.v",
 			"v1-test.0-2.v",
 		})
-		h.files.Scan(func(item *filesItem) bool {
+		h.dirtyFiles.Scan(func(item *filesItem) bool {
 			fName := h.vFilePath(item.startTxNum/ii.aggregationStep, item.endTxNum/ii.aggregationStep)
 			item.decompressor = &seg.Decompressor{FileName1: fName}
 			return true
 		})
-		h.reCalcRoFiles()
+		h.reCalcVisibleFiles()
 
 		hc := h.MakeContext()
 		defer hc.Close()
@@ -290,14 +290,14 @@ func TestFindMergeRangeCornerCases(t *testing.T) {
 			"v1-test.2-3.ef",
 			"v1-test.3-4.ef",
 		})
-		ii.files.Scan(func(item *filesItem) bool {
+		ii.dirtyFiles.Scan(func(item *filesItem) bool {
 			fName := ii.efFilePath(item.startTxNum/ii.aggregationStep, item.endTxNum/ii.aggregationStep)
 			item.decompressor = &seg.Decompressor{FileName1: fName}
 			return true
 		})
-		ii.reCalcRoFiles()
+		ii.reCalcVisibleFiles()
 
-		h := &History{InvertedIndex: ii, files: btree2.NewBTreeG[*filesItem](filesItemLess)}
+		h := &History{InvertedIndex: ii, dirtyFiles: btree2.NewBTreeG[*filesItem](filesItemLess)}
 		h.scanStateFiles([]string{
 			"v1-test.0-1.v",
 			"v1-test.1-2.v",
@@ -305,12 +305,12 @@ func TestFindMergeRangeCornerCases(t *testing.T) {
 			"v1-test.2-3.v",
 			"v1-test.3-4.v",
 		})
-		h.files.Scan(func(item *filesItem) bool {
+		h.dirtyFiles.Scan(func(item *filesItem) bool {
 			fName := h.vFilePath(item.startTxNum/ii.aggregationStep, item.endTxNum/ii.aggregationStep)
 			item.decompressor = &seg.Decompressor{FileName1: fName}
 			return true
 		})
-		h.reCalcRoFiles()
+		h.reCalcVisibleFiles()
 
 		hc := h.MakeContext()
 		defer hc.Close()
@@ -332,25 +332,25 @@ func TestFindMergeRangeCornerCases(t *testing.T) {
 			"v1-test.0-2.ef",
 			"v1-test.2-3.ef",
 		})
-		ii.files.Scan(func(item *filesItem) bool {
+		ii.dirtyFiles.Scan(func(item *filesItem) bool {
 			fName := ii.efFilePath(item.startTxNum/ii.aggregationStep, item.endTxNum/ii.aggregationStep)
 			item.decompressor = &seg.Decompressor{FileName1: fName}
 			return true
 		})
-		ii.reCalcRoFiles()
+		ii.reCalcVisibleFiles()
 
-		h := &History{InvertedIndex: ii, files: btree2.NewBTreeG[*filesItem](filesItemLess)}
+		h := &History{InvertedIndex: ii, dirtyFiles: btree2.NewBTreeG[*filesItem](filesItemLess)}
 		h.scanStateFiles([]string{
 			"v1-test.0-1.v",
 			"v1-test.1-2.v",
 			"v1-test.2-3.v",
 		})
-		h.files.Scan(func(item *filesItem) bool {
+		h.dirtyFiles.Scan(func(item *filesItem) bool {
 			fName := h.vFilePath(item.startTxNum/ii.aggregationStep, item.endTxNum/ii.aggregationStep)
 			item.decompressor = &seg.Decompressor{FileName1: fName}
 			return true
 		})
-		h.reCalcRoFiles()
+		h.reCalcVisibleFiles()
 
 		hc := h.MakeContext()
 		defer hc.Close()
@@ -371,26 +371,26 @@ func TestFindMergeRangeCornerCases(t *testing.T) {
 			"v1-test.1-2.ef",
 			"v1-test.0-2.ef",
 		})
-		ii.files.Scan(func(item *filesItem) bool {
+		ii.dirtyFiles.Scan(func(item *filesItem) bool {
 			fName := ii.efFilePath(item.startTxNum/ii.aggregationStep, item.endTxNum/ii.aggregationStep)
 			item.decompressor = &seg.Decompressor{FileName1: fName}
 			return true
 		})
-		ii.reCalcRoFiles()
+		ii.reCalcVisibleFiles()
 
-		h := &History{InvertedIndex: ii, files: btree2.NewBTreeG[*filesItem](filesItemLess)}
+		h := &History{InvertedIndex: ii, dirtyFiles: btree2.NewBTreeG[*filesItem](filesItemLess)}
 		h.scanStateFiles([]string{
 			"v1-test.0-1.v",
 			"v1-test.1-2.v",
 			"v1-test.0-2.v",
 			"v1-test.2-3.v",
 		})
-		h.files.Scan(func(item *filesItem) bool {
+		h.dirtyFiles.Scan(func(item *filesItem) bool {
 			fName := h.vFilePath(item.startTxNum/ii.aggregationStep, item.endTxNum/ii.aggregationStep)
 			item.decompressor = &seg.Decompressor{FileName1: fName}
 			return true
 		})
-		h.reCalcRoFiles()
+		h.reCalcVisibleFiles()
 
 		hc := h.MakeContext()
 		defer hc.Close()
@@ -407,12 +407,12 @@ func TestFindMergeRangeCornerCases(t *testing.T) {
 			"v1-test.2-3.ef",
 			"v1-test.3-4.ef",
 		})
-		ii.files.Scan(func(item *filesItem) bool {
+		ii.dirtyFiles.Scan(func(item *filesItem) bool {
 			fName := ii.efFilePath(item.startTxNum/ii.aggregationStep, item.endTxNum/ii.aggregationStep)
 			item.decompressor = &seg.Decompressor{FileName1: fName}
 			return true
 		})
-		ii.reCalcRoFiles()
+		ii.reCalcVisibleFiles()
 		ic := ii.MakeContext()
 		defer ic.Close()
 		needMerge, from, to := ic.findMergeRange(4, 32)
