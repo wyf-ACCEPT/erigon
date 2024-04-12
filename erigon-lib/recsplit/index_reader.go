@@ -19,6 +19,7 @@ package recsplit
 import (
 	"sync"
 
+	"github.com/ledgerwatch/log/v3"
 	"github.com/spaolacci/murmur3"
 )
 
@@ -90,6 +91,13 @@ func (r *IndexReader) TwoLayerLookup(key []byte) (uint64, bool) {
 	if !ok {
 		return 0, false
 	}
+	defer func() {
+		rec := recover()
+		if rec != nil {
+			log.Error("panic in file", "file", r.index.FileName())
+			panic(rec)
+		}
+	}()
 	return r.OrdinalLookup(id), true
 }
 func (r *IndexReader) TwoLayerLookupByHash(hi, lo uint64) (uint64, bool) {
