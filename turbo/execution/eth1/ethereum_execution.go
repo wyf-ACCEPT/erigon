@@ -3,7 +3,9 @@ package eth1
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math/big"
+	"time"
 
 	"github.com/ledgerwatch/erigon-lib/chain"
 	libcommon "github.com/ledgerwatch/erigon-lib/common"
@@ -156,11 +158,15 @@ func (e *EthereumExecutionModule) ValidateChain(ctx context.Context, req *execut
 		}, nil
 	}
 	defer e.semaphore.Release(1)
+	fmt.Println("VALIDATE CHAIN CALLED")
+	s := time.Now()
 	tx, err := e.db.BeginRw(ctx)
 	if err != nil {
 		return nil, err
 	}
 	defer tx.Rollback()
+	fmt.Println(time.Since(s))
+
 	e.forkValidator.ClearWithUnwind(e.accumulator, e.stateChangeConsumer)
 	blockHash := gointerfaces.ConvertH256ToHash(req.Hash)
 	header, err := e.blockReader.Header(ctx, tx, blockHash, req.Number)

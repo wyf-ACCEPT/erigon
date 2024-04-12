@@ -115,12 +115,15 @@ func (e *EthereumExecutionModule) updateForkChoice(ctx context.Context, blockHas
 		hash   libcommon.Hash
 		number uint64
 	}
+	fmt.Println("FCU CALLED")
+	t := time.Now()
 	tx, err := e.db.BeginRwNosync(ctx)
 	if err != nil {
 		sendForkchoiceErrorWithoutWaiting(outcomeCh, err)
 		return
 	}
 	defer tx.Rollback()
+	fmt.Println("FCU TX", time.Since(t))
 
 	defer e.forkValidator.ClearWithUnwind(e.accumulator, e.stateChangeConsumer)
 	// Step one, find reconnection point, and mark all of those headers as canonical.
