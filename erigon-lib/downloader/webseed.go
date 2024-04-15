@@ -440,11 +440,13 @@ func (d *WebSeeds) retrieveFileEtag(ctx context.Context, file *url.URL) (string,
 	request = request.WithContext(ctx)
 	resp, err := http.DefaultClient.Do(request)
 	if err != nil {
+		log.Warn("[dbg] etag1", "err", err, "url", request.URL.String())
 		return "", fmt.Errorf("webseed.http: %w, url=%s", err, file.String())
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		if resp.StatusCode == http.StatusNotFound {
+			log.Warn("[dbg] etag2", "ErrEtagNotFound", ErrEtagNotFound, "url", request.URL.String())
 			return "", ErrEtagNotFound
 		}
 		return "", fmt.Errorf("webseed.http: status code %d, url=%s", resp.StatusCode, file.String())
@@ -454,6 +456,7 @@ func (d *WebSeeds) retrieveFileEtag(ctx context.Context, file *url.URL) (string,
 	if etag == "" {
 		return "", fmt.Errorf("webseed.http: file has no etag, url=%s", file.String())
 	}
+	log.Warn("[dbg] etag3", "ErrEtagNotFound", ErrEtagNotFound, "url", request.URL.String())
 	etag = strings.Trim(etag, "\"")
 	if strings.Contains(etag, "-") {
 		return etag, ErrInvalidEtag
