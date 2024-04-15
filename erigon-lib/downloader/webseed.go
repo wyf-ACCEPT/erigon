@@ -293,7 +293,6 @@ func (w *WebSeedCheckReport) ToString(full bool) string {
 func (d *WebSeeds) VerifyManifestedBucket(ctx context.Context, webSeedProviderURL *url.URL) (report *WebSeedCheckReport, err error) {
 	report = &WebSeedCheckReport{seed: webSeedProviderURL}
 	defer func() { fmt.Printf("%s\n", report.ToString(true)) }()
-	log.Warn("[dbg] get3", "url", webSeedProviderURL.String())
 
 	manifestResponse, err := d.retrieveManifest(ctx, webSeedProviderURL)
 	report.manifestExist = len(manifestResponse) != 0
