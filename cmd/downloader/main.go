@@ -403,7 +403,7 @@ var torrentMagnet = &cobra.Command{
 
 func manifestVerify(ctx context.Context, logger log.Logger) error {
 	webseedsList := common.CliString2Array(webseeds)
-	if len(webseedsList) == 0 {
+	if len(webseedsList) == 0 { //fallback to default if exact list not passed
 		if known, ok := snapcfg.KnownWebseeds[chain]; ok {
 			webseedsList = append(webseedsList, known...)
 		}
