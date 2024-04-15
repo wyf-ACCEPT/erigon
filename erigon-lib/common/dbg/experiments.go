@@ -37,7 +37,8 @@ var (
 	stopBeforeStage = EnvString("STOP_BEFORE_STAGE", "")
 	stopAfterStage  = EnvString("STOP_AFTER_STAGE", "")
 
-	mergeTr = EnvInt("MERGE_THRESHOLD", -1)
+	mergeTr                 = EnvInt("MERGE_THRESHOLD", -1)
+	MdbxWafInsteadOfBalance = EnvBool("MDBX_WAF_INSTEAD_OF_BALANCE", false)
 
 	//state v3
 	noPrune                  = EnvBool("NO_PRUNE", false)
