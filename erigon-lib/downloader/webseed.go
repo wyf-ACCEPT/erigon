@@ -458,7 +458,7 @@ func (d *WebSeeds) retrieveFileEtag(ctx context.Context, file *url.URL) (string,
 	}
 	etag = strings.Trim(etag, "\"")
 	if strings.Contains(etag, "-") {
-		log.Warn("[dbg] etag3", "headers", resp.Header)
+		log.Warn("[dbg] etag3", "headers", resp.Header, "url", request.URL.String())
 		return etag, ErrInvalidEtag
 	}
 	return etag, nil
