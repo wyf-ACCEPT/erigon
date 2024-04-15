@@ -4,7 +4,7 @@ go 1.21.7
 
 require (
 	github.com/erigontech/mdbx-go v0.37.3-0.20240405220011-94974b3aaa32
-	github.com/ledgerwatch/erigon-snapshot v1.3.1-0.20240410023018-83b468869a43
+	github.com/ledgerwatch/erigon-snapshot v1.3.1-0.20240414040752-529118229f0f
 	github.com/ledgerwatch/interfaces v0.0.0-20240320062914-b57f05746087
 	github.com/ledgerwatch/log/v3 v3.9.0
 	github.com/ledgerwatch/secp256k1 v1.0.0
@@ -36,7 +36,7 @@ require (
 	github.com/quasilyte/go-ruleguard/dsl v0.3.22
 	github.com/shirou/gopsutil/v3 v3.24.2
 	github.com/spaolacci/murmur3 v1.1.0
-	github.com/stretchr/testify v1.8.4
+	github.com/stretchr/testify v1.9.0
 	github.com/tidwall/btree v1.6.0
 	go.uber.org/mock v0.4.0
 	golang.org/x/crypto v0.22.0
