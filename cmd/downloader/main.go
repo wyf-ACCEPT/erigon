@@ -421,7 +421,7 @@ func manifestVerify(ctx context.Context, logger log.Logger) error {
 				}
 				continue
 			}
-			log.Warn("[dbg] get001", "str", uri)
+			log.Warn("[dbg] get001", "str", uri.String())
 			webseedHttpProviders = append(webseedHttpProviders, uri)
 			continue
 		}
