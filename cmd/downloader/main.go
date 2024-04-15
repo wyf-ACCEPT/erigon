@@ -430,7 +430,7 @@ func manifestVerify(ctx context.Context, logger log.Logger) error {
 			if !strings.HasPrefix(withoutVerisonPrefix, "https:") {
 				continue
 			}
-			uri, err := url.ParseRequestURI(withoutVerisonPrefix)
+			uri, err := url.Parse(withoutVerisonPrefix)
 			if err != nil {
 				log.Warn("[webseed] can't parse url", "err", err, "url", withoutVerisonPrefix)
 				continue
