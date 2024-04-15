@@ -174,8 +174,6 @@ func (d *WebSeeds) VerifyManifestedBuckets(ctx context.Context, failFast bool) e
 	reports := make([]*WebSeedCheckReport, 0, len(d.seeds))
 
 	for _, webSeedProviderURL := range d.seeds {
-		log.Warn("[dbg] webSeedProviderURL", "webSeedProviderURL", webSeedProviderURL.String())
-
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
@@ -464,6 +462,7 @@ func (d *WebSeeds) retrieveFileEtag(ctx context.Context, file *url.URL) (string,
 }
 
 func (d *WebSeeds) retrieveManifest(ctx context.Context, webSeedProviderUrl *url.URL) (snaptype.WebSeedsFromProvider, error) {
+	log.Warn("[dbg] and ", "webSeedProviderUrl", webSeedProviderUrl.String())
 	baseUrl := webSeedProviderUrl.String()
 	ref, err := url.Parse("manifest.txt")
 	if err != nil {
