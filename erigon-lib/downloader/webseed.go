@@ -463,14 +463,12 @@ func (d *WebSeeds) retrieveFileEtag(ctx context.Context, file *url.URL) (string,
 
 func (d *WebSeeds) retrieveManifest(ctx context.Context, webSeedProviderUrl *url.URL) (snaptype.WebSeedsFromProvider, error) {
 	baseUrl := webSeedProviderUrl.String()
-	webSeedProviderUrl.Path + "/manifest.txt"
+	webSeedProviderUrl.Path += "/manifest.txt"
 	u := webSeedProviderUrl
-	log.Warn("[dbg] and ", "webSeedProviderUrl", webSeedProviderUrl.String(), "u", u.String())
 	request, err := http.NewRequest(http.MethodGet, u.String(), nil)
 	if err != nil {
 		return nil, err
 	}
-	log.Warn("[dbg] get2", "url", u.String())
 
 	request = request.WithContext(ctx)
 	resp, err := http.DefaultClient.Do(request)
