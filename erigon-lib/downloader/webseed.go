@@ -174,6 +174,8 @@ func (d *WebSeeds) VerifyManifestedBuckets(ctx context.Context, failFast bool) e
 	reports := make([]*WebSeedCheckReport, 0, len(d.seeds))
 
 	for _, webSeedProviderURL := range d.seeds {
+		log.Warn("[dbg] webSeedProviderURL", "webSeedProviderURL", webSeedProviderURL.String())
+
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
