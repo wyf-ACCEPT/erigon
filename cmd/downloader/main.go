@@ -421,6 +421,7 @@ func manifestVerify(ctx context.Context, logger log.Logger) error {
 				}
 				continue
 			}
+			log.Warn("[dbg] get001", "str", webseed, "url", uri.String())
 			webseedHttpProviders = append(webseedHttpProviders, uri)
 			continue
 		}
@@ -435,7 +436,6 @@ func manifestVerify(ctx context.Context, logger log.Logger) error {
 				log.Warn("[webseed] can't parse url", "err", err, "url", withoutVerisonPrefix)
 				continue
 			}
-			log.Warn("[dbg] get001", "str", webseed, "url", uri.String())
 			webseedHttpProviders = append(webseedHttpProviders, uri)
 		} else {
 			continue
