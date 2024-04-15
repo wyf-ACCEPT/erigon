@@ -463,7 +463,7 @@ func (d *WebSeeds) retrieveFileEtag(ctx context.Context, file *url.URL) (string,
 
 func (d *WebSeeds) retrieveManifest(ctx context.Context, webSeedProviderUrl *url.URL) (snaptype.WebSeedsFromProvider, error) {
 	baseUrl := webSeedProviderUrl.String()
-	webSeedProviderUrl.Path += "/manifest.txt"
+	webSeedProviderUrl.Path += "/manifest.txt" // allow: host.com/v2/manifest.txt
 	u := webSeedProviderUrl
 	request, err := http.NewRequest(http.MethodGet, u.String(), nil)
 	if err != nil {
