@@ -403,7 +403,6 @@ var torrentMagnet = &cobra.Command{
 
 func manifestVerify(ctx context.Context, logger log.Logger) error {
 	webseedsList := common.CliString2Array(webseeds)
-	log.Warn("[dbg] len(webseedsList)", "len(webseedsList)", len(webseedsList))
 	if len(webseedsList) == 0 { //fallback to default if exact list not passed
 		if known, ok := snapcfg.KnownWebseeds[chain]; ok {
 			webseedsList = append(webseedsList, known...)
@@ -415,7 +414,6 @@ func manifestVerify(ctx context.Context, logger log.Logger) error {
 	webseedFileProviders := make([]string, 0, len(webseedUrlsOrFiles))
 	for _, webseed := range webseedUrlsOrFiles {
 		if !strings.HasPrefix(webseed, "v") { // has marker v1/v2/...
-			log.Warn("[dbg] get001", "str", webseed)
 			uri, err := url.ParseRequestURI(webseed)
 			if err != nil {
 				if strings.HasSuffix(webseed, ".toml") && dir.FileExist(webseed) {
@@ -423,6 +421,7 @@ func manifestVerify(ctx context.Context, logger log.Logger) error {
 				}
 				continue
 			}
+			log.Warn("[dbg] get001", "str", uri)
 			webseedHttpProviders = append(webseedHttpProviders, uri)
 			continue
 		}
