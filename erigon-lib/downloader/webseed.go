@@ -456,7 +456,7 @@ func (d *WebSeeds) retrieveFileEtag(ctx context.Context, file *url.URL) (string,
 	if etag == "" {
 		return "", fmt.Errorf("webseed.http: file has no etag, url=%s", file.String())
 	}
-	log.Warn("[dbg] etag3", "ErrEtagNotFound", ErrEtagNotFound, "url", request.URL.String())
+	log.Warn("[dbg] etag3", "etag", etag)
 	etag = strings.Trim(etag, "\"")
 	if strings.Contains(etag, "-") {
 		return etag, ErrInvalidEtag
