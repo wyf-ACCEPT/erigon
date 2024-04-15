@@ -433,7 +433,6 @@ var ErrInvalidEtag = fmt.Errorf("invalid etag")
 var ErrEtagNotFound = fmt.Errorf("not found")
 
 func (d *WebSeeds) retrieveFileEtag(ctx context.Context, file *url.URL) (string, error) {
-	log.Warn("[dbg] get", "url", file.String())
 	request, err := http.NewRequest(http.MethodHead, file.String(), nil)
 	if err != nil {
 		return "", err
