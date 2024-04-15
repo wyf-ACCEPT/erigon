@@ -414,6 +414,7 @@ func manifestVerify(ctx context.Context, logger log.Logger) error {
 	webseedFileProviders := make([]string, 0, len(webseedUrlsOrFiles))
 	for _, webseed := range webseedUrlsOrFiles {
 		if !strings.HasPrefix(webseed, "v") { // has marker v1/v2/...
+			log.Warn("[dbg] get001", "str", webseed)
 			uri, err := url.ParseRequestURI(webseed)
 			if err != nil {
 				if strings.HasSuffix(webseed, ".toml") && dir.FileExist(webseed) {
@@ -421,12 +422,12 @@ func manifestVerify(ctx context.Context, logger log.Logger) error {
 				}
 				continue
 			}
-			log.Warn("[dbg] get001", "str", webseed, "url", uri.String())
 			webseedHttpProviders = append(webseedHttpProviders, uri)
 			continue
 		}
 
 		if strings.HasPrefix(webseed, "v1:") {
+			log.Warn("[dbg] get002", "str", webseed)
 			withoutVerisonPrefix := webseed[3:]
 			if !strings.HasPrefix(withoutVerisonPrefix, "https:") {
 				continue
