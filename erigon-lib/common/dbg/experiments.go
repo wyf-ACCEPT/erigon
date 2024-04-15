@@ -40,6 +40,9 @@ var (
 	mergeTr                 = EnvInt("MERGE_THRESHOLD", -1)
 	MdbxWafInsteadOfBalance = EnvBool("MDBX_WAF_INSTEAD_OF_BALANCE", false)
 
+	// disable downloader startup - no file checks, no torrents, run on current snapshots and db.
+	downloaderOff = EnvBool("DOWNLOADER_OFF", false)
+
 	//state v3
 	noPrune                  = EnvBool("NO_PRUNE", false)
 	noMerge                  = EnvBool("NO_MERGE", false)
@@ -69,6 +72,8 @@ func ReadMemStats(m *runtime.MemStats) {
 		runtime.ReadMemStats(m)
 	}
 }
+
+func DownloaderOff() bool { return downloaderOff }
 
 func WriteMap() bool      { return writeMap }
 func NoSync() bool        { return noSync }
