@@ -3,7 +3,7 @@ module github.com/ledgerwatch/erigon
 go 1.21.7
 
 require (
-	github.com/erigontech/mdbx-go v0.37.3-0.20240415062232-a997047e9f77
+	github.com/erigontech/mdbx-go v0.37.3-0.20240416075802-c3fb4f677086
 	github.com/erigontech/silkworm-go v0.15.0
 	github.com/ledgerwatch/log/v3 v3.9.0
 	github.com/ledgerwatch/secp256k1 v1.0.0
