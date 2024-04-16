@@ -748,6 +748,7 @@ func (ac *AggregatorRoTx) CanUnwindBeforeBlockNum(blockNum uint64, tx kv.Tx) (ui
 	if blockNum == 0 {
 		panic(0)
 	}
+	log.Warn("[dbg] CanUnwindBeforeBlockNum0", "blockNum", blockNum, "maxTxNum", unwindToTxNum)
 	if err != nil {
 		return 0, false, err
 	}
