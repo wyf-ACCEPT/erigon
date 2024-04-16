@@ -750,6 +750,7 @@ func (ac *AggregatorRoTx) CanUnwindBeforeBlockNum(blockNum uint64, tx kv.Tx) (ui
 	}
 	log.Warn("[dbg] CanUnwindBeforeBlockNum0", "blockNum", blockNum, "maxTxNum", unwindToTxNum)
 	if err != nil {
+		log.Warn("[dbg] CanUnwindBeforeBlockNum1", "err", err)
 		return 0, false, err
 	}
 
@@ -757,20 +758,19 @@ func (ac *AggregatorRoTx) CanUnwindBeforeBlockNum(blockNum uint64, tx kv.Tx) (ui
 	//fmt.Printf("CanUnwindBeforeBlockNum: blockNum=%d unwindTo=%d\n", blockNum, unwindToTxNum)
 	domains, err := NewSharedDomains(tx, ac.a.logger)
 	if err != nil {
+		log.Warn("[dbg] CanUnwindBeforeBlockNum2", "err", err)
 		return 0, false, err
 	}
 	defer domains.Close()
 
-	if ac.CanUnwindDomainsToTxNum() < unwindToTxNum {
-
-	}
-
 	blockNumWithCommitment, _, _, err := domains.LatestCommitmentState(tx, ac.CanUnwindDomainsToTxNum(), unwindToTxNum)
+	log.Warn("[dbg] CanUnwindBeforeBlockNum3", "err", err, "ac.CanUnwindDomainsToTxNum()", ac.CanUnwindDomainsToTxNum(), "unwindToTxNum", unwindToTxNum, "blockNumWithCommitment", blockNumWithCommitment)
 	if err != nil {
 		_minBlockNum, _ := ac.MinUnwindDomainsBlockNum(tx)
 		log.Warn("[dbg] CanUnwindBeforeBlockNum zero3", "err", err, "ac.CanUnwindDomainsToTxNum()", ac.CanUnwindDomainsToTxNum(), "_minBlockNum", _minBlockNum)
 		return _minBlockNum, false, nil //nolint
 	}
+
 	return blockNumWithCommitment, true, nil
 }
 
