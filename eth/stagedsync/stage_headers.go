@@ -335,6 +335,10 @@ Loop:
 			}
 			defer doms.Close()
 
+			/*
+				[WARN] [04-16|03:28:05.951] [dbg] st_headers:CanUnwindBeforeBlockNum unwindTo=5899504 allowedUnwindTo=0 ok=true err=nil
+				[DBUG] [04-16|03:28:05.952] Error while executing stage              err="[2/15 Headers] too far unwind. requested=0, minAllowed=5889698"
+			*/
 			allowedUnwindTo, ok, err := tx.(state.HasAggCtx).AggCtx().(*state.AggregatorRoTx).CanUnwindBeforeBlockNum(unwindTo, tx)
 			log.Warn("[dbg] st_headers:CanUnwindBeforeBlockNum", "unwindTo", unwindTo, "allowedUnwindTo", allowedUnwindTo, "ok", ok, "err", err)
 			if err != nil {
