@@ -1276,7 +1276,7 @@ func (sdc *SharedDomainsCommitmentContext) LatestCommitmentState(tx kv.Tx, cd *D
 			log.Warn("[dbg] LatestCommitmentState4", "txn", txn)
 			state = value
 		} else {
-			log.Warn("[dbg] LatestCommitmentState5", "txn", txn)
+			log.Warn("[dbg] LatestCommitmentState5", "txn", txn, "sinceTx", sinceTx, "untilTx", untilTx)
 		}
 		return nil
 	}); err != nil {
