@@ -745,7 +745,9 @@ func (ac *AggregatorRoTx) MinUnwindDomainsBlockNum(tx kv.Tx) (uint64, error) {
 
 func (ac *AggregatorRoTx) CanUnwindBeforeBlockNum(blockNum uint64, tx kv.Tx) (uint64, bool, error) {
 	unwindToTxNum, err := rawdbv3.TxNums.Max(tx, blockNum)
-	log.Warn("[dbg] CanUnwindBeforeBlockNum1", "blockNum", blockNum, "maxTxNum", unwindToTxNum)
+	if blockNum == 0 {
+		panic(0)
+	}
 	if err != nil {
 		return 0, false, err
 	}

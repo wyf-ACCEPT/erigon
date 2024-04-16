@@ -329,6 +329,9 @@ Loop:
 	if headerInserter.Unwind() {
 		if cfg.historyV3 {
 			unwindTo := headerInserter.UnwindPoint()
+			if unwindTo == 0 {
+				panic(0)
+			}
 			doms, err := state.NewSharedDomains(tx, logger) //TODO: if remove this line TestBlockchainHeaderchainReorgConsistency failing
 			if err != nil {
 				return err
