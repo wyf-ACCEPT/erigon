@@ -283,6 +283,7 @@ func (opts MdbxOpts) Open(ctx context.Context) (kv.RwDB, error) {
 		return nil, err
 	}
 	if dbg.MdbxWafInsteadOfBalance {
+		log.Warn("[dbg] set", "MDBX_opt_prefer_waf_insteadof_balance", 1)
 		if err = env.SetOption(mdbx.OptPreferWafInsteadOfBalance, 1); err != nil {
 			return nil, err
 		}
