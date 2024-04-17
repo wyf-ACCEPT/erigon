@@ -126,6 +126,7 @@ func (e *EthereumExecutionModule) updateForkChoice(ctx context.Context, original
 		return
 	}
 	defer func() {
+		e.logger.Warn("[dbg] Rollback1")
 		if tx != nil {
 			tx.Rollback()
 		}
@@ -325,6 +326,7 @@ TooBigJumpStep:
 		}
 		defer func() {
 			if tx == nil {
+				e.logger.Warn("[dbg] Rollback2")
 				tx.Rollback()
 			}
 		}()
@@ -419,6 +421,7 @@ TooBigJumpStep:
 			}
 		}
 
+		e.logger.Warn("[dbg] Commit1")
 		if err := tx.Commit(); err != nil {
 			sendForkchoiceErrorWithoutWaiting(outcomeCh, err)
 			return
