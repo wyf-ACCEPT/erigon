@@ -329,11 +329,11 @@ func NewDecompressor(compressedFilePath string) (*Decompressor, error) {
 		}
 	}
 	d.wordsStart = pos + dictSize
-	fmt.Printf("[dbg] %d, %d, %d, %d\n", d.Count(), dictSize, d.size, compressedMinSize)
-	if d.Count() == 0 && dictSize == 0 && d.size > compressedMinSize {
-		return nil, &ErrCompressedFileCorrupted{
-			FileName: fName, Reason: fmt.Sprintf("size %v but no words in it", datasize.ByteSize(d.size).HR())}
-	}
+
+	//if d.Count() == 0 && dictSize == 0 && d.size > compressedMinSize {
+	//	return nil, &ErrCompressedFileCorrupted{
+	//		FileName: fName, Reason: fmt.Sprintf("size %v but no words in it", datasize.ByteSize(d.size).HR())}
+	//}
 	closeDecompressor = false
 	return d, nil
 }
