@@ -120,6 +120,7 @@ func (e *EthereumExecutionModule) updateForkChoice(ctx context.Context, original
 		hash   common.Hash
 		number uint64
 	}
+	e.logger.Warn("[dbg] BeginRw1")
 	tx, err := e.db.BeginRwNosync(ctx)
 	if err != nil {
 		sendForkchoiceErrorWithoutWaiting(outcomeCh, err)
@@ -160,7 +161,7 @@ func (e *EthereumExecutionModule) updateForkChoice(ctx context.Context, original
 	}
 
 	tooBigJump := e.syncCfg.LoopBlockLimit > 0 && finishProgressBefore > 0 && fcuHeader.Number.Uint64()-finishProgressBefore > uint64(e.syncCfg.LoopBlockLimit)
-
+	log.Warn("[dbg] tooBigJump0", "tooBigJump", tooBigJump)
 	if tooBigJump {
 		isSynced = false
 	}
@@ -319,6 +320,7 @@ func (e *EthereumExecutionModule) updateForkChoice(ctx context.Context, original
 
 TooBigJumpStep:
 	if tx == nil {
+		e.logger.Warn("[dbg] BeginRw2")
 		tx, err = e.db.BeginRwNosync(ctx)
 		if err != nil {
 			sendForkchoiceErrorWithoutWaiting(outcomeCh, err)
@@ -353,8 +355,9 @@ TooBigJumpStep:
 			sendForkchoiceErrorWithoutWaiting(outcomeCh, fmt.Errorf("forkchoice: block %x not found or was marked invalid", blockHash))
 			return
 		}
+	} else {
+		log.Info("[sync.dbg] full jump!", "currentJumpTo", finishProgressBefore+uint64(e.syncCfg.LoopBlockLimit), "bigJumpTo", fcuHeader.Number.Uint64())
 	}
-
 	// Set Progress for headers and bodies accordingly.
 	if err := stages.SaveStageProgress(tx, stages.Headers, fcuHeader.Number.Uint64()); err != nil {
 		sendForkchoiceErrorWithoutWaiting(outcomeCh, err)
