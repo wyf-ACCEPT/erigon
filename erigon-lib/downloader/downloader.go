@@ -1114,6 +1114,13 @@ func (d *Downloader) mainLoop(silent bool) error {
 					}
 				}
 
+				d.logger.Info("[dbg] maps",
+					"waiting", waiting,
+					"failed", failed,
+					"checking", checking,
+					"complete", len(complete),
+				)
+
 				switch {
 				case len(t.PeerConns()) > 0:
 					d.logger.Debug("[snapshots] Downloading from BitTorrent", "file", t.Name(), "peers", len(t.PeerConns()), "webpeers", len(t.WebseedPeerConns()))
