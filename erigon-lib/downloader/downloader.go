@@ -1209,7 +1209,7 @@ func (d *Downloader) mainLoop(silent bool) error {
 			lastMetadatUpdate := d.stats.LastMetadataUpdate
 			d.lock.Unlock()
 
-			d.logger.Info("[dbg] before lastMetadatUpdate", "available", len(available), "lastMetadatUpdate", lastMetadatUpdate.String())
+			d.logger.Info("[dbg] before lastMetadatUpdate", "available", len(available), "lastMetadatUpdate", lastMetadatUpdate == nil)
 			if lastMetadatUpdate != nil &&
 				((len(available) == 0 && time.Since(*lastMetadatUpdate) > 30*time.Second) ||
 					time.Since(*lastMetadatUpdate) > 5*time.Minute) {
