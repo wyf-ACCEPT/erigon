@@ -1121,6 +1121,7 @@ func (d *Downloader) mainLoop(silent bool) error {
 					"complete", len(complete),
 					"available", len(available),
 					"d.webDownloadInfo", len(d.webDownloadInfo),
+					"seedHashMismatches", len(seedHashMismatches),
 				)
 
 				switch {
@@ -1210,6 +1211,16 @@ func (d *Downloader) mainLoop(silent bool) error {
 			d.lock.Unlock()
 
 			d.logger.Info("[dbg] before lastMetadatUpdate", "available", len(available), "lastMetadatUpdate", lastMetadatUpdate == nil)
+
+			d.logger.Info("[dbg] maps2",
+				"waiting", waiting,
+				"failed", failed,
+				"checking", checking,
+				"complete", len(complete),
+				"available", len(available),
+				"d.webDownloadInfo", len(d.webDownloadInfo),
+				"seedHashMismatches", len(seedHashMismatches),
+			)
 			if lastMetadatUpdate != nil &&
 				((len(available) == 0 && time.Since(*lastMetadatUpdate) > 5*time.Second) ||
 					time.Since(*lastMetadatUpdate) > 20*time.Second) {
@@ -1217,6 +1228,7 @@ func (d *Downloader) mainLoop(silent bool) error {
 				ll := d.torrentClient.Torrents()
 				d.logger.Info("[dbg] update metadata", "torrents", len(ll), "d.webDownloadInfo", len(d.webDownloadInfo))
 				for _, t := range ll {
+
 					if t.Info() == nil {
 						if isComplete, _, _ := d.checkComplete(t.Name()); isComplete {
 							continue
