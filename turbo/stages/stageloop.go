@@ -111,8 +111,10 @@ func ProcessFrozenBlocks(ctx context.Context, db kv.RwDB, blockReader services.F
 			return err
 		}
 		if finStageProgress >= blockReader.FrozenBlocks() {
+			log.Warn("[dbg] ProcessFrozenBlocks break1")
 			break
 		}
+		log.Warn("[dbg] ProcessFrozenBlocks2")
 
 		log.Debug("[sync] processFrozenBlocks", "finStageProgress", finStageProgress, "frozenBlocks", blockReader.FrozenBlocks())
 
@@ -126,6 +128,7 @@ func ProcessFrozenBlocks(ctx context.Context, db kv.RwDB, blockReader services.F
 		}
 
 		if !more {
+			log.Warn("[dbg] ProcessFrozenBlocks3")
 			break
 		}
 	}

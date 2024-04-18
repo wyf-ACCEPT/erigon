@@ -249,6 +249,7 @@ func (e *EthereumExecutionModule) Start(ctx context.Context) {
 	e.semaphore.Acquire(ctx, 1)
 	defer e.semaphore.Release(1)
 
+	log.Warn("[dbg] EthereumExecutionModule start")
 	if err := stages.ProcessFrozenBlocks(ctx, e.db, e.blockReader, e.executionPipeline); err != nil {
 		if !errors.Is(err, context.Canceled) {
 			e.logger.Error("Could not start execution service", "err", err)
