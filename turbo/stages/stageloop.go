@@ -111,7 +111,9 @@ func ProcessFrozenBlocks(ctx context.Context, db kv.RwDB, blockReader services.F
 			return err
 		}
 		if finStageProgress >= blockReader.FrozenBlocks() {
-			log.Warn("[dbg] ProcessFrozenBlocks break1")
+			log.Warn("[dbg] ProcessFrozenBlocks break1", "finStageProgress", finStageProgress, "blockReader.FrozenBlocks()", blockReader.FrozenBlocks())
+			blockReader.Snapshots().ReopenFolder()
+			log.Warn("[dbg] ProcessFrozenBlocks break1", "finStageProgress", finStageProgress, "blockReader.FrozenBlocks()", blockReader.FrozenBlocks())
 			break
 		}
 		log.Warn("[dbg] ProcessFrozenBlocks2")
