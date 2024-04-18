@@ -1211,8 +1211,8 @@ func (d *Downloader) mainLoop(silent bool) error {
 
 			d.logger.Info("[dbg] before lastMetadatUpdate", "available", len(available), "lastMetadatUpdate", lastMetadatUpdate == nil)
 			if lastMetadatUpdate != nil &&
-				((len(available) == 0 && time.Since(*lastMetadatUpdate) > 30*time.Second) ||
-					time.Since(*lastMetadatUpdate) > 5*time.Minute) {
+				((len(available) == 0 && time.Since(*lastMetadatUpdate) > 5*time.Second) ||
+					time.Since(*lastMetadatUpdate) > 20*time.Second) {
 
 				ll := d.torrentClient.Torrents()
 				d.logger.Info("[dbg] update metadata", "torrents", len(ll), "d.webDownloadInfo", len(d.webDownloadInfo))
@@ -1221,6 +1221,7 @@ func (d *Downloader) mainLoop(silent bool) error {
 						if isComplete, _, _ := d.checkComplete(t.Name()); isComplete {
 							continue
 						}
+						d.logger.Info("[dbg] not completed", "t", t.Name())
 
 						d.lock.RLock()
 						_, ok := d.downloading[t.Name()]
