@@ -1221,18 +1221,19 @@ func (d *Downloader) mainLoop(silent bool) error {
 						if isComplete, _, _ := d.checkComplete(t.Name()); isComplete {
 							continue
 						}
-						d.logger.Info("[dbg] not completed", "t", t.Name())
 
 						d.lock.RLock()
 						_, ok := d.downloading[t.Name()]
 						d.lock.RUnlock()
 
 						if !ok {
+
 							if _, ok := seedHashMismatches[t.InfoHash()]; ok {
 								continue
 							}
 
 							_, mismatches, err := d.getWebDownloadInfo(t)
+							d.logger.Info("[dbg] mismatches", "t", t.Name(), "mismatches", mismatches)
 
 							seedHashMismatches[t.InfoHash()] = append(seedHashMismatches[t.InfoHash()], mismatches...)
 
