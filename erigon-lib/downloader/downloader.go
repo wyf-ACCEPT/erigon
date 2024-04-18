@@ -1233,7 +1233,7 @@ func (d *Downloader) mainLoop(silent bool) error {
 							}
 
 							_, mismatches, err := d.getWebDownloadInfo(t)
-							d.logger.Info("[dbg] mismatches", "t", t.Name(), "mismatches", mismatches)
+							d.logger.Info("[dbg] mismatches", "t", t.Name(), "mismatches", mismatches, "c", t.Complete.Bool())
 
 							seedHashMismatches[t.InfoHash()] = append(seedHashMismatches[t.InfoHash()], mismatches...)
 
