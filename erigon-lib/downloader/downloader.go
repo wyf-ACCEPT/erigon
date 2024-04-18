@@ -1198,8 +1198,8 @@ func (d *Downloader) mainLoop(silent bool) error {
 					}
 
 					d.logger.Debug("[snapshots] Downloading from torrent", "file", t.Name(), "peers", len(t.PeerConns()))
-
 					log.Warn("[dbg] delete from waiting !", "waiting", waiting)
+
 					delete(waiting, t.Name())
 					d.torrentDownload(t, downloadComplete, sem)
 				}
