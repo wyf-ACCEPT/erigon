@@ -1198,6 +1198,8 @@ func (d *Downloader) mainLoop(silent bool) error {
 					}
 
 					d.logger.Debug("[snapshots] Downloading from torrent", "file", t.Name(), "peers", len(t.PeerConns()))
+
+					log.Warn("[dbg] delete from waiting !", "waiting", waiting)
 					delete(waiting, t.Name())
 					d.torrentDownload(t, downloadComplete, sem)
 				}
@@ -1207,6 +1209,7 @@ func (d *Downloader) mainLoop(silent bool) error {
 			lastMetadatUpdate := d.stats.LastMetadataUpdate
 			d.lock.Unlock()
 
+			d.logger.Info("[dbg] before lastMetadatUpdate", "available", len(available), "lastMetadatUpdate", lastMetadatUpdate.String())
 			if lastMetadatUpdate != nil &&
 				((len(available) == 0 && time.Since(*lastMetadatUpdate) > 30*time.Second) ||
 					time.Since(*lastMetadatUpdate) > 5*time.Minute) {
@@ -1220,7 +1223,7 @@ func (d *Downloader) mainLoop(silent bool) error {
 						}
 
 						d.lock.RLock()
-						_, ok := d.webDownloadInfo[t.Name()]
+						_, ok := d.downloading[t.Name()]
 						d.lock.RUnlock()
 
 						if !ok {
@@ -1228,7 +1231,7 @@ func (d *Downloader) mainLoop(silent bool) error {
 								continue
 							}
 
-							info, mismatches, err := d.getWebDownloadInfo(t)
+							_, mismatches, err := d.getWebDownloadInfo(t)
 
 							seedHashMismatches[t.InfoHash()] = append(seedHashMismatches[t.InfoHash()], mismatches...)
 
@@ -1240,13 +1243,13 @@ func (d *Downloader) mainLoop(silent bool) error {
 							}
 
 							d.lock.Lock()
-							d.webDownloadInfo[t.Name()] = info
+							d.downloading[t.Name()] = struct{}{}
 							d.lock.Unlock()
 						}
 					} else {
-						d.lock.Lock()
-						delete(d.webDownloadInfo, t.Name())
-						d.lock.Unlock()
+						//d.lock.Lock()
+						//delete(d.downloading, t.Name())
+						//d.lock.Unlock()
 					}
 				}
 			}
