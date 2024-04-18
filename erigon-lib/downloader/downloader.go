@@ -1007,6 +1007,16 @@ func (d *Downloader) mainLoop(silent bool) error {
 
 			available := availableTorrents(d.ctx, pending, d.cfg.DownloadSlots-downloadingLen)
 
+			d.logger.Info("[dbg] maps",
+				"waiting", waiting,
+				"failed", failed,
+				"checking", checking,
+				"complete", len(complete),
+				"pending", len(pending),
+				"available", len(available),
+				"seedHashMismatches", len(seedHashMismatches),
+			)
+
 			for _, t := range available {
 
 				torrentInfo, err := d.torrentInfo(t.Name())
@@ -1071,15 +1081,6 @@ func (d *Downloader) mainLoop(silent bool) error {
 						waiting[t.Name()] = struct{}{}
 					}
 				}
-
-				d.logger.Info("[dbg] maps",
-					"waiting", waiting,
-					"failed", failed,
-					"checking", checking,
-					"complete", len(complete),
-					"available", len(available),
-					"seedHashMismatches", len(seedHashMismatches),
-				)
 
 				switch {
 				case len(t.PeerConns()) > 0:
