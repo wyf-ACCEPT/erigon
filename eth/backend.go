@@ -1351,7 +1351,6 @@ func setUpBlockReader(ctx context.Context, db kv.RwDB, dirs datadir.Dirs, snConf
 			allBorSnapshots.ReopenFolder()
 		}
 	} else {
-		log.Warn("[dbg] OptimisticalyReopenFolder")
 		allSnapshots.OptimisticalyReopenFolder()
 		if isBor {
 			allBorSnapshots.OptimisticalyReopenFolder()
