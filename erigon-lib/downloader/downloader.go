@@ -87,11 +87,10 @@ type Downloader struct {
 	logger    log.Logger
 	verbosity log.Lvl
 
-	torrentFiles    *TorrentFiles
-	snapshotLock    *snapshotLock
-	webDownloadInfo map[string]webDownloadInfo
-	downloading     map[string]struct{}
-	downloadLimit   *rate.Limit
+	torrentFiles  *TorrentFiles
+	snapshotLock  *snapshotLock
+	downloading   map[string]struct{}
+	downloadLimit *rate.Limit
 }
 
 type webDownloadInfo struct {
@@ -265,7 +264,6 @@ func New(ctx context.Context, cfg *downloadercfg.Cfg, logger log.Logger, verbosi
 		verbosity:           verbosity,
 		torrentFiles:        &TorrentFiles{dir: cfg.Dirs.Snap},
 		snapshotLock:        snapLock,
-		webDownloadInfo:     map[string]webDownloadInfo{},
 		webDownloadSessions: map[string]*RCloneSession{},
 		downloading:         map[string]struct{}{},
 		webseedsDiscover:    discover,
@@ -993,11 +991,7 @@ func (d *Downloader) mainLoop(silent bool) error {
 			default:
 			}
 
-			d.lock.RLock()
-			webDownloadInfoLen := len(d.webDownloadInfo)
-			d.lock.RUnlock()
-
-			if len(pending)+webDownloadInfoLen == 0 {
+			if len(pending) == 0 {
 				select {
 				case <-d.ctx.Done():
 					return
@@ -1012,42 +1006,6 @@ func (d *Downloader) mainLoop(silent bool) error {
 			d.lock.RUnlock()
 
 			available := availableTorrents(d.ctx, pending, d.cfg.DownloadSlots-downloadingLen)
-
-			d.lock.RLock()
-			for _, webDownload := range d.webDownloadInfo {
-				_, downloading := d.downloading[webDownload.torrent.Name()]
-
-				if downloading {
-					continue
-				}
-
-				addDownload := true
-
-				for _, t := range available {
-					if t.Name() == webDownload.torrent.Name() {
-						addDownload = false
-						break
-					}
-				}
-
-				if addDownload {
-					if len(available) < d.cfg.DownloadSlots-downloadingLen {
-						available = append(available, webDownload.torrent)
-					}
-				} else {
-					if wi, isStateFile, ok := snaptype.ParseFileName(d.SnapDir(), webDownload.torrent.Name()); ok && !isStateFile {
-						for i, t := range available {
-							if ai, _, ok := snaptype.ParseFileName(d.SnapDir(), t.Name()); ok {
-								if ai.CompareTo(wi) > 0 {
-									available[i] = webDownload.torrent
-									break
-								}
-							}
-						}
-					}
-				}
-			}
-			d.lock.RUnlock()
 
 			for _, t := range available {
 
@@ -1120,7 +1078,6 @@ func (d *Downloader) mainLoop(silent bool) error {
 					"checking", checking,
 					"complete", len(complete),
 					"available", len(available),
-					"d.webDownloadInfo", len(d.webDownloadInfo),
 					"seedHashMismatches", len(seedHashMismatches),
 				)
 
@@ -1158,46 +1115,6 @@ func (d *Downloader) mainLoop(silent bool) error {
 						d.torrentDownload(t, downloadComplete, sem)
 					}
 				default:
-					if d.webDownloadClient != nil {
-						d.lock.RLock()
-						webDownload, ok := d.webDownloadInfo[t.Name()]
-						d.lock.RUnlock()
-
-						if !ok {
-							var mismatches []*seedHash
-							var err error
-
-							webDownload, mismatches, err = d.getWebDownloadInfo(t)
-
-							if err != nil {
-								if len(mismatches) > 0 {
-									seedHashMismatches[t.InfoHash()] = append(seedHashMismatches[t.InfoHash()], mismatches...)
-									logSeedHashMismatches(t.InfoHash(), t.Name(), seedHashMismatches, d.logger)
-								}
-
-								d.logger.Warn("Can't complete web download", "file", t.Info().Name, "err", err)
-								continue
-							}
-						}
-
-						root, _ := path.Split(webDownload.url.String())
-						peerUrl, err := url.Parse(root)
-
-						if err != nil {
-							d.logger.Warn("Can't complete web download", "file", t.Info().Name, "err", err)
-							continue
-						}
-
-						d.lock.Lock()
-						delete(d.webDownloadInfo, t.Name())
-						d.lock.Unlock()
-
-						d.logger.Debug("[snapshots] Downloading from web", "file", t.Name(), "webpeers", len(t.WebseedPeerConns()))
-						delete(waiting, t.Name())
-						d.webDownload([]*url.URL{peerUrl}, t, &webDownload, downloadComplete, sem)
-						continue
-					}
-
 					d.logger.Debug("[snapshots] Downloading from torrent", "file", t.Name(), "peers", len(t.PeerConns()))
 					log.Warn("[dbg] delete from waiting !", "waiting", waiting)
 
@@ -1218,7 +1135,6 @@ func (d *Downloader) mainLoop(silent bool) error {
 				"checking", checking,
 				"complete", len(complete),
 				"available", len(available),
-				"d.webDownloadInfo", len(d.webDownloadInfo),
 				"seedHashMismatches", len(seedHashMismatches),
 			)
 			if lastMetadatUpdate != nil &&
@@ -1226,7 +1142,7 @@ func (d *Downloader) mainLoop(silent bool) error {
 					time.Since(*lastMetadatUpdate) > 20*time.Second) {
 
 				ll := d.torrentClient.Torrents()
-				d.logger.Info("[dbg] update metadata", "torrents", len(ll), "d.webDownloadInfo", len(d.webDownloadInfo))
+				d.logger.Info("[dbg] update metadata", "torrents", len(ll))
 				for _, t := range ll {
 
 					if t.Info() == nil {
@@ -1410,14 +1326,6 @@ func (d *Downloader) checkComplete(name string) (bool, int64, *time.Time) {
 }
 
 func (d *Downloader) getWebDownloadInfo(t *torrent.Torrent) (webDownloadInfo, []*seedHash, error) {
-	d.lock.RLock()
-	info, ok := d.webDownloadInfo[t.Name()]
-	d.lock.RUnlock()
-
-	if ok {
-		return info, nil, nil
-	}
-
 	// todo this function does not exit on first matched webseed hash, could make unexpected results
 	infos, seedHashMismatches, err := d.webseeds.getWebDownloadInfo(d.ctx, t)
 	if err != nil || len(infos) == 0 {
@@ -1932,8 +1840,6 @@ func (d *Downloader) ReCalcStats(interval time.Duration) {
 						}
 					}
 				}
-			} else if _, ok := d.webDownloadInfo[torrentName]; ok {
-				stats.MetadataReady++
 			} else {
 				noMetadata = append(noMetadata, torrentName)
 			}
