@@ -1119,6 +1119,8 @@ func (d *Downloader) mainLoop(silent bool) error {
 					"failed", failed,
 					"checking", checking,
 					"complete", len(complete),
+					"available", len(available),
+					"d.webDownloadInfo", len(d.webDownloadInfo),
 				)
 
 				switch {
@@ -1209,7 +1211,9 @@ func (d *Downloader) mainLoop(silent bool) error {
 				((len(available) == 0 && time.Since(*lastMetadatUpdate) > 30*time.Second) ||
 					time.Since(*lastMetadatUpdate) > 5*time.Minute) {
 
-				for _, t := range d.torrentClient.Torrents() {
+				ll := d.torrentClient.Torrents()
+				d.logger.Info("[dbg] update metadata", "torrents", len(ll), "d.webDownloadInfo", len(d.webDownloadInfo))
+				for _, t := range ll {
 					if t.Info() == nil {
 						if isComplete, _, _ := d.checkComplete(t.Name()); isComplete {
 							continue
