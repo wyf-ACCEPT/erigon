@@ -372,7 +372,6 @@ func doIntegrity(cliCtx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-
 	ctx := cliCtx.Context
 	dirs := datadir.New(cliCtx.String(utils.DataDirFlag.Name))
 	chainDB := dbCfg(kv.ChainDB, dirs.Chaindata).MustOpen()

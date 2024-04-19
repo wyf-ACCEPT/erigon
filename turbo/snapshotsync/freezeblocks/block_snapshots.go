@@ -2120,7 +2120,7 @@ func HeadersIdx(ctx context.Context, info snaptype.FileInfo, salt uint32, tmpDir
 }
 
 func BodiesIdx(ctx context.Context, info snaptype.FileInfo, salt uint32, tmpDir string, p *background.Progress, lvl log.Lvl, logger log.Logger) (err error) {
-	num := make([]byte, 8)
+	num := make([]byte, binary.MaxVarintLen64)
 
 	if err := Idx(ctx, info, salt, info.From, tmpDir, log.LvlDebug, p, func(idx *recsplit.RecSplit, i, offset uint64, _ []byte) error {
 		if p != nil {
