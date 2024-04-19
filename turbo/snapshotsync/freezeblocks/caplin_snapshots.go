@@ -37,7 +37,7 @@ import (
 var sidecarSSZSize = (&cltypes.BlobSidecar{}).EncodingSizeSSZ()
 
 func BeaconSimpleIdx(ctx context.Context, sn snaptype.FileInfo, salt uint32, tmpDir string, p *background.Progress, lvl log.Lvl, logger log.Logger) (err error) {
-	if err := Idx(ctx, sn, salt, sn.From, tmpDir, log.LvlDebug, p, func(idx *recsplit.RecSplit, i, offset uint64, word []byte) error {
+	if err := Idx(ctx, sn, salt, sn.From, tmpDir, log.LvlTrace, p, func(idx *recsplit.RecSplit, i, offset uint64, word []byte) error {
 		if i%20_000 == 0 {
 			logger.Log(lvl, fmt.Sprintf("Generating idx for %s", sn.Type.String()), "progress", i)
 		}
