@@ -161,15 +161,14 @@ func (m *mdbxPieceCompletionBatch) Set(pk metainfo.PieceKey, b bool) error {
 	var key [infohash.Size + 4]byte
 	copy(key[:], pk.InfoHash[:])
 	binary.BigEndian.PutUint32(key[infohash.Size:], uint32(pk.Index))
-
-	v := []byte(incomplete)
-	if b {
-		v = []byte(complete)
-	}
 	return m.db.Batch(func(tx kv.RwTx) error {
 		i++
-		if i%1000 == 0 {
+		if i%10_000 == 0 {
 			log.Warn("[dbg] batch calls", "i", i)
+		}
+		v := []byte(incomplete)
+		if b {
+			v = []byte(complete)
 		}
 		return tx.Put(kv.BittorrentCompletion, key[:], v)
 	})
