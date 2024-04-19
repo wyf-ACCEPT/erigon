@@ -1081,7 +1081,6 @@ func stageExec(db kv.RwDB, ctx context.Context, logger log.Logger) error {
 	if warmup {
 		return reset2.WarmupExec(ctx, db)
 	}
-	//agg.BuildMissedIndicesInBackground(ctx, estimate.IndexSnapshot.Workers())
 	if reset {
 		if err := reset2.ResetExec(ctx, db, chain, "", logger); err != nil {
 			return err
