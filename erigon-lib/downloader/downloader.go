@@ -1832,7 +1832,6 @@ func (d *Downloader) ReCalcStats(interval time.Duration) {
 	}
 
 	var dbInfo int
-	var dbComplete int
 	var tComplete int
 	var torrentInfo int
 
@@ -1890,30 +1889,8 @@ func (d *Downloader) ReCalcStats(interval time.Duration) {
 
 		if !torrentComplete {
 			if info, err := d.torrentInfo(torrentName); err == nil {
-				updateStats := t.Info() == nil
-
-				if updateStats {
+				if info != nil {
 					dbInfo++
-				}
-
-				if info.Completed != nil && info.Completed.Before(time.Now()) {
-					if info.Length != nil {
-						if updateStats {
-							stats.MetadataReady++
-							stats.BytesTotal += uint64(*info.Length)
-						}
-
-						if fi, err := os.Stat(filepath.Join(d.SnapDir(), t.Name())); err == nil {
-							if torrentComplete = (fi.Size() == *info.Length); torrentComplete {
-								//infoRead := t.Stats().BytesReadData
-								//if updateStats || infoRead.Int64() == 0 {
-								//	stats.BytesCompleted += uint64(*info.Length)
-								//}
-								dbComplete++
-								progress = float32(100)
-							}
-						}
-					}
 				}
 			} else if _, ok := d.webDownloadInfo[torrentName]; ok {
 				stats.MetadataReady++
@@ -2027,7 +2004,6 @@ func (d *Downloader) ReCalcStats(interval time.Duration) {
 			"torrent", torrentInfo,
 			"db", dbInfo,
 			"t-complete", tComplete,
-			"db-complete", dbComplete,
 			"webseed-trips", stats.WebseedTripCount.Load(),
 			"webseed-discards", stats.WebseedDiscardCount.Load(),
 			"webseed-fails", stats.WebseedServerFails.Load(),
@@ -2595,7 +2571,8 @@ func openClient(ctx context.Context, dbDir, snapDir string, cfg *torrent.ClientC
 	if err != nil {
 		return nil, nil, nil, nil, fmt.Errorf("torrentcfg.openClient: %w", err)
 	}
-	c, err = NewMdbxPieceCompletion(db)
+	//c, err = NewMdbxPieceCompletion(db)
+	c, err = NewMdbxPieceCompletionBatch(db)
 	if err != nil {
 		return nil, nil, nil, nil, fmt.Errorf("torrentcfg.NewMdbxPieceCompletion: %w", err)
 	}
