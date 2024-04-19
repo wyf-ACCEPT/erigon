@@ -540,6 +540,7 @@ func (s *CaplinSnapshots) BuildMissingIndices(ctx context.Context, logger log.Lo
 		p := &background.Progress{}
 
 		if err := BeaconSimpleIdx(ctx, segment, s.Salt, s.tmpdir, p, log.LvlDebug, logger); err != nil {
+			log.Warn("[dbg] CaplinSnapshots.BuildMissingIndices2", "err", err)
 			return err
 		}
 	}
