@@ -1376,20 +1376,30 @@ func (br *BlockRetire) RetireBlocks(ctx context.Context, minBlockNum uint64, max
 	includeBor := br.chainConfig.Bor != nil
 
 	var err error
+	if includeBor {
+		// "bor snaps" can be behind "block snaps", it's ok: for example because of `kill -9` in the middle of merge
+		// just build everything until `FrozenBlocks()`
+		for {
+			var okBor bool
+			minBlockNum = cmp.Max(br.blockReader.FrozenBlocks(), minBlockNum)
+			okBor, err = br.retireBorBlocks(ctx, br.blockReader.FrozenBorBlocks(), minBlockNum, lvl, seedNewSnapshots, onDeleteSnapshots)
+			if err != nil {
+				return err
+			}
+			if !okBor {
+				break
+			}
+		}
+	}
+
 	for {
 		var ok, okBor bool
 
 		minBlockNum = cmp.Max(br.blockReader.FrozenBlocks(), minBlockNum)
 		maxBlockNum = br.maxScheduledBlock.Load()
 
-		if includeBor {
-			// "bor snaps" can be behind "block snaps", it's ok: for example because of `kill -9` in the middle of merge
-			okBor, err = br.retireBorBlocks(ctx, br.blockReader.FrozenBorBlocks(), minBlockNum, lvl, seedNewSnapshots, onDeleteSnapshots)
-			if err != nil {
-				return err
-			}
-		}
-
+		log.Warn("[dbg] retireBlocks iter", " br.maxScheduledBlock.Load()", br.maxScheduledBlock.Load(),
+			"br.blockReader.FrozenBlocks()", br.blockReader.FrozenBlocks())
 		ok, err = br.retireBlocks(ctx, minBlockNum, maxBlockNum, lvl, seedNewSnapshots, onDeleteSnapshots)
 		if err != nil {
 			return err
