@@ -31,7 +31,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func BaseCase(t *testing.T) (kv.RwDB, kv.RwTx, kv.RwCursorDupSort) {
+func BaseCaseDB(t *testing.T) kv.RwDB {
 	t.Helper()
 	path := t.TempDir()
 	logger := log.New()
@@ -43,11 +43,18 @@ func BaseCase(t *testing.T) (kv.RwDB, kv.RwTx, kv.RwCursorDupSort) {
 		}
 	}).MapSize(128 * datasize.MB).MustOpen()
 	t.Cleanup(db.Close)
+	return db
+}
+
+func BaseCase(t *testing.T) (kv.RwDB, kv.RwTx, kv.RwCursorDupSort) {
+	t.Helper()
+	db := BaseCaseDB(t)
 
 	tx, err := db.BeginRw(context.Background())
 	require.NoError(t, err)
 	t.Cleanup(tx.Rollback)
 
+	table := "Table"
 	c, err := tx.RwCursorDupSort(table)
 	require.NoError(t, err)
 	t.Cleanup(c.Close)
