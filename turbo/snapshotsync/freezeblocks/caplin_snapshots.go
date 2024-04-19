@@ -522,11 +522,14 @@ func (s *CaplinSnapshots) BuildMissingIndices(ctx context.Context, logger log.Lo
 
 	// wait for Downloader service to download all expected snapshots
 	segments, _, err := SegmentsCaplin(s.dir, 0)
+	log.Warn("[dbg] CaplinSnapshots.BuildMissingIndices", "segments", len(segments), "err", err)
 	if err != nil {
 		return err
 	}
 	for index := range segments {
 		segment := segments[index]
+		log.Warn("[dbg] CaplinSnapshots.BuildMissingIndices1", "t", segment.Type.Enum().String(), "name", segment.Name())
+
 		// The same slot=>offset mapping is used for both beacon blocks and blob sidecars.
 		if segment.Type.Enum() != snaptype.Enums.BeaconBlocks && segment.Type.Enum() != snaptype.Enums.BlobSidecars {
 			continue
