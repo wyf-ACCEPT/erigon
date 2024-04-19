@@ -1361,15 +1361,21 @@ func (br *BlockRetire) RetireBlocksInBackground(ctx context.Context, minBlockNum
 			defer br.snBuildAllowed.Release(1)
 		}
 
-		err := br.RetireBlocks(ctx, minBlockNum, maxBlockNum, lvl, seedNewSnapshots, onDeleteSnapshots)
+		iterationsLimit := 100 // to prevent holding semaphore for too long
+		err := br.RetireBlocks(ctx, minBlockNum, maxBlockNum, iterationsLimit, lvl, seedNewSnapshots, onDeleteSnapshots)
 		if err != nil {
-			br.logger.Warn("[snapshots] retire blocks", "err", err)
+			if errors.Is(err, context.Canceled) {
+				br.logger.Warn("[snapshots] retire blocks", "err", err)
+			}
 			return
 		}
 	}()
 }
 
-func (br *BlockRetire) RetireBlocks(ctx context.Context, minBlockNum uint64, maxBlockNum uint64, lvl log.Lvl, seedNewSnapshots func(downloadRequest []services.DownloadRequest) error, onDeleteSnapshots func(l []string) error) error {
+func (br *BlockRetire) RetireBlocks(ctx context.Context, minBlockNum, maxBlockNum uint64, iterationsLimit int, lvl log.Lvl, seedNewSnapshots func(downloadRequest []services.DownloadRequest) error, onDeleteSnapshots func(l []string) error) error {
+	if iterationsLimit == -1 {
+		iterationsLimit = 10_000_000
+	}
 	if maxBlockNum > br.maxScheduledBlock.Load() {
 		br.maxScheduledBlock.Store(maxBlockNum)
 	}
@@ -1392,13 +1398,13 @@ func (br *BlockRetire) RetireBlocks(ctx context.Context, minBlockNum uint64, max
 		}
 	}
 
-	for {
+	for ; iterationsLimit > 0; iterationsLimit-- {
 		var ok, okBor bool
 
 		minBlockNum = cmp.Max(br.blockReader.FrozenBlocks(), minBlockNum)
 		maxBlockNum = br.maxScheduledBlock.Load()
 
-		log.Warn("[dbg] retireBlocks iter", " br.maxScheduledBlock.Load()", br.maxScheduledBlock.Load(), "br.blockReader.FrozenBlocks()", br.blockReader.FrozenBlocks())
+		log.Warn("[dbg] retireBlocks iter", "br.maxScheduledBlock.Load()", br.maxScheduledBlock.Load(), "br.blockReader.FrozenBlocks()", br.blockReader.FrozenBlocks())
 		ok, err = br.retireBlocks(ctx, minBlockNum, maxBlockNum, lvl, seedNewSnapshots, onDeleteSnapshots)
 		if err != nil {
 			return err
@@ -1413,6 +1419,7 @@ func (br *BlockRetire) RetireBlocks(ctx context.Context, minBlockNum uint64, max
 		}
 
 		if !(ok || okBor) {
+			log.Warn("[dbg] retireBlocks exit", "ok", ok, "okBor", okBor)
 			break
 		}
 	}
