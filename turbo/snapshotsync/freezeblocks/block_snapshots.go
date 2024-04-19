@@ -478,7 +478,7 @@ func (s *RoSnapshots) OpenFiles() (list []string) {
 // ReopenList stops on optimistic=false, continue opening files on optimistic=true
 func (s *RoSnapshots) ReopenList(fileNames []string, optimistic bool) error {
 	if err := s.rebuildSegments(fileNames, true, optimistic); err != nil {
-		return err
+		return fmt.Errorf("ReopenList: %w", err)
 	}
 	return nil
 }
