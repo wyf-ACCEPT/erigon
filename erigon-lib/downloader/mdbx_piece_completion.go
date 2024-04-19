@@ -123,8 +123,6 @@ type mdbxPieceCompletionBatch struct {
 
 var _ storage.PieceCompletion = (*mdbxPieceCompletionBatch)(nil)
 
-var i int
-
 func NewMdbxPieceCompletionBatch(db kv.RwDB) (ret storage.PieceCompletion, err error) {
 	ret = &mdbxPieceCompletionBatch{db: db.(*mdbx.MdbxKV)}
 	return
