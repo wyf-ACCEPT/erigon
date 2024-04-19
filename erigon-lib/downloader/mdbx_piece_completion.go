@@ -25,6 +25,7 @@ import (
 	"github.com/anacrolix/torrent/types/infohash"
 	"github.com/ledgerwatch/erigon-lib/kv"
 	"github.com/ledgerwatch/erigon-lib/kv/mdbx"
+	"github.com/ledgerwatch/log/v3"
 )
 
 const (
@@ -123,6 +124,8 @@ type mdbxPieceCompletionBatch struct {
 
 var _ storage.PieceCompletion = (*mdbxPieceCompletionBatch)(nil)
 
+var i int
+
 func NewMdbxPieceCompletionBatch(db kv.RwDB) (ret storage.PieceCompletion, err error) {
 	ret = &mdbxPieceCompletionBatch{db: db.(*mdbx.MdbxKV)}
 	return
@@ -164,6 +167,10 @@ func (m *mdbxPieceCompletionBatch) Set(pk metainfo.PieceKey, b bool) error {
 		v = []byte(complete)
 	}
 	return m.db.Batch(func(tx kv.RwTx) error {
+		i++
+		if i%1000 == 0 {
+			log.Warn("[dbg] batch calls", "i", i)
+		}
 		return tx.Put(kv.BittorrentCompletion, key[:], v)
 	})
 }
