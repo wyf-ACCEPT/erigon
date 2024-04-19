@@ -1398,8 +1398,7 @@ func (br *BlockRetire) RetireBlocks(ctx context.Context, minBlockNum uint64, max
 		minBlockNum = cmp.Max(br.blockReader.FrozenBlocks(), minBlockNum)
 		maxBlockNum = br.maxScheduledBlock.Load()
 
-		log.Warn("[dbg] retireBlocks iter", " br.maxScheduledBlock.Load()", br.maxScheduledBlock.Load(),
-			"br.blockReader.FrozenBlocks()", br.blockReader.FrozenBlocks())
+		log.Warn("[dbg] retireBlocks iter", " br.maxScheduledBlock.Load()", br.maxScheduledBlock.Load(), "br.blockReader.FrozenBlocks()", br.blockReader.FrozenBlocks())
 		ok, err = br.retireBlocks(ctx, minBlockNum, maxBlockNum, lvl, seedNewSnapshots, onDeleteSnapshots)
 		if err != nil {
 			return err
