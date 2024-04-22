@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"math/rand/v2"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -871,8 +872,10 @@ Loop:
 					applyTx.CollectMetrics()
 					if !useExternalTx {
 						tt = time.Now()
-						if err = applyTx.Commit(); err != nil {
-							return err
+						if rand.N(2)%2 == 0 {
+							if err = applyTx.Commit(); err != nil {
+								return err
+							}
 						}
 
 						t2 = time.Since(tt)
