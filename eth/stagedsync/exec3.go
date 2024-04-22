@@ -868,10 +868,6 @@ Loop:
 						return err
 					}
 
-					if blocksFreezeCfg.Produce {
-						agg.BuildFilesInBackground(outputTxNum.Load())
-					}
-
 					tt = time.Now()
 					applyTx.CollectMetrics()
 					if !useExternalTx && rand.N(2)%2 == 0 {
@@ -903,6 +899,10 @@ Loop:
 							return err
 						}
 					}
+					if blocksFreezeCfg.Produce {
+						agg.BuildFilesInBackground(outputTxNum.Load())
+					}
+
 					doms, err = state2.NewSharedDomains(applyTx, logger)
 					if err != nil {
 						return err
