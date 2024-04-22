@@ -6,7 +6,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"math/rand/v2"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -606,6 +605,7 @@ func ExecV3(ctx context.Context,
 
 	//fmt.Printf("exec blocks: %d -> %d\n", blockNum, maxBlockNum)
 
+	var commits int
 	var b *types.Block
 Loop:
 	for ; blockNum <= maxBlockNum; blockNum++ {
@@ -870,7 +870,8 @@ Loop:
 
 					tt = time.Now()
 					applyTx.CollectMetrics()
-					if !useExternalTx && rand.N(2)%2 == 0 {
+					commits++
+					if !useExternalTx && commits%2 == 0 {
 						tt = time.Now()
 						t2 = time.Since(tt)
 
