@@ -868,20 +868,15 @@ Loop:
 						return err
 					}
 
+					if blocksFreezeCfg.Produce {
+						agg.BuildFilesInBackground(outputTxNum.Load())
+					}
+
 					tt = time.Now()
 					applyTx.CollectMetrics()
-					if !useExternalTx {
+					if !useExternalTx && rand.N(2)%2 == 0 {
 						tt = time.Now()
-						if rand.N(2)%2 == 0 {
-							if err = applyTx.Commit(); err != nil {
-								return err
-							}
-						}
-
 						t2 = time.Since(tt)
-						if blocksFreezeCfg.Produce {
-							agg.BuildFilesInBackground(outputTxNum.Load())
-						}
 
 						tt = time.Now()
 						for haveMoreToPrune := true; haveMoreToPrune; {
