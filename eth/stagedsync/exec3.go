@@ -874,7 +874,7 @@ Loop:
 					if !useExternalTx && commits%2 == 0 {
 						tt = time.Now()
 						t2 = time.Since(tt)
-
+						applyTx.Commit()
 						tt = time.Now()
 						for haveMoreToPrune := true; haveMoreToPrune; {
 							if err := chainDb.Update(ctx, func(tx kv.RwTx) error {
