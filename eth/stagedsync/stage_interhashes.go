@@ -110,7 +110,7 @@ func SpawnIntermediateHashesStage(s *StageState, u Unwinder, tx kv.RwTx, cfg Tri
 	tooBigJump := to > s.BlockNumber && to-s.BlockNumber > 100_000 // RetainList is in-memory structure and it will OOM if jump is too big, such big jump anyway invalidate most of existing Intermediate hashes
 	if !tooBigJump && cfg.historyV3 && to-s.BlockNumber > 10 {
 		//incremental can work only on DB data, not on snapshots
-		_, n, err := rawdbv3.TxNums.FindBlockNum(tx, cfg.agg.EndTxNumMinimax())
+		_, n, err := rawdbv3.TxNums.FindBlockNum(tx, cfg.agg.VisibleFilesMaxTxNum())
 		if err != nil {
 			return trie.EmptyRoot, err
 		}

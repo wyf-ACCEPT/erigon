@@ -128,7 +128,7 @@ func printStages(tx kv.Tx, snapshots *freezeblocks.RoSnapshots, borSn *freezeblo
 		return err
 	}
 
-	_, lastBlockInHistSnap, _ := rawdbv3.TxNums.FindBlockNum(tx, agg.EndTxNumMinimax())
+	_, lastBlockInHistSnap, _ := rawdbv3.TxNums.FindBlockNum(tx, agg.VisibleFilesMaxTxNum())
 	_lb, _lt, _ := rawdbv3.TxNums.Last(tx)
 	fmt.Fprintf(w, "history.v3: %t, idx steps: %.02f, lastBlockInSnap=%d, TxNums_Index(%d,%d), filesAmount: %d\n\n", h3, rawdbhelpers.IdxStepsCountV3(tx), lastBlockInHistSnap, _lb, _lt, agg.FilesAmount())
 	s1, err := tx.ReadSequence(kv.EthTx)

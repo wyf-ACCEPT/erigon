@@ -358,7 +358,7 @@ func aggregatorV3_RestartOnDatadir(t *testing.T, rc runCfg) {
 	}()
 
 	//anotherAgg.SetTx(rwTx)
-	startTx := anotherAgg.EndTxNumMinimax()
+	startTx := anotherAgg.VisibleFilesMaxTxNum()
 	ac2 := anotherAgg.BeginFilesRo()
 	defer ac2.Close()
 	dom2, err := NewSharedDomains(WrapTxWithCtx(rwTx, ac2), log.New())

@@ -167,7 +167,7 @@ func ResetExec(ctx context.Context, db kv.RwDB, chain string, tmpDir string, log
 			defer doms.Close()
 
 			_ = stages.SaveStageProgress(tx, stages.Execution, doms.BlockNum())
-			mxs := agg.EndTxNumMinimax() / agg.StepSize()
+			mxs := agg.VisibleFilesMaxTxNum() / agg.StepSize()
 			if mxs > 0 {
 				mxs--
 			}

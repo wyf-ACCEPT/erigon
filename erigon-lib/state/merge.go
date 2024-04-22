@@ -40,7 +40,7 @@ import (
 	"github.com/ledgerwatch/erigon-lib/seg"
 )
 
-func (d *Domain) endTxNumMinimax() uint64 {
+func (d *Domain) dirtyFilesEndTxNumMinimax() uint64 {
 	minimax := d.History.endTxNumMinimax()
 	if max, ok := d.dirtyFiles.Max(); ok {
 		endTxNum := max.endTxNum
@@ -51,7 +51,7 @@ func (d *Domain) endTxNumMinimax() uint64 {
 	return minimax
 }
 
-func (ii *InvertedIndex) endTxNumMinimax() uint64 {
+func (ii *InvertedIndex) dirtyFilesEndTxNumMinimax() uint64 {
 	var minimax uint64
 	if max, ok := ii.dirtyFiles.Max(); ok {
 		endTxNum := max.endTxNum
@@ -79,7 +79,7 @@ func (h *History) endTxNumMinimax() uint64 {
 	if h.dontProduceFiles {
 		return math.MaxUint64
 	}
-	minimax := h.InvertedIndex.endTxNumMinimax()
+	minimax := h.InvertedIndex.dirtyFilesEndTxNumMinimax()
 	if max, ok := h.dirtyFiles.Max(); ok {
 		endTxNum := max.endTxNum
 		if minimax == 0 || endTxNum < minimax {
@@ -295,11 +295,11 @@ func (iit *InvertedIndexRoTx) BuildOptionalMissedIndices(ctx context.Context, ps
 }
 
 // endTxNum is always a multiply of aggregation step but this txnum is not available in file (it will be first tx of file to follow after that)
-func (dt *DomainRoTx) maxTxNumInDomainFiles(cold bool) uint64 {
+func (dt *DomainRoTx) maxTxNumInDomainFiles(frozen bool) uint64 {
 	if len(dt.files) == 0 {
 		return 0
 	}
-	if !cold {
+	if !frozen {
 		return dt.files[len(dt.files)-1].endTxNum
 	}
 	for i := len(dt.files) - 1; i >= 0; i-- {
