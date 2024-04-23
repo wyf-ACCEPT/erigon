@@ -21,6 +21,7 @@ import (
 	"container/heap"
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"math"
 	"path/filepath"
@@ -55,16 +56,19 @@ type History struct {
 	*InvertedIndex // indexKeysTable contains mapping txNum -> key1+key2, while index table `key -> {txnums}` is omitted.
 
 	// dirtyFiles - list of ALL files - including: un-indexed-yet, garbage, merged-into-bigger-one, ...
-	// thread-safe, but maybe need 1 RWLock for all trees in AggregatorV3
+	// thread-safe, but maybe need 1 RWLock for all trees in Aggregator
 	//
-	// visibleFiles derivative from field `file`, but without garbage:
+	// _visibleFiles derivative from field `file`, but without garbage:
 	//  - no files with `canDelete=true`
 	//  - no overlaps
 	//  - no un-indexed files (`power-off` may happen between .ef and .efi creation)
 	//
-	// BeginRo() using visibleFiles in zero-copy way
-	dirtyFiles   *btree2.BTreeG[*filesItem]
-	visibleFiles atomic.Pointer[[]ctxItem]
+	// BeginRo() using _visibleFiles in zero-copy way
+	dirtyFiles *btree2.BTreeG[*filesItem]
+
+	// _visibleFiles - underscore in name means: don't use this field directly, use BeginFilesRo()
+	// underlying array is immutable - means it's ready for zero-copy use
+	_visibleFiles atomic.Pointer[[]ctxItem]
 
 	indexList idxList
 
@@ -119,7 +123,7 @@ func NewHistory(cfg histCfg, aggregationStep uint64, filenameBase, indexKeysTabl
 		dontProduceFiles:   cfg.dontProduceHistoryFiles,
 		keepTxInDB:         cfg.keepTxInDB,
 	}
-	h.visibleFiles.Store(&[]ctxItem{})
+	h._visibleFiles.Store(&[]ctxItem{})
 	var err error
 	h.InvertedIndex, err = NewInvertedIndex(cfg.iiCfg, aggregationStep, filenameBase, indexKeysTable, indexTable, cfg.withExistenceIndex, func(fromStep, toStep uint64) bool { return dir.FileExist(h.vFilePath(fromStep, toStep)) }, logger)
 	if err != nil {
@@ -151,7 +155,7 @@ func (h *History) openList(fNames []string) error {
 	h.closeWhatNotInList(fNames)
 	h.scanStateFiles(fNames)
 	if err := h.openFiles(); err != nil {
-		return fmt.Errorf("History(%s).openFiles: %w", h.filenameBase, err)
+		return fmt.Errorf("History.OpenList: %w, %s", err, h.filenameBase)
 	}
 	return nil
 }
@@ -207,9 +211,9 @@ func (h *History) scanStateFiles(fNames []string) (garbageFiles []*filesItem) {
 }
 
 func (h *History) openFiles() error {
-	var err error
 	invalidFileItems := make([]*filesItem, 0)
 	h.dirtyFiles.Walk(func(items []*filesItem) bool {
+		var err error
 		for _, item := range items {
 			fromStep, toStep := item.startTxNum/h.aggregationStep, item.endTxNum/h.aggregationStep
 			if item.decompressor == nil {
@@ -222,8 +226,11 @@ func (h *History) openFiles() error {
 				}
 				if item.decompressor, err = seg.NewDecompressor(fPath); err != nil {
 					_, fName := filepath.Split(fPath)
-					h.logger.Warn("[agg] History.openFiles", "err", err, "f", fName)
-					invalidFileItems = append(invalidFileItems, item)
+					if errors.Is(err, &seg.ErrCompressedFileCorrupted{}) {
+						h.logger.Debug("[agg] History.openFiles", "err", err, "f", fName)
+					} else {
+						h.logger.Warn("[agg] History.openFiles", "err", err, "f", fName)
+					}
 					// don't interrupt on error. other files may be good. but skip indices open.
 					continue
 				}
@@ -243,9 +250,6 @@ func (h *History) openFiles() error {
 		}
 		return true
 	})
-	if err != nil {
-		return err
-	}
 	for _, item := range invalidFileItems {
 		h.dirtyFiles.Delete(item)
 	}
@@ -720,7 +724,7 @@ func (sf HistoryFiles) CleanupOnError() {
 }
 func (h *History) reCalcVisibleFiles() {
 	visibleFiles := calcVisibleFiles(h.dirtyFiles, h.indexList, false)
-	h.visibleFiles.Store(&visibleFiles)
+	h._visibleFiles.Store(&visibleFiles)
 }
 
 // buildFiles performs potentially resource intensive operations of creating
@@ -979,7 +983,7 @@ type HistoryRoTx struct {
 }
 
 func (h *History) BeginFilesRo() *HistoryRoTx {
-	files := *h.visibleFiles.Load()
+	files := *h._visibleFiles.Load()
 	for i := 0; i < len(files); i++ {
 		if !files[i].src.frozen {
 			files[i].src.refcount.Add(1)

@@ -59,7 +59,7 @@ jobs:
         if: runner.os == 'Linux'
         uses: golangci/golangci-lint-action@v4
         with:
-          version: v1.56.1
+          version: v1.57.2
           skip-build-cache: true
           args: --help
 
@@ -72,7 +72,7 @@ jobs:
         run: make lint
 
       - name: Test
-        run: make test3
+        run: make test
 
   tests-windows:
     if: ${{ github.event_name == 'push' || !github.event.pull_request.draft }}

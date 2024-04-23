@@ -15,6 +15,7 @@ import (
 
 	"github.com/c2h5oh/datasize"
 	"github.com/erigontech/mdbx-go/mdbx"
+	"github.com/ledgerwatch/erigon-lib/config3"
 	"github.com/ledgerwatch/erigon/consensus/aura"
 	"github.com/ledgerwatch/log/v3"
 	"golang.org/x/sync/errgroup"
@@ -42,7 +43,6 @@ import (
 	"github.com/ledgerwatch/erigon/core/state"
 	"github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/core/types/accounts"
-	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/erigon/eth/ethconfig/estimate"
 	"github.com/ledgerwatch/erigon/eth/stagedsync/stages"
 	"github.com/ledgerwatch/erigon/turbo/services"
@@ -89,7 +89,7 @@ func (p *Progress) Log(rs *state.StateV3, in *state.QueueWithRetry, rws *state.R
 		//"workers", p.workersCount,
 		"buffer", fmt.Sprintf("%s/%s", common.ByteCount(sizeEstimate), common.ByteCount(p.commitThreshold)),
 		"stepsInDB", fmt.Sprintf("%.2f", idxStepsAmountInDB),
-		"step", fmt.Sprintf("%.1f", float64(outTxNum)/float64(ethconfig.HistoryV3AggregationStep)),
+		"step", fmt.Sprintf("%.1f", float64(outTxNum)/float64(config3.HistoryV3AggregationStep)),
 		"alloc", common.ByteCount(m.Alloc), "sys", common.ByteCount(m.Sys),
 	)
 
@@ -163,12 +163,6 @@ func ExecV3(ctx context.Context,
 			agg.SetCollateAndBuildWorkers(min(2, estimate.StateV3Collate.Workers()))
 		}
 		agg.SetCompressWorkers(estimate.CompressSnapshot.Workers())
-		if err := agg.BuildOptionalMissedIndices(ctx, estimate.IndexSnapshot.Workers()); err != nil {
-			return err
-		}
-		if err := agg.BuildMissedIndices(ctx, estimate.IndexSnapshot.Workers()); err != nil {
-			return err
-		}
 	} else {
 		agg.SetCompressWorkers(1)
 		agg.SetCollateAndBuildWorkers(1)
@@ -186,17 +180,6 @@ func ExecV3(ctx context.Context,
 			defer func() { // need callback - because tx may be committed
 				applyTx.Rollback()
 			}()
-
-			if casted, ok := applyTx.(kv.CanWarmupDB); ok {
-				if err := casted.WarmupDB(false); err != nil {
-					return err
-				}
-				if dbg.MdbxLockInRam() {
-					if err := casted.LockDBInRam(); err != nil {
-						return err
-					}
-				}
-			}
 		}
 	}
 
@@ -575,7 +558,7 @@ func ExecV3(ctx context.Context,
 		})
 	}
 
-	if blockNum < cfg.blockReader.FrozenBlocks() {
+	if useExternalTx && blockNum < cfg.blockReader.FrozenBlocks() {
 		defer agg.KeepStepsInDB(0).KeepStepsInDB(1)
 	}
 
@@ -620,16 +603,11 @@ func ExecV3(ctx context.Context,
 		defer clean()
 	}
 
-	blocksInSnapshots := cfg.blockReader.FrozenBlocks()
 	//fmt.Printf("exec blocks: %d -> %d\n", blockNum, maxBlockNum)
 
 	var b *types.Block
 Loop:
 	for ; blockNum <= maxBlockNum; blockNum++ {
-		if blockNum >= blocksInSnapshots {
-			agg.KeepStepsInDB(1)
-		}
-
 		//time.Sleep(50 * time.Microsecond)
 		if !parallel {
 			select {
@@ -873,17 +851,9 @@ Loop:
 					commitStart = time.Now()
 					tt          = time.Now()
 
-					t1, t2, t3, t4 time.Duration
+					t1, t2, t3 time.Duration
 				)
 
-				if casted, ok := applyTx.(kv.CanWarmupDB); ok {
-					if err := casted.WarmupDB(false); err != nil {
-						return err
-					}
-					t4 = time.Since(tt)
-				}
-
-				tt = time.Now()
 				if ok, err := flushAndCheckCommitmentV3(ctx, b.HeaderNoCopy(), applyTx, doms, cfg, execStage, stageProgress, parallel, logger, u, inMemExec); err != nil {
 					return err
 				} else if !ok {
@@ -956,7 +926,7 @@ Loop:
 				logger.Info("Committed", "time", time.Since(commitStart),
 					"block", doms.BlockNum(), "txNum", doms.TxNum(),
 					"step", fmt.Sprintf("%.1f", float64(doms.TxNum())/float64(agg.StepSize())),
-					"flush+commitment", t1, "tx.commit", t2, "prune", t3, "warmup", t4)
+					"flush+commitment", t1, "tx.commit", t2, "prune", t3)
 			default:
 			}
 		}
@@ -1197,7 +1167,7 @@ func blockWithSenders(db kv.RoDB, tx kv.Tx, blockReader services.BlockReader, bl
 	return b, err
 }
 
-func processResultQueue(ctx context.Context, in *state.QueueWithRetry, rws *state.ResultsQueue, outputTxNumIn uint64, rs *state.StateV3, agg *state2.AggregatorV3, applyTx kv.Tx, backPressure chan struct{}, applyWorker *exec3.Worker, canRetry, forceStopAtBlockEnd bool) (outputTxNum uint64, conflicts, triggers int, processedBlockNum uint64, stopedAtBlockEnd bool, err error) {
+func processResultQueue(ctx context.Context, in *state.QueueWithRetry, rws *state.ResultsQueue, outputTxNumIn uint64, rs *state.StateV3, agg *state2.Aggregator, applyTx kv.Tx, backPressure chan struct{}, applyWorker *exec3.Worker, canRetry, forceStopAtBlockEnd bool) (outputTxNum uint64, conflicts, triggers int, processedBlockNum uint64, stopedAtBlockEnd bool, err error) {
 	rwsIt := rws.Iter()
 	defer rwsIt.Close()
 
@@ -1779,7 +1749,7 @@ func safeCloseTxTaskCh(ch chan *state.TxTask) {
 
 func ReconstituteState(ctx context.Context, s *StageState, dirs datadir.Dirs, workerCount int, batchSize datasize.ByteSize, chainDb kv.RwDB,
 	blockReader services.FullBlockReader,
-	logger log.Logger, agg *state2.AggregatorV3, engine consensus.Engine,
+	logger log.Logger, agg *state2.Aggregator, engine consensus.Engine,
 	chainConfig *chain.Config, genesis *types.Genesis) (err error) {
 	startTime := time.Now()
 

@@ -21,6 +21,7 @@ import (
 	"container/heap"
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"math"
 	"os"
@@ -59,16 +60,19 @@ type InvertedIndex struct {
 	iiCfg
 
 	// dirtyFiles - list of ALL files - including: un-indexed-yet, garbage, merged-into-bigger-one, ...
-	// thread-safe, but maybe need 1 RWLock for all trees in AggregatorV3
+	// thread-safe, but maybe need 1 RWLock for all trees in Aggregator
 	//
-	// visibleFiles derivative from field `file`, but without garbage:
+	// _visibleFiles derivative from field `file`, but without garbage:
 	//  - no files with `canDelete=true`
 	//  - no overlaps
 	//  - no un-indexed files (`power-off` may happen between .ef and .efi creation)
 	//
-	// BeginRo() using visibleFiles in zero-copy way
-	dirtyFiles   *btree2.BTreeG[*filesItem]
-	visibleFiles atomic.Pointer[[]ctxItem]
+	// BeginRo() using _visibleFiles in zero-copy way
+	dirtyFiles *btree2.BTreeG[*filesItem]
+
+	// _visibleFiles - underscore in name means: don't use this field directly, use BeginFilesRo()
+	// underlying array is immutable - means it's ready for zero-copy use
+	_visibleFiles atomic.Pointer[[]ctxItem]
 
 	indexKeysTable  string // txnNum_u64 -> key (k+auto_increment)
 	indexTable      string // k -> txnNum_u64 , Needs to be table with DupSort
@@ -118,7 +122,7 @@ func NewInvertedIndex(cfg iiCfg, aggregationStep uint64, filenameBase, indexKeys
 		ii.indexList |= withExistence
 	}
 
-	ii.visibleFiles.Store(&[]ctxItem{})
+	ii._visibleFiles.Store(&[]ctxItem{})
 
 	return &ii, nil
 }
@@ -167,7 +171,7 @@ func (ii *InvertedIndex) OpenList(fNames []string, readonly bool) error {
 	ii.closeWhatNotInList(fNames)
 	ii.scanStateFiles(fNames)
 	if err := ii.openFiles(); err != nil {
-		return fmt.Errorf("InvertedIndex(%s).openFiles: %w", ii.filenameBase, err)
+		return fmt.Errorf("NewHistory.openFiles: %w, %s", err, ii.filenameBase)
 	}
 	_ = readonly // for future safety features. RPCDaemon must not delte files
 	return nil
@@ -232,7 +236,7 @@ var (
 
 func (ii *InvertedIndex) reCalcVisibleFiles() {
 	visibleFiles := calcVisibleFiles(ii.dirtyFiles, ii.indexList, false)
-	ii.visibleFiles.Store(&visibleFiles)
+	ii._visibleFiles.Store(&visibleFiles)
 }
 
 func (ii *InvertedIndex) missedIdxFiles() (l []*filesItem) {
@@ -336,10 +340,10 @@ func (ii *InvertedIndex) BuildMissedIndices(ctx context.Context, g *errgroup.Gro
 }
 
 func (ii *InvertedIndex) openFiles() error {
-	var err error
 	var invalidFileItems []*filesItem
 	invalidFileItemsLock := sync.Mutex{}
 	ii.dirtyFiles.Walk(func(items []*filesItem) bool {
+		var err error
 		for _, item := range items {
 			item := item
 			fromStep, toStep := item.startTxNum/ii.aggregationStep, item.endTxNum/ii.aggregationStep
@@ -356,7 +360,11 @@ func (ii *InvertedIndex) openFiles() error {
 
 				if item.decompressor, err = seg.NewDecompressor(fPath); err != nil {
 					_, fName := filepath.Split(fPath)
-					ii.logger.Warn("[agg] InvertedIndex.openFiles", "err", err, "f", fName)
+					if errors.Is(err, &seg.ErrCompressedFileCorrupted{}) {
+						ii.logger.Debug("[agg] InvertedIndex.openFiles", "err", err, "f", fName)
+					} else {
+						ii.logger.Warn("[agg] InvertedIndex.openFiles", "err", err, "f", fName)
+					}
 					invalidFileItemsLock.Lock()
 					invalidFileItems = append(invalidFileItems, item)
 					invalidFileItemsLock.Unlock()
@@ -541,7 +549,7 @@ func (w *invertedIndexBufferedWriter) add(key, indexKey []byte) error {
 }
 
 func (ii *InvertedIndex) BeginFilesRo() *InvertedIndexRoTx {
-	files := *ii.visibleFiles.Load()
+	files := *ii._visibleFiles.Load()
 	for i := 0; i < len(files); i++ {
 		if !files[i].src.frozen {
 			files[i].src.refcount.Add(1)

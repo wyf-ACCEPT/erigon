@@ -21,6 +21,7 @@ import (
 	"container/heap"
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"math"
 	"path/filepath"
@@ -44,44 +45,8 @@ import (
 	"github.com/ledgerwatch/erigon-lib/kv"
 	"github.com/ledgerwatch/erigon-lib/kv/iter"
 	"github.com/ledgerwatch/erigon-lib/kv/order"
-	"github.com/ledgerwatch/erigon-lib/metrics"
 	"github.com/ledgerwatch/erigon-lib/recsplit"
 	"github.com/ledgerwatch/erigon-lib/seg"
-)
-
-var (
-	//LatestStateReadWarm          = metrics.GetOrCreateSummary(`latest_state_read{type="warm",found="yes"}`)  //nolint
-	//LatestStateReadWarmNotFound  = metrics.GetOrCreateSummary(`latest_state_read{type="warm",found="no"}`)   //nolint
-	//LatestStateReadGrind         = metrics.GetOrCreateSummary(`latest_state_read{type="grind",found="yes"}`) //nolint
-	//LatestStateReadGrindNotFound = metrics.GetOrCreateSummary(`latest_state_read{type="grind",found="no"}`)  //nolint
-	//LatestStateReadCold          = metrics.GetOrCreateSummary(`latest_state_read{type="cold",found="yes"}`)  //nolint
-	//LatestStateReadColdNotFound  = metrics.GetOrCreateSummary(`latest_state_read{type="cold",found="no"}`)   //nolint
-	mxPrunableDAcc  = metrics.GetOrCreateGauge(`domain_prunable{type="domain",table="account"}`)
-	mxPrunableDSto  = metrics.GetOrCreateGauge(`domain_prunable{type="domain",table="storage"}`)
-	mxPrunableDCode = metrics.GetOrCreateGauge(`domain_prunable{type="domain",table="code"}`)
-	mxPrunableDComm = metrics.GetOrCreateGauge(`domain_prunable{type="domain",table="commitment"}`)
-	mxPrunableHAcc  = metrics.GetOrCreateGauge(`domain_prunable{type="history",table="account"}`)
-	mxPrunableHSto  = metrics.GetOrCreateGauge(`domain_prunable{type="history",table="storage"}`)
-	mxPrunableHCode = metrics.GetOrCreateGauge(`domain_prunable{type="history",table="code"}`)
-	mxPrunableHComm = metrics.GetOrCreateGauge(`domain_prunable{type="history",table="commitment"}`)
-
-	mxRunningMerges        = metrics.GetOrCreateGauge("domain_running_merges")
-	mxRunningFilesBuilding = metrics.GetOrCreateGauge("domain_running_files_building")
-	mxCollateTook          = metrics.GetOrCreateHistogram("domain_collate_took")
-	mxPruneTookDomain      = metrics.GetOrCreateHistogram(`domain_prune_took{type="domain"}`)
-	mxPruneTookHistory     = metrics.GetOrCreateHistogram(`domain_prune_took{type="history"}`)
-	mxPruneTookIndex       = metrics.GetOrCreateHistogram(`domain_prune_took{type="index"}`)
-	mxPruneInProgress      = metrics.GetOrCreateGauge("domain_pruning_progress")
-	mxCollationSize        = metrics.GetOrCreateGauge("domain_collation_size")
-	mxCollationSizeHist    = metrics.GetOrCreateGauge("domain_collation_hist_size")
-	mxPruneSizeDomain      = metrics.GetOrCreateCounter(`domain_prune_size{type="domain"}`)
-	mxPruneSizeHistory     = metrics.GetOrCreateCounter(`domain_prune_size{type="history"}`)
-	mxPruneSizeIndex       = metrics.GetOrCreateCounter(`domain_prune_size{type="index"}`)
-	mxBuildTook            = metrics.GetOrCreateSummary("domain_build_files_took")
-	mxStepTook             = metrics.GetOrCreateHistogram("domain_step_took")
-	mxFlushTook            = metrics.GetOrCreateSummary("domain_flush_took")
-	mxCommitmentRunning    = metrics.GetOrCreateGauge("domain_running_commitment")
-	mxCommitmentTook       = metrics.GetOrCreateSummary("domain_commitment_took")
 )
 
 // StepsInColdFile - files of this size are completely frozen/immutable.
@@ -107,16 +72,19 @@ type Domain struct {
 	*History
 
 	// dirtyFiles - list of ALL files - including: un-indexed-yet, garbage, merged-into-bigger-one, ...
-	// thread-safe, but maybe need 1 RWLock for all trees in AggregatorV3
+	// thread-safe, but maybe need 1 RWLock for all trees in Aggregator
 	//
-	// visibleFiles derivative from field `file`, but without garbage:
+	// _visibleFiles derivative from field `file`, but without garbage:
 	//  - no files with `canDelete=true`
 	//  - no overlaps
 	//  - no un-indexed files (`power-off` may happen between .ef and .efi creation)
 	//
-	// BeginRo() using visibleFiles in zero-copy way
-	dirtyFiles   *btree2.BTreeG[*filesItem]
-	visibleFiles atomic.Pointer[[]ctxItem]
+	// BeginRo() using _visibleFiles in zero-copy way
+	dirtyFiles *btree2.BTreeG[*filesItem]
+
+	// _visibleFiles - underscore in name means: don't use this field directly, use BeginFilesRo()
+	// underlying array is immutable - means it's ready for zero-copy use
+	_visibleFiles atomic.Pointer[[]ctxItem]
 
 	// replaceKeysInValues allows to replace commitment branch values with shorter keys.
 	// for commitment domain only
@@ -155,7 +123,7 @@ func NewDomain(cfg domainCfg, aggregationStep uint64, filenameBase, keysTable, v
 		restrictSubsetFileDeletions: cfg.restrictSubsetFileDeletions, // to prevent not merged 'garbage' to delete on start
 	}
 
-	d.visibleFiles.Store(&[]ctxItem{})
+	d._visibleFiles.Store(&[]ctxItem{})
 
 	var err error
 	if d.History, err = NewHistory(cfg.hist, aggregationStep, filenameBase, indexKeysTable, indexTable, historyValsTable, nil, logger); err != nil {
@@ -213,7 +181,7 @@ func (d *Domain) openList(names []string, readonly bool) error {
 	d.closeWhatNotInList(names)
 	d.scanStateFiles(names)
 	if err := d.openFiles(); err != nil {
-		return fmt.Errorf("Domain.OpenList: %s, %w", d.filenameBase, err)
+		return fmt.Errorf("Domain.openList: %w, %s", err, d.filenameBase)
 	}
 	d.protectFromHistoryFilesAheadOfDomainFiles(readonly)
 	d.reCalcVisibleFiles()
@@ -224,7 +192,7 @@ func (d *Domain) openList(names []string, readonly bool) error {
 //   - `kill -9` in the middle of `buildFiles()`, then `rm -f db` (restore from backup)
 //   - `kill -9` in the middle of `buildFiles()`, then `stage_exec --reset` (drop progress - as a hot-fix)
 func (d *Domain) protectFromHistoryFilesAheadOfDomainFiles(readonly bool) {
-	d.removeFilesAfterStep(d.endTxNumMinimax()/d.aggregationStep, readonly)
+	d.removeFilesAfterStep(d.dirtyFilesEndTxNumMinimax()/d.aggregationStep, readonly)
 }
 
 func (d *Domain) OpenFolder(readonly bool) error {
@@ -364,7 +332,11 @@ func (d *Domain) openFiles() (err error) {
 
 				if item.decompressor, err = seg.NewDecompressor(fPath); err != nil {
 					_, fName := filepath.Split(fPath)
-					d.logger.Warn("[agg] Domain.openFiles", "err", err, "f", fName)
+					if errors.Is(err, &seg.ErrCompressedFileCorrupted{}) {
+						d.logger.Debug("[agg] Domain.openFiles", "err", err, "f", fName)
+					} else {
+						d.logger.Warn("[agg] Domain.openFiles", "err", err, "f", fName)
+					}
 					invalidFileItemsLock.Lock()
 					invalidFileItems = append(invalidFileItems, item)
 					invalidFileItemsLock.Unlock()
@@ -452,7 +424,7 @@ func (d *Domain) closeWhatNotInList(fNames []string) {
 
 func (d *Domain) reCalcVisibleFiles() {
 	visibleFiles := calcVisibleFiles(d.dirtyFiles, d.indexList, false)
-	d.visibleFiles.Store(&visibleFiles)
+	d._visibleFiles.Store(&visibleFiles)
 }
 
 func (d *Domain) Close() {
@@ -802,7 +774,7 @@ func (d *Domain) collectFilesStats() (datsz, idxsz, files uint64) {
 }
 
 func (d *Domain) BeginFilesRo() *DomainRoTx {
-	files := *d.visibleFiles.Load()
+	files := *d._visibleFiles.Load()
 	for i := 0; i < len(files); i++ {
 		if !files[i].src.frozen {
 			files[i].src.refcount.Add(1)
@@ -2238,37 +2210,6 @@ func (sf SelectedStaticFiles) Close() {
 					item.decompressor.Close()
 				}
 				if item.index != nil {
-					item.index.Close()
-				}
-				if item.bindex != nil {
-					item.bindex.Close()
-				}
-			}
-		}
-	}
-}
-
-type MergedFiles struct {
-	d     [kv.DomainLen]*filesItem
-	dHist [kv.DomainLen]*filesItem
-	dIdx  [kv.DomainLen]*filesItem
-}
-
-func (mf MergedFiles) FillV3(m *MergedFilesV3) MergedFiles {
-	for id := range m.d {
-		mf.d[id], mf.dHist[id], mf.dIdx[id] = m.d[id], m.dHist[id], m.dIdx[id]
-	}
-	return mf
-}
-
-func (mf MergedFiles) Close() {
-	for id := range mf.d {
-		for _, item := range []*filesItem{mf.d[id], mf.dHist[id], mf.dIdx[id]} {
-			if item != nil {
-				if item.decompressor != nil {
-					item.decompressor.Close()
-				}
-				if item.decompressor != nil {
 					item.index.Close()
 				}
 				if item.bindex != nil {
