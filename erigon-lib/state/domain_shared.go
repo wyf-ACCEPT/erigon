@@ -85,7 +85,6 @@ type HasAggCtx interface {
 var ErrStateIsAheadOfBlocks = fmt.Errorf("`domain snaps` are ahead of `block snaps`")
 
 func NewSharedDomains(tx kv.Tx, logger log.Logger) (*SharedDomains, error) {
-	panic(1)
 	var ac *AggregatorRoTx
 	if casted, ok := tx.(HasAggCtx); ok {
 		ac = casted.AggCtx().(*AggregatorRoTx)
