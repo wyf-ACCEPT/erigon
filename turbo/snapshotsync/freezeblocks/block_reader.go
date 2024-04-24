@@ -541,6 +541,11 @@ func (r *BlockReader) BlockWithSenders(ctx context.Context, tx kv.Getter, hash c
 	return r.blockWithSenders(ctx, tx, hash, blockHeight, false)
 }
 func (r *BlockReader) blockWithSenders(ctx context.Context, tx kv.Getter, hash common.Hash, blockHeight uint64, forceCanonical bool) (block *types.Block, senders []common.Address, err error) {
+	var dbgPrefix string
+	dbgEnabled := true
+	if dbgEnabled {
+		dbgPrefix = fmt.Sprintf("[dbg] BlockReader.blockWithSenders(hash=%x,blk=%d,forceCanonical=%t) -> ", hash, blockHeight, forceCanonical)
+	}
 	maxBlockNumInFiles := r.sn.BlocksAvailable()
 	if tx != nil && (maxBlockNumInFiles == 0 || blockHeight > maxBlockNumInFiles) {
 		if forceCanonical {
@@ -549,6 +554,9 @@ func (r *BlockReader) blockWithSenders(ctx context.Context, tx kv.Getter, hash c
 				return nil, nil, fmt.Errorf("requested non-canonical hash %x. canonical=%x", hash, canonicalHash)
 			}
 			if canonicalHash != hash {
+				if dbgEnabled {
+					log.Info(dbgPrefix + fmt.Sprintf("this hash is not canonical now. current one is %x", canonicalHash))
+				}
 				return nil, nil, nil
 			}
 		}
@@ -557,10 +565,16 @@ func (r *BlockReader) blockWithSenders(ctx context.Context, tx kv.Getter, hash c
 		if err != nil {
 			return nil, nil, err
 		}
+		if dbgEnabled {
+			log.Info(dbgPrefix + fmt.Sprintf("found in db %t", block != nil))
+		}
 		return block, senders, nil
 	}
 
 	if r.sn == nil {
+		if dbgEnabled {
+			log.Info(dbgPrefix + "no files")
+		}
 		return
 	}
 
@@ -568,6 +582,9 @@ func (r *BlockReader) blockWithSenders(ctx context.Context, tx kv.Getter, hash c
 	defer view.Close()
 	seg, ok := view.HeadersSegment(blockHeight)
 	if !ok {
+		if dbgEnabled {
+			log.Info(dbgPrefix + "no header files for this block num")
+		}
 		return
 	}
 
@@ -577,6 +594,9 @@ func (r *BlockReader) blockWithSenders(ctx context.Context, tx kv.Getter, hash c
 		return nil, nil, err
 	}
 	if h == nil {
+		if dbgEnabled {
+			log.Info(dbgPrefix + "got nil header from file")
+		}
 		return
 	}
 
@@ -585,6 +605,9 @@ func (r *BlockReader) blockWithSenders(ctx context.Context, tx kv.Getter, hash c
 	var txsAmount uint32
 	bodySeg, ok := view.BodiesSegment(blockHeight)
 	if !ok {
+		if dbgEnabled {
+			log.Info(dbgPrefix + "no bodies file for this block num")
+		}
 		return
 	}
 	b, baseTxnId, txsAmount, buf, err = r.bodyFromSnapshot(blockHeight, bodySeg, buf)
@@ -592,11 +615,17 @@ func (r *BlockReader) blockWithSenders(ctx context.Context, tx kv.Getter, hash c
 		return nil, nil, err
 	}
 	if b == nil {
+		if dbgEnabled {
+			log.Info(dbgPrefix + "got nil body from file")
+		}
 		return
 	}
 	if txsAmount == 0 {
 		block = types.NewBlockFromStorage(hash, h, nil, b.Uncles, b.Withdrawals)
 		if len(senders) != block.Transactions().Len() {
+			if dbgEnabled {
+				log.Info(dbgPrefix + fmt.Sprintf("found block with %d transactions, but %d senders", block.Transactions().Len(), len(senders)))
+			}
 			return block, senders, nil // no senders is fine - will recover them on the fly
 		}
 		block.SendersToTxs(senders)
@@ -605,6 +634,9 @@ func (r *BlockReader) blockWithSenders(ctx context.Context, tx kv.Getter, hash c
 
 	txnSeg, ok := view.TxsSegment(blockHeight)
 	if !ok {
+		if dbgEnabled {
+			log.Info(dbgPrefix + "no transactions file for this block num")
+		}
 		return
 	}
 	var txs []types.Transaction
@@ -614,6 +646,9 @@ func (r *BlockReader) blockWithSenders(ctx context.Context, tx kv.Getter, hash c
 	}
 	block = types.NewBlockFromStorage(hash, h, txs, b.Uncles, b.Withdrawals)
 	if len(senders) != block.Transactions().Len() {
+		if dbgEnabled {
+			log.Info(dbgPrefix + fmt.Sprintf("found block with %d transactions, but %d senders", block.Transactions().Len(), len(senders)))
+		}
 		return block, senders, nil // no senders is fine - will recover them on the fly
 	}
 	block.SendersToTxs(senders)
