@@ -192,6 +192,14 @@ func ExecV3(ctx context.Context,
 		doms, err = state2.NewSharedDomains(applyTx, log.New())
 		if err != nil {
 			if errors.Is(err, state2.ErrStateIsAheadOfBlocks) {
+				if err := execStage.Update(applyTx, blockReader.FrozenBlocks()); err != nil {
+					return err
+				}
+				if useExternalTx {
+					if err := applyTx.Commit(); err != nil {
+						return err
+					}
+				}
 				return nil
 			}
 			return err
