@@ -112,6 +112,11 @@ func SpawnRecoverSendersStage(cfg SendersCfg, s *StageState, u Unwinder, tx kv.R
 		to = startFrom + cfg.limit
 	}
 
+	if to > startFrom && cfg.limit > 0 && to-startFrom > cfg.limit { // uint underflow protection. preserve global jump limit.
+		log.Warn("[dbg] change to", "before", to, "after", startFrom+uint64(cfg.syncCfg.LoopBlockLimit))
+		to = startFrom + cfg.limit
+	}
+
 	if to > s.BlockNumber+16 {
 		logger.Info(fmt.Sprintf("[%s] Started", logPrefix), "from", s.BlockNumber, "to", to)
 	}
