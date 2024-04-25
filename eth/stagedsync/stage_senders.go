@@ -68,7 +68,6 @@ func StageSendersCfg(db kv.RwDB, chainCfg *chain.Config, syncCfg ethconfig.Sync,
 		blockReader:     blockReader,
 		loopBreakCheck:  loopBreakCheck,
 		syncCfg:         syncCfg,
-		limit:           uint64(limit),
 	}
 }
 
