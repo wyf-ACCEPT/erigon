@@ -47,17 +47,12 @@ type SendersCfg struct {
 	blockReader     services.FullBlockReader
 	loopBreakCheck  func(int) bool
 	syncCfg         ethconfig.Sync
-	limit           uint64
 }
 
 func StageSendersCfg(db kv.RwDB, chainCfg *chain.Config, syncCfg ethconfig.Sync, badBlockHalt bool, tmpdir string, prune prune.Mode, blockReader services.FullBlockReader, hd *headerdownload.HeaderDownload, loopBreakCheck func(int) bool) SendersCfg {
 	const sendersBatchSize = 10000
 	const sendersBlockSize = 4096
 
-	limit := syncCfg.LoopBlockLimit
-	if limit <= 0 {
-		limit = math.MaxUint64
-	}
 	return SendersCfg{
 		db:              db,
 		batchSize:       sendersBatchSize,
@@ -107,14 +102,9 @@ func SpawnRecoverSendersStage(cfg SendersCfg, s *StageState, u Unwinder, tx kv.R
 	}
 	logPrefix := s.LogPrefix()
 	startFrom := s.BlockNumber + 1
-	if to > startFrom && cfg.limit > 0 && to-startFrom > cfg.limit { // uint underflow protection. preserve global jump limit.
+	if to > startFrom && cfg.syncCfg.LoopBlockLimit > 0 && to-startFrom > uint64(cfg.syncCfg.LoopBlockLimit) { // uint underflow protection. preserve global jump limit.
 		log.Warn("[dbg] change to", "before", to, "after", startFrom+uint64(cfg.syncCfg.LoopBlockLimit))
-		to = startFrom + cfg.limit
-	}
-
-	if to > startFrom && cfg.limit > 0 && to-startFrom > cfg.limit { // uint underflow protection. preserve global jump limit.
-		log.Warn("[dbg] change to", "before", to, "after", startFrom+uint64(cfg.syncCfg.LoopBlockLimit))
-		to = startFrom + cfg.limit
+		to = startFrom + uint64(cfg.syncCfg.LoopBlockLimit)
 	}
 
 	if to > s.BlockNumber+16 {
