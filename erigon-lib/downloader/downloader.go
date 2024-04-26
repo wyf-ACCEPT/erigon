@@ -2600,7 +2600,8 @@ func openClient(ctx context.Context, dbDir, snapDir string, cfg *torrent.ClientC
 	if err != nil {
 		return nil, nil, nil, nil, fmt.Errorf("torrentcfg.NewMdbxPieceCompletion: %w", err)
 	}
-	m = storage.NewMMapWithCompletion(snapDir, c)
+	//m = storage.NewMMapWithCompletion(snapDir, c)
+	m = storage.NewFileWithCompletion(snapDir, c)
 	cfg.DefaultStorage = m
 
 	err = func() error {
