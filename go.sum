@@ -141,6 +141,8 @@ github.com/anacrolix/sync v0.5.1/go.mod h1:BbecHL6jDSExojhNtgTFSBcdGerzNc64tz3DC
 github.com/anacrolix/tagflag v0.0.0-20180109131632-2146c8d41bf0/go.mod h1:1m2U/K6ZT+JZG0+bdMK6qauP49QT4wE5pmhJXOKKCHw=
 github.com/anacrolix/tagflag v1.0.0/go.mod h1:1m2U/K6ZT+JZG0+bdMK6qauP49QT4wE5pmhJXOKKCHw=
 github.com/anacrolix/tagflag v1.1.0/go.mod h1:Scxs9CV10NQatSmbyjqmqmeQNwGzlNe0CMUMIxqHIG8=
+github.com/anacrolix/torrent v1.55.1-0.20240426054416-bafb71e52a25 h1:XTHGa2pQ2ezTNFXMtWG4816phd8/zd04227vOgfLNOw=
+github.com/anacrolix/torrent v1.55.1-0.20240426054416-bafb71e52a25/go.mod h1:MsIikhT44vf1MpylScIy9q1cbtgFvr+fNCLV28SG5D8=
 github.com/anacrolix/upnp v0.1.3-0.20220123035249-922794e51c96 h1:QAVZ3pN/J4/UziniAhJR2OZ9Ox5kOY2053tBbbqUPYA=
 github.com/anacrolix/upnp v0.1.3-0.20220123035249-922794e51c96/go.mod h1:Wa6n8cYIdaG35x15aH3Zy6d03f7P728QfdcDeD/IEOs=
 github.com/anacrolix/utp v0.1.0 h1:FOpQOmIwYsnENnz7tAGohA+r6iXpRjrq8ssKSre2Cp4=
@@ -272,8 +274,6 @@ github.com/erigontech/mdbx-go v0.37.2 h1:KxSHRcbXX9uACoJPuW3Jmu1QB7M68rwjDOkbcNI
 github.com/erigontech/mdbx-go v0.37.2/go.mod h1:FAMxbOgqOnRDx51j8HjuJZIgznbDwjX7LItd+/UWyA4=
 github.com/erigontech/silkworm-go v0.18.0 h1:j56p61xZHBFhZGH1OixlGU8KcfjHzcw9pjAfjmVsOZA=
 github.com/erigontech/silkworm-go v0.18.0/go.mod h1:O50ux0apICEVEGyRWiE488K8qz8lc3PA/SXbQQAc8SU=
-github.com/erigontech/torrent v1.54.2-alpha h1:LwjzX1Tqvb37kCeBQNuAe6JJEBR3aQ2Mas336Ts+Vz8=
-github.com/erigontech/torrent v1.54.2-alpha/go.mod h1:nYNeuR4xPlEl4CturFD9/KRXBRJEcJGqjegDNWakwG4=
 github.com/fjl/gencodec v0.0.0-20220412091415-8bb9e558978c h1:CndMRAH4JIwxbW8KYq6Q+cGWcGHz0FjGR3QqcInWcW0=
 github.com/fjl/gencodec v0.0.0-20220412091415-8bb9e558978c/go.mod h1:AzA8Lj6YtixmJWL+wkKoBGsLWy9gFrAzi4g+5bCKwpY=
 github.com/flynn/go-shlex v0.0.0-20150515145356-3f9db97f8568/go.mod h1:xEzjJPgXI435gkrCt3MPfRiAkVrwSbHsst4LCFVfpJc=
@@ -318,8 +318,8 @@ github.com/go-kit/kit v0.9.0/go.mod h1:xBxKIO96dXMWWy0MnWVtmwkA9/13aqxPnvrjFYMA2
 github.com/go-kit/log v0.1.0/go.mod h1:zbhenjAZHb184qTLMA9ZjW7ThYL0H2mk7Q6pNt4vbaY=
 github.com/go-llsqlite/adapter v0.0.0-20230927005056-7f5ce7f0c916 h1:OyQmpAN302wAopDgwVjgs2HkFawP9ahIEqkUYz7V7CA=
 github.com/go-llsqlite/adapter v0.0.0-20230927005056-7f5ce7f0c916/go.mod h1:DADrR88ONKPPeSGjFp5iEN55Arx3fi2qXZeKCYDpbmU=
-github.com/go-llsqlite/crawshaw v0.4.0 h1:L02s2jZBBJj80xm1VkkdyB/JlQ/Fi0kLbNHfXA8yrec=
-github.com/go-llsqlite/crawshaw v0.4.0/go.mod h1:/YJdV7uBQaYDE0fwe4z3wwJIZBJxdYzd38ICggWqtaE=
+github.com/go-llsqlite/crawshaw v0.5.2-0.20240425034140-f30eb7704568 h1:3EpZo8LxIzF4q3BT+vttQQlRfA6uTtTb/cxVisWa5HM=
+github.com/go-llsqlite/crawshaw v0.5.2-0.20240425034140-f30eb7704568/go.mod h1:/YJdV7uBQaYDE0fwe4z3wwJIZBJxdYzd38ICggWqtaE=
 github.com/go-logfmt/logfmt v0.3.0/go.mod h1:Qt1PoO58o5twSAckw1HlFXLmHsOX5/0LbT9GBnD5lWE=
 github.com/go-logfmt/logfmt v0.4.0/go.mod h1:3RMwSq7FuexP4Kalkev3ejPJsZTpXXBr9+V4qmtdjCk=
 github.com/go-logfmt/logfmt v0.5.0/go.mod h1:wCYkCAKZfumFQihp8CzCvQ3paCTfi41vtzG1KdI/P7A=

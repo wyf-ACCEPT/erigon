@@ -1,6 +1,8 @@
 module github.com/ledgerwatch/erigon
 
-go 1.21
+go 1.22
+
+toolchain go1.22.2
 
 require (
 	github.com/erigontech/mdbx-go v0.37.2
@@ -22,7 +24,7 @@ require (
 	github.com/alecthomas/kong v0.8.1
 	github.com/anacrolix/log v0.15.2
 	github.com/anacrolix/sync v0.5.1
-	github.com/anacrolix/torrent v1.54.2-0.20240424124100-1ef0afe9d44b
+	github.com/anacrolix/torrent v1.55.1-0.20240426054416-bafb71e52a25
 	github.com/benesch/cgosymbolizer v0.0.0-20190515212042-bec6fe6e597b
 	github.com/btcsuite/btcd/btcec/v2 v2.1.3
 	github.com/c2h5oh/datasize v0.0.0-20220606134207-859f65c6625b
@@ -163,7 +165,7 @@ require (
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
 	github.com/garslo/gogen v0.0.0-20170307003452-d6ebae628c7c // indirect
 	github.com/go-llsqlite/adapter v0.0.0-20230927005056-7f5ce7f0c916 // indirect
-	github.com/go-llsqlite/crawshaw v0.4.0 // indirect
+	github.com/go-llsqlite/crawshaw v0.5.2-0.20240425034140-f30eb7704568 // indirect
 	github.com/go-logr/logr v1.2.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-sourcemap/sourcemap v2.1.3+incompatible // indirect
@@ -291,7 +293,7 @@ require (
 )
 
 replace (
-	github.com/anacrolix/torrent => github.com/erigontech/torrent v1.54.2-alpha
+	//github.com/anacrolix/torrent => github.com/erigontech/torrent v1.54.2-alpha
 	github.com/holiman/bloomfilter/v2 => github.com/AskAlexSharov/bloomfilter/v2 v2.0.8
 	github.com/tendermint/tendermint => github.com/bnb-chain/tendermint v0.31.12
 )

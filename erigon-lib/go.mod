@@ -1,6 +1,8 @@
 module github.com/ledgerwatch/erigon-lib
 
-go 1.21
+go 1.22
+
+toolchain go1.22.2
 
 require (
 	github.com/erigontech/mdbx-go v0.37.2
@@ -15,7 +17,7 @@ require (
 	github.com/anacrolix/dht/v2 v2.21.1
 	github.com/anacrolix/go-libutp v1.3.1
 	github.com/anacrolix/log v0.15.2
-	github.com/anacrolix/torrent v1.54.2-0.20240424124100-1ef0afe9d44b
+	github.com/anacrolix/torrent v1.55.1-0.20240426054416-bafb71e52a25
 	github.com/c2h5oh/datasize v0.0.0-20220606134207-859f65c6625b
 	github.com/containerd/cgroups/v3 v3.0.3
 	github.com/crate-crypto/go-kzg-4844 v0.7.0
@@ -49,7 +51,15 @@ require (
 	google.golang.org/protobuf v1.33.0
 )
 
-require github.com/cespare/xxhash v1.1.0 // indirect
+require (
+	github.com/cespare/xxhash v1.1.0 // indirect
+	github.com/klauspost/cpuid/v2 v2.2.3 // indirect
+	github.com/minio/sha256-simd v1.0.0 // indirect
+	github.com/mr-tron/base58 v1.2.0 // indirect
+	github.com/multiformats/go-multihash v0.2.3 // indirect
+	github.com/multiformats/go-varint v0.0.6 // indirect
+	lukechampine.com/blake3 v1.1.6 // indirect
+)
 
 require (
 	github.com/ajwerner/btree v0.0.0-20211221152037-f427b3e689c0 // indirect
@@ -81,7 +91,7 @@ require (
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/go-llsqlite/adapter v0.0.0-20230927005056-7f5ce7f0c916 // indirect
-	github.com/go-llsqlite/crawshaw v0.4.0 // indirect
+	github.com/go-llsqlite/crawshaw v0.5.2-0.20240425034140-f30eb7704568 // indirect
 	github.com/go-logr/logr v1.2.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
@@ -146,7 +156,7 @@ require (
 )
 
 replace (
-	github.com/anacrolix/torrent => github.com/erigontech/torrent v1.54.2-alpha
+	//github.com/anacrolix/torrent => github.com/erigontech/torrent v1.54.2-alpha
 	github.com/holiman/bloomfilter/v2 => github.com/AskAlexSharov/bloomfilter/v2 v2.0.8
 	github.com/tidwall/btree => github.com/AskAlexSharov/btree v1.6.2
 )
