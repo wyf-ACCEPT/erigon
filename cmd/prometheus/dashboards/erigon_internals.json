@@ -6206,18 +6206,17 @@
       },
       {
         "current": {
-          "selected": true,
-          "text": "default",
-          "value": "default"
+          "selected": false,
+          "text": "Prometheus",
+          "value": "PBFA97CFB590B2093"
         },
-        "hide": 1,
+        "hide": 2,
         "includeAll": false,
         "label": "Prometheus",
         "multi": false,
         "name": "DS_PROMETHEUS",
         "options": [],
         "query": "prometheus",
-        "queryValue": "",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
@@ -6256,6 +6255,6 @@
   "timezone": "",
   "title": "Erigon Internals",
   "uid": "b42a61d7-02b1-416c-8ab4-b9c864356174",
-  "version": 13,
+  "version": 14,
   "weekStart": ""
 }
