@@ -561,6 +561,7 @@ func (s *RoSnapshots) rebuildSegments(fileNames []string, open bool, optimistic 
 	}
 
 	if segmentsMaxSet {
+		log.Warn("[dbg] s.segmentsMax.Store()", "v", segmentsMax)
 		s.segmentsMax.Store(segmentsMax)
 	}
 	s.segmentsReady.Store(true)
