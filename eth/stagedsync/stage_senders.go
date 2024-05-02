@@ -93,6 +93,12 @@ func SpawnRecoverSendersStage(cfg SendersCfg, s *StageState, u Unwinder, tx kv.R
 		return errStart
 	}
 
+	startFrom := s.BlockNumber + 1
+	if toBlock > startFrom && cfg.syncCfg.LoopBlockLimit > 0 && toBlock-startFrom > uint64(cfg.syncCfg.LoopBlockLimit) { // uint underflow protection. preserve global jump limit.
+		log.Warn("[dbg] StageSenders. big jump", "to", toBlock, "newTo", startFrom+uint64(cfg.syncCfg.LoopBlockLimit), "prevStageProgress", prevStageProgress)
+		toBlock = startFrom + uint64(cfg.syncCfg.LoopBlockLimit)
+	}
+
 	var to = prevStageProgress
 	if toBlock > 0 {
 		to = cmp.Min(prevStageProgress, toBlock)
@@ -107,12 +113,6 @@ func SpawnRecoverSendersStage(cfg SendersCfg, s *StageState, u Unwinder, tx kv.R
 
 	logEvery := time.NewTicker(30 * time.Second)
 	defer logEvery.Stop()
-
-	startFrom := s.BlockNumber + 1
-	if to > startFrom && cfg.syncCfg.LoopBlockLimit > 0 && to-startFrom > uint64(cfg.syncCfg.LoopBlockLimit) { // uint underflow protection. preserve global jump limit.
-		log.Warn("[dbg] StageSenders. big jump", "to", to, "newTo", startFrom+uint64(cfg.syncCfg.LoopBlockLimit), "prevStageProgress", prevStageProgress)
-		to = startFrom + uint64(cfg.syncCfg.LoopBlockLimit)
-	}
 
 	jobs := make(chan *senderRecoveryJob, cfg.batchSize)
 	out := make(chan *senderRecoveryJob, cfg.batchSize)
