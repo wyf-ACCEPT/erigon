@@ -95,7 +95,7 @@ func SpawnRecoverSendersStage(cfg SendersCfg, s *StageState, u Unwinder, tx kv.R
 
 	startFrom := s.BlockNumber + 1
 	if toBlock > startFrom && cfg.syncCfg.LoopBlockLimit > 0 && toBlock-startFrom > uint64(cfg.syncCfg.LoopBlockLimit) { // uint underflow protection. preserve global jump limit.
-		log.Warn("[dbg] StageSenders. big jump", "to", toBlock, "newTo", startFrom+uint64(cfg.syncCfg.LoopBlockLimit), "prevStageProgress", prevStageProgress)
+		log.Warn("[dbg] StageSenders. big jump", "toBlock", toBlock, "newTo", startFrom+uint64(cfg.syncCfg.LoopBlockLimit), "prevStageProgress", prevStageProgress)
 		toBlock = startFrom + uint64(cfg.syncCfg.LoopBlockLimit)
 	}
 
