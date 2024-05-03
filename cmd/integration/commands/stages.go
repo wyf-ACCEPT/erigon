@@ -14,6 +14,7 @@ import (
 	"github.com/c2h5oh/datasize"
 	"github.com/erigontech/mdbx-go/mdbx"
 	lru "github.com/hashicorp/golang-lru/arc/v2"
+	"github.com/ledgerwatch/erigon/cl/clparams"
 	"github.com/ledgerwatch/log/v3"
 	"github.com/ledgerwatch/secp256k1"
 	"github.com/spf13/cobra"
@@ -1793,6 +1794,7 @@ func removeMigration(db kv.RwDB, ctx context.Context) error {
 var openSnapshotOnce sync.Once
 var _allSnapshotsSingleton *freezeblocks.RoSnapshots
 var _allBorSnapshotsSingleton *freezeblocks.BorRoSnapshots
+var _caplinSnapshotsSingleton *freezeblocks.CaplinSnapshots
 var _aggSingleton *libstate.Aggregator
 
 func allSnapshots(ctx context.Context, db kv.RoDB, logger log.Logger) (*freezeblocks.RoSnapshots, *freezeblocks.BorRoSnapshots, *libstate.Aggregator) {
@@ -1809,7 +1811,12 @@ func allSnapshots(ctx context.Context, db kv.RoDB, logger log.Logger) (*freezebl
 
 		_allSnapshotsSingleton = freezeblocks.NewRoSnapshots(snapCfg, dirs.Snap, 0, logger)
 		_allBorSnapshotsSingleton = freezeblocks.NewBorRoSnapshots(snapCfg, dirs.Snap, 0, logger)
-		var err error
+		_, beaconConfig, _, err := clparams.GetConfigsByNetworkName(chain)
+		if err != nil {
+			panic(err)
+		}
+		_caplinSnapshotsSingleton = freezeblocks.NewCaplinSnapshots(ethconfig.BlocksFreezing{}, beaconConfig, dirs, log.Root())
+
 		_aggSingleton, err = libstate.NewAggregator(ctx, dirs, config3.HistoryV3AggregationStep, db, logger)
 		if err != nil {
 			panic(err)
@@ -1819,6 +1826,10 @@ func allSnapshots(ctx context.Context, db kv.RoDB, logger log.Logger) (*freezebl
 			g := &errgroup.Group{}
 			g.Go(func() error {
 				_allSnapshotsSingleton.OptimisticalyReopenFolder()
+				return nil
+			})
+			g.Go(func() error {
+				_ = _caplinSnapshotsSingleton.ReopenFolder()
 				return nil
 			})
 			g.Go(func() error {
@@ -1833,6 +1844,8 @@ func allSnapshots(ctx context.Context, db kv.RoDB, logger log.Logger) (*freezebl
 
 			_allSnapshotsSingleton.LogStat("blocks")
 			_allBorSnapshotsSingleton.LogStat("bor")
+			log.Info("[Snapshots:Caplin] ", "blk", _caplinSnapshotsSingleton.SegmentsMax(), "idx", _caplinSnapshotsSingleton.IndicesMax())
+			_caplinSnapshotsSingleton.SegmentsMax()
 			_ = db.View(context.Background(), func(tx kv.Tx) error {
 				ac := _aggSingleton.BeginFilesRo()
 				defer ac.Close()
