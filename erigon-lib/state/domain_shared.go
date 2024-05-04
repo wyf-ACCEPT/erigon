@@ -958,23 +958,29 @@ func (sd *SharedDomains) DomainDelPrefix(domain kv.Domain, prefix []byte) error 
 func (sd *SharedDomains) Tx() kv.Tx { return sd.roTx }
 
 type SharedDomainsCommitmentContext struct {
-	sd           *SharedDomains
-	discard      bool
-	updates      *UpdateTree
-	mode         CommitmentMode
-	branchCache  map[string]cachedBranch
-	patriciaTrie commitment.Trie
-	justRestored atomic.Bool
+	sd                *SharedDomains
+	discard           bool
+	updates           *UpdateTree
+	mode              CommitmentMode
+	branchCache       map[string]cachedBranch
+	accountKeyToValue map[string][]byte
+	storageKeyToValue map[string][]byte
+	codeKeyToValue    map[string][]byte
+	patriciaTrie      commitment.Trie
+	justRestored      atomic.Bool
 }
 
 func NewSharedDomainsCommitmentContext(sd *SharedDomains, mode CommitmentMode, trieVariant commitment.TrieVariant) *SharedDomainsCommitmentContext {
 	ctx := &SharedDomainsCommitmentContext{
-		sd:           sd,
-		mode:         mode,
-		updates:      NewUpdateTree(mode),
-		discard:      dbg.DiscardCommitment(),
-		patriciaTrie: commitment.InitializeTrie(trieVariant),
-		branchCache:  make(map[string]cachedBranch),
+		sd:                sd,
+		mode:              mode,
+		updates:           NewUpdateTree(mode),
+		discard:           dbg.DiscardCommitment(),
+		patriciaTrie:      commitment.InitializeTrie(trieVariant),
+		accountKeyToValue: make(map[string][]byte),
+		storageKeyToValue: make(map[string][]byte),
+		codeKeyToValue:    make(map[string][]byte),
+		branchCache:       make(map[string]cachedBranch),
 	}
 
 	ctx.patriciaTrie.ResetContext(ctx)
@@ -989,6 +995,9 @@ type cachedBranch struct {
 // Cache should ResetBranchCache after each commitment computation
 func (sdc *SharedDomainsCommitmentContext) ResetBranchCache() {
 	sdc.branchCache = make(map[string]cachedBranch)
+	sdc.accountKeyToValue = make(map[string][]byte)
+	sdc.storageKeyToValue = make(map[string][]byte)
+	sdc.codeKeyToValue = make(map[string][]byte)
 }
 
 func (sdc *SharedDomainsCommitmentContext) GetBranch(pref []byte) ([]byte, uint64, error) {
@@ -1024,9 +1033,16 @@ func (sdc *SharedDomainsCommitmentContext) PutBranch(prefix []byte, data []byte,
 }
 
 func (sdc *SharedDomainsCommitmentContext) GetAccount(plainKey []byte, cell *commitment.Cell) error {
-	encAccount, _, err := sdc.sd.LatestAccount(plainKey)
-	if err != nil {
-		return fmt.Errorf("GetAccount failed: %w", err)
+	var encAccount []byte
+	var err error
+	if v, ok := sdc.accountKeyToValue[string(plainKey)]; ok {
+		encAccount = v
+	} else {
+		encAccount, _, err = sdc.sd.LatestAccount(plainKey)
+		if err != nil {
+			return fmt.Errorf("GetAccount failed: %w", err)
+		}
+		sdc.accountKeyToValue[string(plainKey)] = encAccount
 	}
 	cell.Nonce = 0
 	cell.Balance.Clear()
@@ -1040,9 +1056,15 @@ func (sdc *SharedDomainsCommitmentContext) GetAccount(plainKey []byte, cell *com
 		//fmt.Printf("GetAccount: %x: n=%d b=%d ch=%x\n", plainKey, nonce, balance, chash)
 	}
 
-	code, _, err := sdc.sd.LatestCode(plainKey)
-	if err != nil {
-		return fmt.Errorf("GetAccount: failed to read latest code: %w", err)
+	var code []byte
+	if _, ok := sdc.codeKeyToValue[string(plainKey)]; ok {
+		code = sdc.codeKeyToValue[string(plainKey)]
+	} else {
+		code, _, err = sdc.sd.LatestCode(plainKey)
+		if err != nil {
+			return fmt.Errorf("GetAccount: failed to read latest code: %w", err)
+		}
+		sdc.codeKeyToValue[string(plainKey)] = code
 	}
 	if len(code) > 0 {
 		//fmt.Printf("GetAccount: code %x - %x\n", plainKey, code)
@@ -1057,10 +1079,17 @@ func (sdc *SharedDomainsCommitmentContext) GetAccount(plainKey []byte, cell *com
 }
 
 func (sdc *SharedDomainsCommitmentContext) GetStorage(plainKey []byte, cell *commitment.Cell) error {
+	var enc []byte
+	var err error
 	// Look in the summary table first
-	enc, _, err := sdc.sd.LatestStorage(plainKey)
-	if err != nil {
-		return err
+	if v, ok := sdc.storageKeyToValue[string(plainKey)]; ok {
+		enc = v
+	} else {
+		enc, _, err = sdc.sd.LatestStorage(plainKey)
+		if err != nil {
+			return err
+		}
+		sdc.storageKeyToValue[string(plainKey)] = enc
 	}
 	//if sdc.sd.trace {
 	//	fmt.Printf("[SDC] GetStorage: %x - %x\n", plainKey, enc)
@@ -1100,14 +1129,17 @@ func (sdc *SharedDomainsCommitmentContext) KeysCount() uint64 {
 }
 
 func (sdc *SharedDomainsCommitmentContext) TouchAccount(c *commitmentItem, val []byte) {
+	sdc.accountKeyToValue[string(c.plainKey)] = common.Copy(val)
 	sdc.updates.TouchAccount(c, val)
 }
 
 func (sdc *SharedDomainsCommitmentContext) TouchStorage(c *commitmentItem, val []byte) {
+	sdc.storageKeyToValue[string(c.plainKey)] = common.Copy(val)
 	sdc.updates.TouchStorage(c, val)
 }
 
 func (sdc *SharedDomainsCommitmentContext) TouchCode(c *commitmentItem, val []byte) {
+	sdc.codeKeyToValue[string(c.plainKey)] = common.Copy(val)
 	sdc.updates.TouchCode(c, val)
 }
 
