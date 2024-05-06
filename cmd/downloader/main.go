@@ -257,6 +257,7 @@ func Downloader(ctx context.Context, logger log.Logger) error {
 	if seedbox {
 		var downloadItems []*proto_downloader.AddItem
 		for _, it := range snapcfg.KnownCfg(chain).Preverified {
+			fmt.Printf("[dbg] aading torrent: %s\n", it.Name)
 			downloadItems = append(downloadItems, &proto_downloader.AddItem{
 				Path:        it.Name,
 				TorrentHash: downloadergrpc.String2Proto(it.Hash),
