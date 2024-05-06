@@ -3,6 +3,7 @@ package snapcfg
 import (
 	_ "embed"
 	"encoding/json"
+	"fmt"
 	"path/filepath"
 	"slices"
 	"sort"
@@ -401,6 +402,8 @@ func KnownCfg(networkName string) *Cfg {
 	if !ok {
 		return newCfg(networkName, Preverified{})
 	}
+	fmt.Printf("dbg: here %s\n", knownTypes[networkName])
+
 	return newCfg(networkName, c.Typed(knownTypes[networkName]))
 }
 
