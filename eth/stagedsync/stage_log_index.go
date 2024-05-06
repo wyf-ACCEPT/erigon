@@ -13,13 +13,14 @@ import (
 
 	"github.com/RoaringBitmap/roaring"
 	"github.com/c2h5oh/datasize"
+	"github.com/ledgerwatch/log/v3"
+
 	libcommon "github.com/ledgerwatch/erigon-lib/common"
 	"github.com/ledgerwatch/erigon-lib/common/dbg"
 	"github.com/ledgerwatch/erigon-lib/common/hexutility"
 	"github.com/ledgerwatch/erigon-lib/etl"
 	"github.com/ledgerwatch/erigon-lib/kv"
 	"github.com/ledgerwatch/erigon-lib/kv/bitmapdb"
-	"github.com/ledgerwatch/log/v3"
 
 	"github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/ethdb/cbor"
@@ -421,6 +422,13 @@ func PruneLogIndex(s *PruneState, tx kv.RwTx, cfg LogIndexCfg, ctx context.Conte
 	}
 	logPrefix := s.LogPrefix()
 
+	logger.Info(
+		fmt.Sprintf("[%s] prune state", logPrefix),
+		"id", s.ID,
+		"forwardProgress", s.ForwardProgress,
+		"pruneProgress", s.PruneProgress,
+	)
+
 	useExternalTx := tx != nil
 	if !useExternalTx {
 		tx, err = cfg.db.BeginRw(ctx)
@@ -434,11 +442,14 @@ func PruneLogIndex(s *PruneState, tx kv.RwTx, cfg LogIndexCfg, ctx context.Conte
 	if err = pruneLogIndex(logPrefix, tx, cfg.tmpdir, s.PruneProgress, pruneTo, ctx, logger, cfg.noPruneContracts); err != nil {
 		return err
 	}
+
+	logger.Info(fmt.Sprintf("[%s] stage done", logPrefix), "at", pruneTo)
 	if err = s.DoneAt(tx, pruneTo); err != nil {
 		return err
 	}
 
 	if !useExternalTx {
+		logger.Info(fmt.Sprintf("[%s] stage commit", logPrefix))
 		if err = tx.Commit(); err != nil {
 			return err
 		}
