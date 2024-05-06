@@ -271,6 +271,7 @@ func fromToml(in []byte) (out Preverified) {
 	if err := toml.Unmarshal(in, &outMap); err != nil {
 		panic(err)
 	}
+	fmt.Printf("[dbg] fromToml: %s\n", doSort(outMap))
 	return doSort(outMap)
 }
 
@@ -402,7 +403,7 @@ func KnownCfg(networkName string) *Cfg {
 	if !ok {
 		return newCfg(networkName, Preverified{})
 	}
-	fmt.Printf("dbg: here networkName%s, %s\n", networkName, knownTypes[networkName])
+	fmt.Printf("dbg: here networkNam=%s, %s\n", networkName, knownTypes[networkName])
 
 	return newCfg(networkName, c.Typed(knownTypes[networkName]))
 }
