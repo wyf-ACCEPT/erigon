@@ -402,7 +402,7 @@ func KnownCfg(networkName string) *Cfg {
 	if !ok {
 		return newCfg(networkName, Preverified{})
 	}
-	fmt.Printf("dbg: here %s\n", knownTypes[networkName])
+	fmt.Printf("dbg: here networkName%s, %s\n", networkName, knownTypes[networkName])
 
 	return newCfg(networkName, c.Typed(knownTypes[networkName]))
 }
