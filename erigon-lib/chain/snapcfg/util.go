@@ -3,7 +3,6 @@ package snapcfg
 import (
 	_ "embed"
 	"encoding/json"
-	"fmt"
 	"path/filepath"
 	"slices"
 	"sort"
@@ -271,7 +270,6 @@ func fromToml(in []byte) (out Preverified) {
 	if err := toml.Unmarshal(in, &outMap); err != nil {
 		panic(err)
 	}
-	fmt.Printf("[dbg] fromToml: %s\n", doSort(outMap))
 	return doSort(outMap)
 }
 
@@ -402,9 +400,6 @@ func KnownCfg(networkName string) *Cfg {
 
 	if !ok {
 		return newCfg(networkName, Preverified{})
-	}
-	if networkName == "bor-mainnet" {
-		fmt.Printf("dbg: here networkNam=%s, %s, %s\n", networkName, knownTypes[networkName], newCfg(networkName, c.Typed(knownTypes[networkName])))
 	}
 
 	return newCfg(networkName, c.Typed(knownTypes[networkName]))
