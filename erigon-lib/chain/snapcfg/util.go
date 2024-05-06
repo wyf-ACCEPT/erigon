@@ -403,7 +403,9 @@ func KnownCfg(networkName string) *Cfg {
 	if !ok {
 		return newCfg(networkName, Preverified{})
 	}
-	fmt.Printf("dbg: here networkNam=%s, %s\n", networkName, knownTypes[networkName])
+	if networkName == "bor-mainnet" {
+		fmt.Printf("dbg: here networkNam=%s, %s, %s\n", networkName, knownTypes[networkName], newCfg(networkName, c.Typed(knownTypes[networkName])))
+	}
 
 	return newCfg(networkName, c.Typed(knownTypes[networkName]))
 }
