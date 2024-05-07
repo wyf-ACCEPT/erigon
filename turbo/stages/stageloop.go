@@ -183,9 +183,18 @@ func StageLoopIteration(ctx context.Context, db kv.RwDB, txc wrap.TxContainer, s
 
 	// -- Prune+commit(sync)
 	if externalTx {
+		if txc.Tx != nil {
+			logger.Info("run prune with non-nil externalTx", "tx", txc.Tx.CHandle())
+		} else {
+			logger.Info("run prune with nil externalTx")
+		}
+
 		err = sync.RunPrune(db, txc.Tx, initialCycle)
 	} else {
-		err = db.Update(ctx, func(tx kv.RwTx) error { return sync.RunPrune(db, tx, initialCycle) })
+		err = db.Update(ctx, func(tx kv.RwTx) error {
+			logger.Info("run prune with db.Update", "tx", tx.CHandle())
+			return sync.RunPrune(db, tx, initialCycle)
+		})
 	}
 	if err != nil {
 		return err
