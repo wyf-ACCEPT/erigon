@@ -435,7 +435,10 @@ func PruneLogIndex(s *PruneState, tx kv.RwTx, cfg LogIndexCfg, ctx context.Conte
 		if err != nil {
 			return err
 		}
+		logger.Info(fmt.Sprintf("[%s] using internal tx", logPrefix), "tx", tx.CHandle())
 		defer tx.Rollback()
+	} else {
+		logger.Info(fmt.Sprintf("[%s] using external tx", logPrefix), "tx", tx.CHandle())
 	}
 
 	pruneTo := cfg.prune.Receipts.PruneTo(s.ForwardProgress)
