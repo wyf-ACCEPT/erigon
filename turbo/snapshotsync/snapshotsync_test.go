@@ -1,6 +1,7 @@
 package snapshotsync
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -20,6 +21,7 @@ func TestBlackListForPruning(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	fmt.Printf("a: %s\n", blackList)
 	for p := range blackList {
 		// take the snapshot file name and parse it to get the "from"
 		info, _, ok := snaptype.ParseFileName("tmp", p)

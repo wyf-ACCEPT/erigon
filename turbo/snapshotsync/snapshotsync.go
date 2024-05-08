@@ -290,6 +290,7 @@ func WaitForDownloader(ctx context.Context, logPrefix string, headerchain, histV
 			return err
 		}
 	}
+	log.Warn("[dbg] blackListForPruning", "blackListForPruning", fmt.Sprintf("%s", blackListForPruning))
 
 	// build all download requests
 	for _, p := range preverifiedBlockSnapshots {
