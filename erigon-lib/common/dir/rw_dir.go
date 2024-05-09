@@ -135,7 +135,6 @@ func ListFiles(dir string, extensions ...string) (paths []string, err error) {
 			log.Warn("[dbg] ListFiles skip1", "dir", dir, "f.Name", f.Name(), "isDir", f.IsDir(), "isregular", f.Type().IsRegular())
 			continue
 		}
-		log.Warn("[dbg] ListFiles", "dir", dir, "f.Name", f.Name())
 		match := false
 		if len(extensions) == 0 {
 			match = true
