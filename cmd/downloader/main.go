@@ -463,7 +463,7 @@ func manifest(ctx context.Context, logger log.Logger) error {
 	fmt.Printf("seedable: %s\n", files)
 	extList := []string{
 		".torrent",
-		".seg", ".idx", // e2
+		//".seg", ".idx", // e2
 		".txt", //salt.txt, manifest.txt
 	}
 	l, _ := dir.ListFiles(dirs.Snap, extList...)
