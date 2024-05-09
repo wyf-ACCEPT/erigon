@@ -20,6 +20,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/ledgerwatch/log/v3"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -131,8 +132,10 @@ func ListFiles(dir string, extensions ...string) (paths []string, err error) {
 	paths = make([]string, 0, len(files))
 	for _, f := range files {
 		if f.IsDir() && !f.Type().IsRegular() {
+			log.Warn("[dbg] ListFiles skip", "dir", dir, "f.Name", f.Name())
 			continue
 		}
+		log.Warn("[dbg] ListFiles", "dir", dir, "f.Name", f.Name())
 		match := false
 		if len(extensions) == 0 {
 			match = true
@@ -143,6 +146,7 @@ func ListFiles(dir string, extensions ...string) (paths []string, err error) {
 			}
 		}
 		if !match {
+			log.Warn("[dbg] ListFiles skip", "dir", dir, "f.Name", f.Name())
 			continue
 		}
 		paths = append(paths, filepath.Join(dir, f.Name()))
