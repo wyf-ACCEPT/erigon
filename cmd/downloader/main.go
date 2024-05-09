@@ -460,7 +460,6 @@ func manifest(ctx context.Context, logger log.Logger) error {
 		return err
 	}
 
-	fmt.Printf("seedable: %s\n", files)
 	extList := []string{
 		".torrent",
 		//".seg", ".idx", // e2

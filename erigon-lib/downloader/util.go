@@ -81,37 +81,22 @@ func seedableSegmentFiles(dir string, chainName string) ([]string, error) {
 	}
 	res := make([]string, 0, len(files))
 	for _, fPath := range files {
-
 		_, name := filepath.Split(fPath)
 		if !snaptype.IsCorrectFileName(name) {
 			continue
 		}
-		ff, _, ok := snaptype.ParseFileName(dir, name)
+		ff, isStateFile, ok := snaptype.ParseFileName(dir, name)
 		if !ok {
 			continue
 		}
+		if isStateFile {
+			continue
+		}
 		if !snapcfg.Seedable(chainName, ff) {
+			log.Warn("[dbg] not seedable?\n", name)
 			continue
 		}
 		res = append(res, name)
-	}
-	return res, nil
-}
-
-func seedableStateFilesBySubDir(dir, subDir string) ([]string, error) {
-	historyDir := filepath.Join(dir, subDir)
-	dir2.MustExist(historyDir)
-	files, err := dir2.ListFiles(historyDir, snaptype.SeedableV3Extensions()...)
-	if err != nil {
-		return nil, err
-	}
-	res := make([]string, 0, len(files))
-	for _, fPath := range files {
-		_, name := filepath.Split(fPath)
-		if !snaptype.E3Seedable(name) {
-			continue
-		}
-		res = append(res, filepath.Join(subDir, name))
 	}
 	return res, nil
 }

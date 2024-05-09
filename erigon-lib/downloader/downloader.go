@@ -2422,19 +2422,6 @@ func SeedableFiles(dirs datadir.Dirs, chainName string) ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("seedableSegmentFiles: %w", err)
 	}
-	l1, err := seedableStateFilesBySubDir(dirs.Snap, "idx")
-	if err != nil {
-		return nil, err
-	}
-	l2, err := seedableStateFilesBySubDir(dirs.Snap, "history")
-	if err != nil {
-		return nil, err
-	}
-	l3, err := seedableStateFilesBySubDir(dirs.Snap, "domain")
-	if err != nil {
-		return nil, err
-	}
-	files = append(append(append(files, l1...), l2...), l3...)
 	return files, nil
 }
 
