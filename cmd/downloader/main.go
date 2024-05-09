@@ -460,39 +460,16 @@ func manifest(ctx context.Context, logger log.Logger) error {
 		return err
 	}
 
+	fmt.Printf("seedable: %s\n", files)
 	extList := []string{
 		".torrent",
-		//".seg", ".idx", // e2
-		//".kv", ".kvi", ".bt", ".kvei", // e3 domain
-		//".v", ".vi", //e3 hist
-		//".ef", ".efi", //e3 idx
+		".seg", ".idx", // e2
 		".txt", //salt.txt, manifest.txt
 	}
 	l, _ := dir.ListFiles(dirs.Snap, extList...)
 	for _, fPath := range l {
 		_, fName := filepath.Split(fPath)
 		files = append(files, fName)
-	}
-	l, _ = dir.ListFiles(dirs.SnapDomain, extList...)
-	for _, fPath := range l {
-		_, fName := filepath.Split(fPath)
-		files = append(files, "domain/"+fName)
-	}
-	l, _ = dir.ListFiles(dirs.SnapHistory, extList...)
-	for _, fPath := range l {
-		_, fName := filepath.Split(fPath)
-		if strings.Contains(fName, "commitment") {
-			continue
-		}
-		files = append(files, "history/"+fName)
-	}
-	l, _ = dir.ListFiles(dirs.SnapIdx, extList...)
-	for _, fPath := range l {
-		_, fName := filepath.Split(fPath)
-		if strings.Contains(fName, "commitment") {
-			continue
-		}
-		files = append(files, "idx/"+fName)
 	}
 
 	sort.Strings(files)
