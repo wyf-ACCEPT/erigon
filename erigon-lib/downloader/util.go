@@ -93,7 +93,7 @@ func seedableSegmentFiles(dir string, chainName string) ([]string, error) {
 			continue
 		}
 		if !snapcfg.Seedable(chainName, ff) {
-			log.Warn("[dbg] not seedable?\n", name)
+			log.Warn("[dbg] not seedable?", "name", name)
 			continue
 		}
 		res = append(res, name)
