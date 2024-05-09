@@ -132,7 +132,7 @@ func ListFiles(dir string, extensions ...string) (paths []string, err error) {
 	paths = make([]string, 0, len(files))
 	for _, f := range files {
 		if f.IsDir() && !f.Type().IsRegular() {
-			log.Warn("[dbg] ListFiles skip", "dir", dir, "f.Name", f.Name())
+			log.Warn("[dbg] ListFiles skip1", "dir", dir, "f.Name", f.Name(), "isDir", f.IsDir(), "isregular", f.Type().IsRegular())
 			continue
 		}
 		log.Warn("[dbg] ListFiles", "dir", dir, "f.Name", f.Name())
@@ -146,7 +146,7 @@ func ListFiles(dir string, extensions ...string) (paths []string, err error) {
 			}
 		}
 		if !match {
-			log.Warn("[dbg] ListFiles skip", "dir", dir, "f.Name", f.Name())
+			log.Warn("[dbg] ListFiles skip2", "dir", dir, "f.Name", f.Name(), "ext", extensions)
 			continue
 		}
 		paths = append(paths, filepath.Join(dir, f.Name()))
