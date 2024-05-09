@@ -475,7 +475,6 @@ func manifest(ctx context.Context, logger log.Logger) error {
 	for _, f := range files {
 		fmt.Printf("%s\n", f)
 	}
-	fmt.Printf("seedable2: %s\n", files)
 	return nil
 }
 
