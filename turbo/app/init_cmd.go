@@ -2,6 +2,7 @@ package app
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 
 	"github.com/ledgerwatch/erigon/core/types"
@@ -37,7 +38,7 @@ It expects the genesis file as argument.`,
 func initGenesis(cliCtx *cli.Context) error {
 	var logger log.Logger
 	var err error
-	if logger, _, err = debug.Setup(cliCtx, true /* rootLogger */); err != nil {
+	if logger, _, _, err = debug.Setup(cliCtx, true /* rootLogger */); err != nil {
 		return err
 	}
 	// Make sure we have a valid genesis JSON
@@ -56,7 +57,7 @@ func initGenesis(cliCtx *cli.Context) error {
 	if err := json.NewDecoder(file).Decode(genesis); err != nil {
 		utils.Fatalf("invalid genesis file: %v", err)
 	}
-
+	fmt.Println("-----------------> genesis.Alloc == nil", genesis.Alloc == nil)
 	// Open and initialise both full and light databases
 	stack := MakeConfigNodeDefault(cliCtx, logger)
 	defer stack.Close()
