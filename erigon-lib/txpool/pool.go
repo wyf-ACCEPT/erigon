@@ -839,6 +839,7 @@ func (p *TxPool) validateTx(txn *types.TxSlot, isLocal bool, stateCache kvcache.
 			return txpoolcfg.InitCodeTooLarge
 		}
 	}
+	txn.Traced = true
 	if txn.Type == types.BlobTxType {
 		if !p.isCancun() {
 			return txpoolcfg.TypeNotActivated
@@ -875,9 +876,9 @@ func (p *TxPool) validateTx(txn *types.TxSlot, isLocal bool, stateCache kvcache.
 		}
 
 		if !isLocal && (p.all.blobCount(txn.SenderID)+uint64(len(txn.BlobHashes))) > p.cfg.BlobSlots {
-			if txn.Traced {
-				p.logger.Info(fmt.Sprintf("TX TRACING: validateTx marked as spamming (too many blobs) idHash=%x slots=%d, limit=%d", txn.IDHash, p.all.count(txn.SenderID), p.cfg.AccountSlots))
-			}
+			// if txn.Traced {
+			p.logger.Info(fmt.Sprintf("TX TRACING: validateTx marked as spamming (too many blobs) idHash=%x slots=%d, limit=%d", txn.IDHash, p.all.count(txn.SenderID), p.cfg.AccountSlots))
+			// }
 			return txpoolcfg.Spammer
 		}
 		if p.totalBlobsInPool.Load() >= p.cfg.TotalBlobPoolLimit {
