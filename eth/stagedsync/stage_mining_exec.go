@@ -266,7 +266,7 @@ func getNextTransactions(
 		if _, count, err = cfg.txPool.YieldBest(amount, &txSlots, poolTx, executionAt, remainingGas, remainingBlobGas, alreadyYielded); err != nil {
 			return err
 		}
-
+		fmt.Println(count)
 		return nil
 	}); err != nil {
 		return nil, 0, err
@@ -282,6 +282,7 @@ func getNextTransactions(
 			return nil, 0, err
 		}
 		if !transaction.GetChainID().IsZero() && transaction.GetChainID().Cmp(chainID) != 0 {
+			fmt.Println("ChainID mismatch")
 			continue
 		}
 

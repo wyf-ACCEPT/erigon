@@ -839,7 +839,7 @@ func (p *TxPool) validateTx(txn *types.TxSlot, isLocal bool, stateCache kvcache.
 			return txpoolcfg.InitCodeTooLarge
 		}
 	}
-	txn.Traced = true
+
 	if txn.Type == types.BlobTxType {
 		if !p.isCancun() {
 			return txpoolcfg.TypeNotActivated
