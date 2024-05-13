@@ -32,7 +32,6 @@ import (
 	"time"
 
 	"github.com/ledgerwatch/erigon-lib/common/assert"
-
 	"github.com/ledgerwatch/erigon-lib/seg"
 	"github.com/ledgerwatch/log/v3"
 	"github.com/spaolacci/murmur3"
@@ -123,11 +122,11 @@ func NewForkable(cfg forkableCfg, aggregationStep uint64, filenameBase, table st
 	return &fk, nil
 }
 
-func (fk *Forkable) efAccessorFilePath(fromStep, toStep uint64) string {
+func (fk *Forkable) fkAccessorFilePath(fromStep, toStep uint64) string {
 	return filepath.Join(fk.dirs.SnapAccessors, fmt.Sprintf("v1-%s.%d-%d.fki", fk.filenameBase, fromStep, toStep))
 }
 func (fk *Forkable) fkFilePath(fromStep, toStep uint64) string {
-	return filepath.Join(fk.dirs.SnapIdx, fmt.Sprintf("v1-%s.%d-%d.fk", fk.filenameBase, fromStep, toStep))
+	return filepath.Join(fk.dirs.SnapForkable, fmt.Sprintf("v1-%s.%d-%d.fk", fk.filenameBase, fromStep, toStep))
 }
 
 func (fk *Forkable) fileNamesOnDisk() (idx, hist, domain []string, err error) {
@@ -213,7 +212,7 @@ func (fk *Forkable) missedIdxFiles() (l []*filesItem) {
 	fk.dirtyFiles.Walk(func(items []*filesItem) bool {
 		for _, item := range items {
 			fromStep, toStep := item.startTxNum/fk.aggregationStep, item.endTxNum/fk.aggregationStep
-			if !dir.FileExist(fk.efAccessorFilePath(fromStep, toStep)) {
+			if !dir.FileExist(fk.fkAccessorFilePath(fromStep, toStep)) {
 				l = append(l, item)
 			}
 		}
@@ -275,7 +274,7 @@ func (fk *Forkable) openFiles() error {
 			}
 
 			if item.index == nil {
-				fPath := fk.efAccessorFilePath(fromStep, toStep)
+				fPath := fk.fkAccessorFilePath(fromStep, toStep)
 				if dir.FileExist(fPath) {
 					if item.index, err = recsplit.OpenIndex(fPath); err != nil {
 						_, fName := filepath.Split(fPath)
@@ -1062,7 +1061,7 @@ func (fk *Forkable) buildFiles(ctx context.Context, step uint64, coll ForkableCo
 	if err := fk.buildMapIdx(ctx, step, step+1, decomp, ps); err != nil {
 		return ForkableFiles{}, fmt.Errorf("build %s efi: %w", fk.filenameBase, err)
 	}
-	if index, err = recsplit.OpenIndex(fk.efAccessorFilePath(step, step+1)); err != nil {
+	if index, err = recsplit.OpenIndex(fk.fkAccessorFilePath(step, step+1)); err != nil {
 		return ForkableFiles{}, err
 	}
 
@@ -1070,8 +1069,8 @@ func (fk *Forkable) buildFiles(ctx context.Context, step uint64, coll ForkableCo
 	return ForkableFiles{decomp: decomp, index: index}, nil
 }
 
-func (fk *Forkable) buildMapIdx(ctx context.Context, fromStep, toStep uint64, data *seg.Decompressor, ps *background.ProgressSet) error {
-	idxPath := fk.efAccessorFilePath(fromStep, toStep)
+func (fk *Forkable) buildMapIdx(ctx context.Context, fromStep, toStep uint64, d *seg.Decompressor, ps *background.ProgressSet) error {
+	idxPath := fk.fkAccessorFilePath(fromStep, toStep)
 	cfg := recsplit.RecSplitArgs{
 		Enums:              true,
 		LessFalsePositives: true,
@@ -1081,8 +1080,26 @@ func (fk *Forkable) buildMapIdx(ctx context.Context, fromStep, toStep uint64, da
 		TmpDir:     fk.dirs.Tmp,
 		IndexFile:  idxPath,
 		Salt:       fk.salt,
+		NoFsync:    fk.noFsync,
+
+		KeyCount: d.Count(),
 	}
-	return buildIndex(ctx, data, fk.compression, idxPath, false, cfg, ps, fk.logger, fk.noFsync)
+	_, fileName := filepath.Split(idxPath)
+	count := d.Count()
+	p := ps.AddNew(fileName, uint64(count))
+	defer ps.Delete(p)
+
+	num := make([]byte, binary.MaxVarintLen64)
+	return buildSimpleIndex(ctx, d, cfg, fk.logger, func(idx *recsplit.RecSplit, i, offset uint64, word []byte) error {
+		if p != nil {
+			p.Processed.Add(1)
+		}
+		n := binary.PutUvarint(num, i)
+		if err := idx.AddKey(num[:n], offset); err != nil {
+			return err
+		}
+		return nil
+	})
 }
 
 func (fk *Forkable) integrateDirtyFiles(sf ForkableFiles, txNumFrom, txNumTo uint64) {

@@ -359,48 +359,48 @@ func mergeForkable(tb testing.TB, db kv.RwDB, ii *Forkable, txs uint64) {
 	tx, err := db.BeginRw(ctx)
 	require.NoError(tb, err)
 	defer tx.Rollback()
-	panic("implement me")
+	//panic("implement me")
 
 	// Leave the last 2 aggregation steps un-collated
-	//for step := uint64(0); step < txs/ii.aggregationStep-1; step++ {
-	//	func() {
-	//		bs, err := ii.collate(ctx, step, tx)
-	//		require.NoError(tb, err)
-	//		sf, err := ii.buildFiles(ctx, step, bs, background.NewProgressSet())
-	//		require.NoError(tb, err)
-	//		ii.integrateDirtyFiles(sf, step*ii.aggregationStep, (step+1)*ii.aggregationStep)
-	//		ii.reCalcVisibleFiles()
-	//		ic := ii.BeginFilesRo()
-	//		defer ic.Close()
-	//		_, err = ic.Prune(ctx, tx, step*ii.aggregationStep, (step+1)*ii.aggregationStep, math.MaxUint64, logEvery, false, false, nil)
-	//		require.NoError(tb, err)
-	//		var found bool
-	//		var startTxNum, endTxNum uint64
-	//		maxEndTxNum := ii.endTxNumMinimax()
-	//		maxSpan := ii.aggregationStep * StepsInColdFile
-	//
-	//		for {
-	//			if stop := func() bool {
-	//				ic := ii.BeginFilesRo()
-	//				defer ic.Close()
-	//				found, startTxNum, endTxNum = ic.findMergeRange(maxEndTxNum, maxSpan)
-	//				if !found {
-	//					return true
-	//				}
-	//				outs, _ := ic.staticFilesInRange(startTxNum, endTxNum)
-	//				in, err := ic.mergeFiles(ctx, outs, startTxNum, endTxNum, background.NewProgressSet())
-	//				require.NoError(tb, err)
-	//				ii.integrateMergedDirtyFiles(outs, in)
-	//				ii.reCalcVisibleFiles()
-	//				return false
-	//			}(); stop {
-	//				break
-	//			}
-	//		}
-	//	}()
-	//}
-	//err = tx.Commit()
-	//require.NoError(tb, err)
+	for step := uint64(0); step < txs/ii.aggregationStep-1; step++ {
+		func() {
+			bs, err := ii.collate(ctx, step, tx)
+			require.NoError(tb, err)
+			sf, err := ii.buildFiles(ctx, step, bs, background.NewProgressSet())
+			require.NoError(tb, err)
+			ii.integrateDirtyFiles(sf, step*ii.aggregationStep, (step+1)*ii.aggregationStep)
+			ii.reCalcVisibleFiles()
+			ic := ii.BeginFilesRo()
+			defer ic.Close()
+			_, err = ic.Prune(ctx, tx, step*ii.aggregationStep, (step+1)*ii.aggregationStep, math.MaxUint64, logEvery, false, false, nil)
+			require.NoError(tb, err)
+			var found bool
+			var startTxNum, endTxNum uint64
+			maxEndTxNum := ii.endTxNumMinimax()
+			maxSpan := ii.aggregationStep * StepsInColdFile
+
+			for {
+				if stop := func() bool {
+					ic := ii.BeginFilesRo()
+					defer ic.Close()
+					found, startTxNum, endTxNum = ic.findMergeRange(maxEndTxNum, maxSpan)
+					if !found {
+						return true
+					}
+					outs, _ := ic.staticFilesInRange(startTxNum, endTxNum)
+					in, err := ic.mergeFiles(ctx, outs, startTxNum, endTxNum, background.NewProgressSet())
+					require.NoError(tb, err)
+					ii.integrateMergedDirtyFiles(outs, in)
+					ii.reCalcVisibleFiles()
+					return false
+				}(); stop {
+					break
+				}
+			}
+		}()
+	}
+	err = tx.Commit()
+	require.NoError(tb, err)
 }
 
 func TestForkableRanges(t *testing.T) {

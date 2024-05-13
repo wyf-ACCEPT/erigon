@@ -379,11 +379,9 @@ func BuildIndex(ctx context.Context, info FileInfo, salt uint32, firstDataId uin
 	}()
 
 	d, err := seg.NewDecompressor(info.Path)
-
 	if err != nil {
 		return fmt.Errorf("can't open %s for indexing: %w", info.Name(), err)
 	}
-
 	defer d.Close()
 
 	if p != nil {

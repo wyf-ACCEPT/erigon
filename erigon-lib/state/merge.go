@@ -284,6 +284,40 @@ func (iit *InvertedIndexRoTx) findMergeRange(maxEndTxNum, maxSpan uint64) (bool,
 	return minFound, startTxNum, endTxNum
 }
 
+// 0-1,1-2,2-3,3-4: allow merge 0-1
+// 0-2,2-3,3-4: allow merge 0-4
+// 0-2,2-4: allow merge 0-4
+//
+// 0-1,1-2,2-3: allow merge 0-2
+//
+// 0-2,2-3: nothing to merge
+func (tx *ForkableRoTx) findMergeRange(maxEndTxNum, maxSpan uint64) (bool, uint64, uint64) {
+	var minFound bool
+	var startTxNum, endTxNum uint64
+	for _, item := range tx.files {
+		if item.endTxNum > maxEndTxNum {
+			continue
+		}
+		endStep := item.endTxNum / tx.ii.aggregationStep
+		spanStep := endStep & -endStep // Extract rightmost bit in the binary representation of endStep, this corresponds to size of maximally possible merge ending at endStep
+		span := cmp.Min(spanStep*tx.ii.aggregationStep, maxSpan)
+		start := item.endTxNum - span
+		foundSuperSet := startTxNum == item.startTxNum && item.endTxNum >= endTxNum
+		if foundSuperSet {
+			minFound = false
+			startTxNum = start
+			endTxNum = item.endTxNum
+		} else if start < item.startTxNum {
+			if !minFound || start < startTxNum {
+				minFound = true
+				startTxNum = start
+				endTxNum = item.endTxNum
+			}
+		}
+	}
+	return minFound, startTxNum, endTxNum
+}
+
 type HistoryRanges struct {
 	historyStartTxNum uint64
 	historyEndTxNum   uint64
@@ -432,9 +466,27 @@ func (iit *InvertedIndexRoTx) staticFilesInRange(startTxNum, endTxNum uint64) ([
 	return files, startJ
 }
 
-// nolint
-func (ii *InvertedIndex) staticFilesInRange(startTxNum, endTxNum uint64, ic *InvertedIndexRoTx) ([]*filesItem, int) {
-	panic("deprecated: use InvertedIndexRoTx.staticFilesInRange")
+func (tx *ForkableRoTx) staticFilesInRange(startTxNum, endTxNum uint64) ([]*filesItem, int) {
+	files := make([]*filesItem, 0, len(tx.files))
+	var startJ int
+
+	for _, item := range tx.files {
+		if item.startTxNum < startTxNum {
+			startJ++
+			continue
+		}
+		if item.endTxNum > endTxNum {
+			break
+		}
+		files = append(files, item.src)
+	}
+	for _, f := range files {
+		if f == nil {
+			panic("must not happen")
+		}
+	}
+
+	return files, startJ
 }
 
 func (ht *HistoryRoTx) staticFilesInRange(r HistoryRanges) (indexFiles, historyFiles []*filesItem, startJ int, err error) {
@@ -489,11 +541,6 @@ func (ht *HistoryRoTx) staticFilesInRange(r HistoryRanges) (indexFiles, historyF
 		}
 	}
 	return
-}
-
-// nolint
-func (h *History) staticFilesInRange(r HistoryRanges, hc *HistoryRoTx) (indexFiles, historyFiles []*filesItem, startJ int, err error) {
-	panic("deprecated: use HistoryRoTx.staticFilesInRange")
 }
 
 func mergeEfs(preval, val, buf []byte) ([]byte, error) {
@@ -1081,6 +1128,81 @@ func (d *Domain) integrateMergedDirtyFiles(valuesOuts, indexOuts, historyOuts []
 		d.dirtyFiles.Delete(out)
 		out.canDelete.Store(true)
 	}
+}
+
+func (tx *ForkableRoTx) mergeFiles(ctx context.Context, files []*filesItem, startTxNum, endTxNum uint64, ps *background.ProgressSet) (*filesItem, error) {
+	for _, h := range files {
+		defer h.decompressor.EnableReadAhead().DisableReadAhead()
+	}
+
+	var outItem *filesItem
+	var comp *seg.Compressor
+	var decomp *seg.Decompressor
+	var err error
+	var closeItem = true
+	defer func() {
+		if closeItem {
+			if comp != nil {
+				comp.Close()
+			}
+			if decomp != nil {
+				decomp.Close()
+			}
+			if outItem != nil {
+				outItem.closeFilesAndRemove()
+			}
+		}
+	}()
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+	fromStep, toStep := startTxNum/tx.ii.aggregationStep, endTxNum/tx.ii.aggregationStep
+
+	datPath := tx.ii.fkFilePath(fromStep, toStep)
+	if comp, err = seg.NewCompressor(ctx, "merge fk "+tx.ii.filenameBase, datPath, tx.ii.dirs.Tmp, seg.MinPatternScore, tx.ii.compressWorkers, log.LvlTrace, tx.ii.logger); err != nil {
+		return nil, fmt.Errorf("merge %s inverted index compressor: %w", tx.ii.filenameBase, err)
+	}
+	defer comp.Close()
+	if tx.ii.noFsync {
+		comp.DisableFsync()
+	}
+	write := NewArchiveWriter(comp, tx.ii.compression)
+	defer write.Close()
+	p := ps.AddNew(path.Base(datPath), 1)
+	defer ps.Delete(p)
+
+	var word = make([]byte, 0, 4096)
+
+	for _, item := range files {
+		g := NewArchiveGetter(item.decompressor.MakeGetter(), tx.ii.compression)
+		g.Reset(0)
+		if g.HasNext() {
+			word, _ = g.Next(word[:0])
+			if err := write.AddWord(word); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	if err = write.Compress(); err != nil {
+		return nil, err
+	}
+
+	outItem = newFilesItem(startTxNum, endTxNum, tx.ii.aggregationStep)
+	if outItem.decompressor, err = seg.NewDecompressor(datPath); err != nil {
+		return nil, fmt.Errorf("merge %s decompressor [%d-%d]: %w", tx.ii.filenameBase, startTxNum, endTxNum, err)
+	}
+	ps.Delete(p)
+
+	if err := tx.ii.buildMapIdx(ctx, fromStep, toStep, outItem.decompressor, ps); err != nil {
+		return nil, fmt.Errorf("merge %s buildIndex [%d-%d]: %w", tx.ii.filenameBase, startTxNum, endTxNum, err)
+	}
+	if outItem.index, err = recsplit.OpenIndex(tx.ii.fkAccessorFilePath(fromStep, toStep)); err != nil {
+		return nil, err
+	}
+
+	closeItem = false
+	return outItem, nil
 }
 
 func (ii *InvertedIndex) integrateMergedDirtyFiles(outs []*filesItem, in *filesItem) {
