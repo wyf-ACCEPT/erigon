@@ -276,6 +276,7 @@ func getNextTransactions(
 	for i := range txSlots.Txs {
 		transaction, err := types.DecodeWrappedTransaction(txSlots.Txs[i])
 		if err == io.EOF {
+			fmt.Println("weird encoding")
 			continue
 		}
 		if err != nil {
@@ -417,7 +418,7 @@ func filterBadTransactions(transactions []types.Transaction, config chain.Config
 		filtered = append(filtered, transaction)
 		transactions = transactions[1:]
 	}
-	logger.Debug("Filtration", "initial", initialCnt, "no sender", noSenderCnt, "no account", noAccountCnt, "nonce too low", nonceTooLowCnt, "nonceTooHigh", missedTxs, "sender not EOA", notEOACnt, "fee too low", feeTooLowCnt, "overflow", overflowCnt, "balance too low", balanceTooLowCnt, "filtered", len(filtered))
+	logger.Info("Filtration", "initial", initialCnt, "no sender", noSenderCnt, "no account", noAccountCnt, "nonce too low", nonceTooLowCnt, "nonceTooHigh", missedTxs, "sender not EOA", notEOACnt, "fee too low", feeTooLowCnt, "overflow", overflowCnt, "balance too low", balanceTooLowCnt, "filtered", len(filtered))
 	return filtered, nil
 }
 
