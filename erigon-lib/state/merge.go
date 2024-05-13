@@ -75,6 +75,30 @@ func (ii *InvertedIndex) endIndexedTxNumMinimax(needFrozen bool) uint64 {
 	return max
 }
 
+func (fk *Forkable) endTxNumMinimax() uint64 {
+	var minimax uint64
+	if _max, ok := fk.dirtyFiles.Max(); ok {
+		endTxNum := _max.endTxNum
+		if minimax == 0 || endTxNum < minimax {
+			minimax = endTxNum
+		}
+	}
+	return minimax
+}
+func (fk *Forkable) endIndexedTxNumMinimax(needFrozen bool) uint64 {
+	var _max uint64
+	fk.dirtyFiles.Walk(func(items []*filesItem) bool {
+		for _, item := range items {
+			if item.index == nil || (needFrozen && !item.frozen) {
+				continue
+			}
+			_max = cmp.Max(_max, item.endTxNum)
+		}
+		return true
+	})
+	return _max
+}
+
 func (h *History) endTxNumMinimax() uint64 {
 	if h.dontProduceHistoryFiles {
 		return math.MaxUint64

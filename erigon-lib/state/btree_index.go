@@ -7,7 +7,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/ledgerwatch/erigon-lib/common"
 	"math"
 	"os"
 	"path"
@@ -15,6 +14,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/ledgerwatch/erigon-lib/common"
 
 	"github.com/c2h5oh/datasize"
 	"github.com/edsrzf/mmap-go"
