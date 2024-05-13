@@ -1020,10 +1020,9 @@ func (ic ForkableCollation) Close() {
 // buildFiles - `step=N` means build file `[N:N+1)` which is equal to [N:N+1)
 func (fk *Forkable) buildFiles(ctx context.Context, step uint64, coll ForkableCollation, ps *background.ProgressSet) (ForkableFiles, error) {
 	var (
-		decomp    *seg.Decompressor
-		index     *recsplit.Index
-		existence *ExistenceFilter
-		err       error
+		decomp *seg.Decompressor
+		index  *recsplit.Index
+		err    error
 	)
 	mxRunningFilesBuilding.Inc()
 	defer mxRunningFilesBuilding.Dec()
@@ -1036,9 +1035,6 @@ func (fk *Forkable) buildFiles(ctx context.Context, step uint64, coll ForkableCo
 			}
 			if index != nil {
 				index.Close()
-			}
-			if existence != nil {
-				existence.Close()
 			}
 		}
 	}()
@@ -1071,7 +1067,7 @@ func (fk *Forkable) buildFiles(ctx context.Context, step uint64, coll ForkableCo
 	}
 
 	closeComp = false
-	return ForkableFiles{decomp: decomp, index: index, existence: existence}, nil
+	return ForkableFiles{decomp: decomp, index: index}, nil
 }
 
 func (fk *Forkable) buildMapIdx(ctx context.Context, fromStep, toStep uint64, data *seg.Decompressor, ps *background.ProgressSet) error {
@@ -1093,7 +1089,6 @@ func (fk *Forkable) integrateDirtyFiles(sf ForkableFiles, txNumFrom, txNumTo uin
 	fi := newFilesItem(txNumFrom, txNumTo, fk.aggregationStep)
 	fi.decompressor = sf.decomp
 	fi.index = sf.index
-	fi.existence = sf.existence
 	fk.dirtyFiles.Set(fi)
 }
 
