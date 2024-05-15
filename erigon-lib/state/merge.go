@@ -1191,7 +1191,7 @@ func (tx *ForkableRoTx) mergeFiles(ctx context.Context, files []*filesItem, star
 	}
 	ps.Delete(p)
 
-	if err := tx.ii.buildMapIdx(ctx, fromStep, toStep, outItem.decompressor, ps); err != nil {
+	if err := tx.ii.buildIdx(ctx, fromStep, toStep, outItem.decompressor, ps); err != nil {
 		return nil, fmt.Errorf("merge %s buildIndex [%d-%d]: %w", tx.ii.filenameBase, startTxNum, endTxNum, err)
 	}
 	if outItem.index, err = recsplit.OpenIndex(tx.ii.fkAccessorFilePath(fromStep, toStep)); err != nil {
@@ -1228,6 +1228,37 @@ func (ii *InvertedIndex) integrateMergedDirtyFiles(outs []*filesItem, in *filesI
 
 		if ii.filenameBase == traceFileLife {
 			ii.logger.Warn(fmt.Sprintf("[agg] mark can delete: %s, triggered by merge of: %s", out.decompressor.FileName(), in.decompressor.FileName()))
+		}
+		out.canDelete.Store(true)
+	}
+}
+
+func (fk *Forkable) integrateMergedDirtyFiles(outs []*filesItem, in *filesItem) {
+	if in != nil {
+		fk.dirtyFiles.Set(in)
+
+		// `kill -9` may leave some garbage
+		// but it still may be useful for merges, until we finish merge frozen file
+		if in.frozen {
+			fk.dirtyFiles.Walk(func(items []*filesItem) bool {
+				for _, item := range items {
+					if item.frozen || item.endTxNum > in.endTxNum {
+						continue
+					}
+					outs = append(outs, item)
+				}
+				return true
+			})
+		}
+	}
+	for _, out := range outs {
+		if out == nil {
+			panic("must not happen: " + fk.filenameBase)
+		}
+		fk.dirtyFiles.Delete(out)
+
+		if fk.filenameBase == traceFileLife {
+			fk.logger.Warn(fmt.Sprintf("[agg] mark can delete: %s, triggered by merge of: %s", out.decompressor.FileName(), in.decompressor.FileName()))
 		}
 		out.canDelete.Store(true)
 	}

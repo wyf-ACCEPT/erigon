@@ -31,7 +31,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ledgerwatch/erigon-lib/common"
 	"github.com/ledgerwatch/erigon-lib/common/assert"
+	"github.com/ledgerwatch/erigon-lib/common/length"
 	"github.com/ledgerwatch/erigon-lib/seg"
 	"github.com/ledgerwatch/log/v3"
 	"github.com/spaolacci/murmur3"
@@ -45,8 +47,6 @@ import (
 	"github.com/ledgerwatch/erigon-lib/etl"
 	"github.com/ledgerwatch/erigon-lib/kv"
 	"github.com/ledgerwatch/erigon-lib/kv/bitmapdb"
-	"github.com/ledgerwatch/erigon-lib/kv/iter"
-	"github.com/ledgerwatch/erigon-lib/kv/order"
 	"github.com/ledgerwatch/erigon-lib/recsplit"
 	"github.com/ledgerwatch/erigon-lib/recsplit/eliasfano32"
 )
@@ -221,12 +221,39 @@ func (fk *Forkable) missedIdxFiles() (l []*filesItem) {
 	return l
 }
 
-func (fk *Forkable) buildEfi(ctx context.Context, item *filesItem, ps *background.ProgressSet) (err error) {
-	if item.decompressor == nil {
-		return fmt.Errorf("buildEfi: passed item with nil decompressor %s %d-%d", fk.filenameBase, item.startTxNum/fk.aggregationStep, item.endTxNum/fk.aggregationStep)
+func (fk *Forkable) buildIdx(ctx context.Context, fromStep, toStep uint64, d *seg.Decompressor, ps *background.ProgressSet) error {
+	if d == nil {
+		return fmt.Errorf("buildIdx: passed item with nil decompressor %s %d-%d", fk.filenameBase, fromStep, toStep)
 	}
-	fromStep, toStep := item.startTxNum/fk.aggregationStep, item.endTxNum/fk.aggregationStep
-	return fk.buildMapIdx(ctx, fromStep, toStep, item.decompressor, ps)
+	idxPath := fk.fkAccessorFilePath(fromStep, toStep)
+	cfg := recsplit.RecSplitArgs{
+		Enums: true,
+
+		BucketSize: 2000,
+		LeafSize:   8,
+		TmpDir:     fk.dirs.Tmp,
+		IndexFile:  idxPath,
+		Salt:       fk.salt,
+		NoFsync:    fk.noFsync,
+
+		KeyCount: d.Count(),
+	}
+	_, fileName := filepath.Split(idxPath)
+	count := d.Count()
+	p := ps.AddNew(fileName, uint64(count))
+	defer ps.Delete(p)
+
+	num := make([]byte, binary.MaxVarintLen64)
+	return buildSimpleIndex(ctx, d, cfg, fk.logger, func(idx *recsplit.RecSplit, i, offset uint64, word []byte) error {
+		if p != nil {
+			p.Processed.Add(1)
+		}
+		n := binary.PutUvarint(num, i)
+		if err := idx.AddKey(num[:n], offset); err != nil {
+			return err
+		}
+		return nil
+	})
 }
 
 // BuildMissedIndices - produce .efi/.vi/.kvi from .ef/.v/.kv
@@ -234,7 +261,8 @@ func (fk *Forkable) BuildMissedIndices(ctx context.Context, g *errgroup.Group, p
 	for _, item := range fk.missedIdxFiles() {
 		item := item
 		g.Go(func() error {
-			return fk.buildEfi(ctx, item, ps)
+			fromStep, toStep := item.startTxNum/fk.aggregationStep, item.endTxNum/fk.aggregationStep
+			return fk.buildIdx(ctx, fromStep, toStep, item.decompressor, ps)
 		})
 	}
 }
@@ -414,6 +442,7 @@ func (fk *Forkable) BeginFilesRo() *ForkableRoTx {
 		files: files,
 	}
 }
+
 func (tx *ForkableRoTx) Close() {
 	if tx.files == nil { // invariant: it's safe to call Close multiple times
 		return
@@ -485,129 +514,52 @@ func (tx *ForkableRoTx) statelessIdxReader(i int) *recsplit.IndexReader {
 	return r
 }
 
-func (tx *ForkableRoTx) seekInFiles(key []byte, txNum uint64) (found bool, equalOrHigherTxNum uint64) {
-	hi, lo := tx.hashKey(key)
-
-	for i := 0; i < len(tx.files); i++ {
-		if tx.files[i].endTxNum <= txNum {
-			continue
-		}
-		offset, ok := tx.statelessIdxReader(i).TwoLayerLookupByHash(hi, lo)
-		if !ok {
-			continue
-		}
-
-		g := tx.statelessGetter(i)
-		g.Reset(offset)
-		k, _ := g.Next(nil)
-		if !bytes.Equal(k, key) {
-			continue
-		}
-		eliasVal, _ := g.Next(nil)
-		equalOrHigherTxNum, found = eliasfano32.Seek(eliasVal, txNum)
-
-		if found {
-			return true, equalOrHigherTxNum
-		}
+func (tx *ForkableRoTx) getInFiles(ts uint64) (v []byte, ok bool) {
+	i, ok := tx.fileByTS(ts)
+	if !ok {
+		return nil, false
 	}
-	return false, 0
+
+	offset := tx.statelessIdxReader(i).OrdinalLookup(ts)
+
+	g := tx.statelessGetter(i)
+	g.Reset(offset)
+	k, _ := g.Next(nil)
+	return k, true
 }
 
-func (tx *ForkableRoTx) recentIterateRange(key []byte, startTxNum, endTxNum int, asc order.By, limit int, roTx kv.Tx) (iter.U64, error) {
-	//optimization: return empty pre-allocated iterator if range is frozen
-	if asc {
-		isFrozenRange := len(tx.files) > 0 && endTxNum >= 0 && tx.files[len(tx.files)-1].endTxNum >= uint64(endTxNum)
-		if isFrozenRange {
-			return iter.EmptyU64, nil
+func (tx *ForkableRoTx) Get(blockNum uint64, blockHash common.Hash, dbtx kv.Tx) ([]byte, bool, error) {
+	v, ok := tx.getInFiles(blockNum)
+	if ok {
+		return v, true, nil
+	}
+	return tx.getInDB(blockNum, blockHash, dbtx)
+}
+func (tx *ForkableRoTx) fileByTS(ts uint64) (i int, ok bool) {
+	for i = 0; i < len(tx.files); i++ {
+		if tx.files[i].hasTS(ts) {
+			return i, true
 		}
-	} else {
-		isFrozenRange := len(tx.files) > 0 && startTxNum >= 0 && tx.files[len(tx.files)-1].endTxNum >= uint64(startTxNum)
-		if isFrozenRange {
-			return iter.EmptyU64, nil
-		}
 	}
+	return 0, false
+}
 
-	var from []byte
-	if startTxNum >= 0 {
-		from = make([]byte, 8)
-		binary.BigEndian.PutUint64(from, uint64(startTxNum))
-	}
+func (tx *ForkableRoTx) Put(blockNum uint64, blockHash common.Hash, v []byte, dbtx kv.RwTx) error {
+	k := make([]byte, length.BlockNum+length.Hash)
+	binary.BigEndian.PutUint64(k, blockNum)
+	copy(k[length.BlockNum:], blockHash[:])
+	return dbtx.Put(tx.ii.table, k, v)
+}
 
-	var to []byte
-	if endTxNum >= 0 {
-		to = make([]byte, 8)
-		binary.BigEndian.PutUint64(to, uint64(endTxNum))
-	}
-	it, err := roTx.RangeDupSort(tx.ii.table, key, from, to, asc, limit)
+func (tx *ForkableRoTx) getInDB(blockNum uint64, blockHash common.Hash, dbtx kv.Tx) ([]byte, bool, error) {
+	k := make([]byte, length.BlockNum+length.Hash)
+	binary.BigEndian.PutUint64(k, blockNum)
+	copy(k[length.BlockNum:], blockHash[:])
+	v, err := dbtx.GetOne(tx.ii.table, k)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
-	return iter.TransformKV2U64(it, func(_, v []byte) (uint64, error) {
-		return binary.BigEndian.Uint64(v), nil
-	}), nil
-}
-
-// IdxRange is to be used in public API, therefore it relies on read-only transaction
-// so that iteration can be done even when the inverted index is being updated.
-// [startTxNum; endNumTx)
-func (tx *ForkableRoTx) iterateRangeFrozen(key []byte, startTxNum, endTxNum int, asc order.By, limit int) (*FrozenInvertedIdxIter, error) {
-	if asc && (startTxNum >= 0 && endTxNum >= 0) && startTxNum > endTxNum {
-		return nil, fmt.Errorf("startTxNum=%d epected to be lower than endTxNum=%d", startTxNum, endTxNum)
-	}
-	if !asc && (startTxNum >= 0 && endTxNum >= 0) && startTxNum < endTxNum {
-		return nil, fmt.Errorf("startTxNum=%d epected to be bigger than endTxNum=%d", startTxNum, endTxNum)
-	}
-
-	it := &FrozenInvertedIdxIter{
-		key:         key,
-		startTxNum:  startTxNum,
-		endTxNum:    endTxNum,
-		indexTable:  tx.ii.table,
-		orderAscend: asc,
-		limit:       limit,
-		ef:          eliasfano32.NewEliasFano(1, 1),
-	}
-	if asc {
-		for i := len(tx.files) - 1; i >= 0; i-- {
-			// [from,to) && from < to
-			if endTxNum >= 0 && int(tx.files[i].startTxNum) >= endTxNum {
-				continue
-			}
-			if startTxNum >= 0 && tx.files[i].endTxNum <= uint64(startTxNum) {
-				break
-			}
-			if tx.files[i].src.index.KeyCount() == 0 {
-				continue
-			}
-			it.stack = append(it.stack, tx.files[i])
-			it.stack[len(it.stack)-1].getter = it.stack[len(it.stack)-1].src.decompressor.MakeGetter()
-			it.stack[len(it.stack)-1].reader = it.stack[len(it.stack)-1].src.index.GetReaderFromPool()
-			it.hasNext = true
-		}
-	} else {
-		for i := 0; i < len(tx.files); i++ {
-			// [from,to) && from > to
-			if endTxNum >= 0 && int(tx.files[i].endTxNum) <= endTxNum {
-				continue
-			}
-			if startTxNum >= 0 && tx.files[i].startTxNum > uint64(startTxNum) {
-				break
-			}
-			if tx.files[i].src.index == nil { // assert
-				err := fmt.Errorf("why file has not index: %s\n", tx.files[i].src.decompressor.FileName())
-				panic(err)
-			}
-			if tx.files[i].src.index.KeyCount() == 0 {
-				continue
-			}
-			it.stack = append(it.stack, tx.files[i])
-			it.stack[len(it.stack)-1].getter = it.stack[len(it.stack)-1].src.decompressor.MakeGetter()
-			it.stack[len(it.stack)-1].reader = it.stack[len(it.stack)-1].src.index.GetReaderFromPool()
-			it.hasNext = true
-		}
-	}
-	it.advance()
-	return it, nil
+	return v, v != nil, err
 }
 
 func (tx *ForkableRoTx) smallestTxNum(dbtx kv.Tx) uint64 {
@@ -1058,7 +1010,7 @@ func (fk *Forkable) buildFiles(ctx context.Context, step uint64, coll ForkableCo
 		return ForkableFiles{}, fmt.Errorf("open %s decompressor: %w", fk.filenameBase, err)
 	}
 
-	if err := fk.buildMapIdx(ctx, step, step+1, decomp, ps); err != nil {
+	if err := fk.buildIdx(ctx, step, step+1, decomp, ps); err != nil {
 		return ForkableFiles{}, fmt.Errorf("build %s efi: %w", fk.filenameBase, err)
 	}
 	if index, err = recsplit.OpenIndex(fk.fkAccessorFilePath(step, step+1)); err != nil {
@@ -1067,39 +1019,6 @@ func (fk *Forkable) buildFiles(ctx context.Context, step uint64, coll ForkableCo
 
 	closeComp = false
 	return ForkableFiles{decomp: decomp, index: index}, nil
-}
-
-func (fk *Forkable) buildMapIdx(ctx context.Context, fromStep, toStep uint64, d *seg.Decompressor, ps *background.ProgressSet) error {
-	idxPath := fk.fkAccessorFilePath(fromStep, toStep)
-	cfg := recsplit.RecSplitArgs{
-		Enums:              true,
-		LessFalsePositives: true,
-
-		BucketSize: 2000,
-		LeafSize:   8,
-		TmpDir:     fk.dirs.Tmp,
-		IndexFile:  idxPath,
-		Salt:       fk.salt,
-		NoFsync:    fk.noFsync,
-
-		KeyCount: d.Count(),
-	}
-	_, fileName := filepath.Split(idxPath)
-	count := d.Count()
-	p := ps.AddNew(fileName, uint64(count))
-	defer ps.Delete(p)
-
-	num := make([]byte, binary.MaxVarintLen64)
-	return buildSimpleIndex(ctx, d, cfg, fk.logger, func(idx *recsplit.RecSplit, i, offset uint64, word []byte) error {
-		if p != nil {
-			p.Processed.Add(1)
-		}
-		n := binary.PutUvarint(num, i)
-		if err := idx.AddKey(num[:n], offset); err != nil {
-			return err
-		}
-		return nil
-	})
 }
 
 func (fk *Forkable) integrateDirtyFiles(sf ForkableFiles, txNumFrom, txNumTo uint64) {

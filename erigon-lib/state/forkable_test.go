@@ -269,7 +269,6 @@ func filledForkableOfSize(tb testing.TB, txs, aggStep, module uint64, logger log
 }
 
 func checkRangesForkable(t *testing.T, db kv.RwDB, ii *Forkable, txs uint64) {
-	panic("implement me")
 	//t.Helper()
 	//ctx := context.Background()
 	//ic := ii.BeginFilesRo()
