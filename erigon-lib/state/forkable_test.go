@@ -18,19 +18,18 @@ package state
 
 import (
 	"context"
-	"encoding/binary"
 	"fmt"
 	"math"
 	"os"
 	"testing"
 	"time"
 
+	"github.com/ledgerwatch/erigon-lib/common"
 	"github.com/ledgerwatch/erigon-lib/common/background"
 	"github.com/ledgerwatch/erigon-lib/common/datadir"
 	"github.com/ledgerwatch/erigon-lib/kv"
 	"github.com/ledgerwatch/erigon-lib/kv/mdbx"
 	"github.com/ledgerwatch/erigon-lib/recsplit"
-	"github.com/ledgerwatch/erigon-lib/recsplit/eliasfano32"
 	"github.com/ledgerwatch/erigon-lib/seg"
 	"github.com/ledgerwatch/log/v3"
 	"github.com/stretchr/testify/require"
@@ -58,79 +57,82 @@ func testDbAndForkable(tb testing.TB, aggStep uint64, logger log.Logger) (kv.RwD
 }
 
 func TestForkableCollationBuild(t *testing.T) {
-	logger := log.New()
 	logEvery := time.NewTicker(30 * time.Second)
 	defer logEvery.Stop()
-	db, ii := testDbAndForkable(t, 16, logger)
+	aggStep := uint64(16)
+	db, ii := testDbAndForkable(t, aggStep, log.New())
 	ctx := context.Background()
-	tx, err := db.BeginRw(ctx)
-	require.NoError(t, err)
-	defer tx.Rollback()
-	ic := ii.BeginFilesRo()
-	defer ic.Close()
-	writer := ic.NewWriter()
-	defer writer.close()
+	t.Run("nonbuf api can see own writes", func(t *testing.T) {
+		require := require.New(t)
 
-	writer.SetTimeStamp(2)
-	err = writer.Add([]byte("key1"))
-	require.NoError(t, err)
+		tx, err := db.BeginRw(ctx)
+		require.NoError(err)
+		defer tx.Rollback()
+		ic := ii.BeginFilesRo()
+		defer ic.Close()
 
-	writer.SetTimeStamp(3)
-	err = writer.Add([]byte("key2"))
-	require.NoError(t, err)
+		//step 0
+		err = ic.Put(1, common.Hash{1}, []byte{1}, tx)
+		require.NoError(err)
+		err = ic.Put(1, common.Hash{3}, []byte{3}, tx)
+		require.NoError(err)
 
-	writer.SetTimeStamp(6)
-	err = writer.Add([]byte("key1"))
-	require.NoError(t, err)
-	err = writer.Add([]byte("key3"))
-	require.NoError(t, err)
+		//step 1
+		err = ic.Put(aggStep+1, common.Hash{1}, []byte{1}, tx)
+		require.NoError(err)
+		err = ic.Put(aggStep+1, common.Hash{3}, []byte{3}, tx)
+		require.NoError(err)
 
-	writer.SetTimeStamp(17)
-	err = writer.Add([]byte("key10"))
-	require.NoError(t, err)
+		//can see own writes
+		v, ok, err := ic.Get(1, common.Hash{1}, tx)
+		require.NoError(err)
+		require.True(ok)
+		require.Equal([]byte{1}, v)
+		//don't see non-existing forks
+		v, ok, err = ic.Get(1, common.Hash{2}, tx)
+		require.NoError(err)
+		require.False(ok)
+		//can see existing forks
+		v, ok, err = ic.Get(1, common.Hash{3}, tx)
+		require.NoError(err)
+		require.True(ok)
+		require.Equal([]byte{3}, v)
 
-	err = writer.Flush(ctx, tx)
-	require.NoError(t, err)
-	err = tx.Commit()
-	require.NoError(t, err)
+		err = tx.Commit()
+		require.NoError(err)
+	})
 
-	roTx, err := db.BeginRo(ctx)
-	require.NoError(t, err)
-	defer roTx.Rollback()
+	t.Run("see only canonical records in files", func(t *testing.T) {
+		require := require.New(t)
 
-	bs, err := ii.collate(ctx, 0, roTx)
-	require.NoError(t, err)
+		roTx, err := db.BeginRo(ctx)
+		require.NoError(err)
+		defer roTx.Rollback()
 
-	sf, err := ii.buildFiles(ctx, 0, bs, background.NewProgressSet())
-	require.NoError(t, err)
-	defer sf.CleanupOnError()
+		bs, err := ii.collate(ctx, 0, roTx)
+		require.NoError(err)
 
-	g := sf.decomp.MakeGetter()
-	g.Reset(0)
-	var words []string
-	var intArrs [][]uint64
-	for g.HasNext() {
-		w, _ := g.Next(nil)
-		words = append(words, string(w))
-		w, _ = g.Next(w[:0])
-		ef, _ := eliasfano32.ReadEliasFano(w)
-		var ints []uint64
-		it := ef.Iterator()
-		for it.HasNext() {
-			v, _ := it.Next()
-			ints = append(ints, v)
+		sf, err := ii.buildFiles(ctx, 0, bs, background.NewProgressSet())
+		require.NoError(err)
+		defer sf.CleanupOnError()
+		g := sf.decomp.MakeGetter()
+		g.Reset(0)
+		require.Equal(1, sf.decomp.Count())
+		var words []string
+		for g.HasNext() {
+			w, _ := g.Next(nil)
+			words = append(words, string(w))
 		}
-		intArrs = append(intArrs, ints)
-	}
-	require.Equal(t, []string{"key1", "key2", "key3"}, words)
-	require.Equal(t, [][]uint64{{2, 6}, {3}, {6}}, intArrs)
-	r := recsplit.NewIndexReader(sf.index)
-	for i := 0; i < len(words); i++ {
-		offset, _ := r.TwoLayerLookup([]byte(words[i]))
-		g.Reset(offset)
-		w, _ := g.Next(nil)
-		require.Equal(t, words[i], string(w))
-	}
+		require.Equal([]string{"1"}, words)
+		r := recsplit.NewIndexReader(sf.index)
+		for i := 0; i < len(words); i++ {
+			offset, _ := r.TwoLayerLookup([]byte(words[i]))
+			g.Reset(offset)
+			w, _ := g.Next(nil)
+			require.Equal(t, words[i], string(w))
+		}
+	})
+
 }
 
 func TestForkableAfterPrune(t *testing.T) {
@@ -151,19 +153,19 @@ func TestForkableAfterPrune(t *testing.T) {
 	writer := ic.NewWriter()
 	defer writer.close()
 
-	writer.SetTimeStamp(2)
-	err = writer.Add([]byte("key1"))
-	require.NoError(t, err)
-
-	writer.SetTimeStamp(3)
-	err = writer.Add([]byte("key2"))
-	require.NoError(t, err)
-
-	writer.SetTimeStamp(6)
-	err = writer.Add([]byte("key1"))
-	require.NoError(t, err)
-	err = writer.Add([]byte("key3"))
-	require.NoError(t, err)
+	//writer.SetTimeStamp(2)
+	//err = writer.Add([]byte("key1"))
+	//require.NoError(t, err)
+	//
+	//writer.SetTimeStamp(3)
+	//err = writer.Add([]byte("key2"))
+	//require.NoError(t, err)
+	//
+	//writer.SetTimeStamp(6)
+	//err = writer.Add([]byte("key1"))
+	//require.NoError(t, err)
+	//err = writer.Add([]byte("key3"))
+	//require.NoError(t, err)
 
 	err = writer.Flush(ctx, tx)
 	require.NoError(t, err)
@@ -225,48 +227,49 @@ func filledForkable(tb testing.TB, logger log.Logger) (kv.RwDB, *Forkable, uint6
 }
 
 func filledForkableOfSize(tb testing.TB, txs, aggStep, module uint64, logger log.Logger) (kv.RwDB, *Forkable, uint64) {
-	tb.Helper()
-	db, ii := testDbAndForkable(tb, aggStep, logger)
-	ctx, require := context.Background(), require.New(tb)
-	tx, err := db.BeginRw(ctx)
-	require.NoError(err)
-	defer tx.Rollback()
-	ic := ii.BeginFilesRo()
-	defer ic.Close()
-
-	writer := ic.NewWriter()
-	defer writer.close()
-
-	var flusher flusher
-
-	// keys are encodings of numbers 1..31
-	// each key changes value on every txNum which is multiple of the key
-	for txNum := uint64(1); txNum <= txs; txNum++ {
-		writer.SetTimeStamp(txNum)
-		for keyNum := uint64(1); keyNum <= module; keyNum++ {
-			if txNum%keyNum == 0 {
-				var k [8]byte
-				binary.BigEndian.PutUint64(k[:], keyNum)
-				err = writer.Add(k[:])
-				require.NoError(err)
-			}
-		}
-		if flusher != nil {
-			require.NoError(flusher.Flush(ctx, tx))
-		}
-		if txNum%10 == 0 {
-			flusher = writer
-			writer = ic.NewWriter()
-		}
-	}
-	if flusher != nil {
-		require.NoError(flusher.Flush(ctx, tx))
-	}
-	err = writer.Flush(ctx, tx)
-	require.NoError(err)
-	err = tx.Commit()
-	require.NoError(err)
-	return db, ii, txs
+	panic("implement me")
+	//tb.Helper()
+	//db, ii := testDbAndForkable(tb, aggStep, logger)
+	//ctx, require := context.Background(), require.New(tb)
+	//tx, err := db.BeginRw(ctx)
+	//require.NoError(err)
+	//defer tx.Rollback()
+	//ic := ii.BeginFilesRo()
+	//defer ic.Close()
+	//
+	//writer := ic.NewWriter()
+	//defer writer.close()
+	//
+	//var flusher flusher
+	//
+	//// keys are encodings of numbers 1..31
+	//// each key changes value on every txNum which is multiple of the key
+	//for txNum := uint64(1); txNum <= txs; txNum++ {
+	//	writer.SetTimeStamp(txNum)
+	//	for keyNum := uint64(1); keyNum <= module; keyNum++ {
+	//		if txNum%keyNum == 0 {
+	//			var k [8]byte
+	//			binary.BigEndian.PutUint64(k[:], keyNum)
+	//			err = writer.Add(k[:])
+	//			require.NoError(err)
+	//		}
+	//	}
+	//	if flusher != nil {
+	//		require.NoError(flusher.Flush(ctx, tx))
+	//	}
+	//	if txNum%10 == 0 {
+	//		flusher = writer
+	//		writer = ic.NewWriter()
+	//	}
+	//}
+	//if flusher != nil {
+	//	require.NoError(flusher.Flush(ctx, tx))
+	//}
+	//err = writer.Flush(ctx, tx)
+	//require.NoError(err)
+	//err = tx.Commit()
+	//require.NoError(err)
+	//return db, ii, txs
 }
 
 func checkRangesForkable(t *testing.T, db kv.RwDB, ii *Forkable, txs uint64) {

@@ -17,7 +17,6 @@
 package state
 
 import (
-	"bytes"
 	"context"
 	"encoding/binary"
 	"errors"
@@ -33,6 +32,7 @@ import (
 
 	"github.com/ledgerwatch/erigon-lib/common"
 	"github.com/ledgerwatch/erigon-lib/common/assert"
+	"github.com/ledgerwatch/erigon-lib/common/hexutility"
 	"github.com/ledgerwatch/erigon-lib/common/length"
 	"github.com/ledgerwatch/erigon-lib/seg"
 	"github.com/ledgerwatch/log/v3"
@@ -46,7 +46,6 @@ import (
 	"github.com/ledgerwatch/erigon-lib/common/dir"
 	"github.com/ledgerwatch/erigon-lib/etl"
 	"github.com/ledgerwatch/erigon-lib/kv"
-	"github.com/ledgerwatch/erigon-lib/kv/bitmapdb"
 	"github.com/ledgerwatch/erigon-lib/recsplit"
 	"github.com/ledgerwatch/erigon-lib/recsplit/eliasfano32"
 )
@@ -99,6 +98,8 @@ type forkableCfg struct {
 	salt *uint32
 	dirs datadir.Dirs
 	db   kv.RoDB // global db pointer. mostly for background warmup.
+
+	canonicalMarkersTable string
 }
 
 func NewForkable(cfg forkableCfg, aggregationStep uint64, filenameBase, table string, integrityCheck func(fromStep uint64, toStep uint64) bool, logger log.Logger) (*Forkable, error) {
@@ -360,12 +361,27 @@ func (tx *ForkableRoTx) Files() (res []string) {
 }
 
 func (tx *ForkableRoTx) Get(blockNum uint64, blockHash common.Hash, dbtx kv.Tx) ([]byte, bool, error) {
-	v, ok := tx.getInFiles(blockNum)
+	v, ok := tx.getFromFiles(blockNum)
 	if ok {
 		return v, true, nil
 	}
-	return tx.getInDB(blockNum, blockHash, dbtx)
+	return tx.fk.getFromDBByTs(blockNum, blockHash, dbtx)
 }
+
+func (tx *ForkableRoTx) getFromFiles(ts uint64) (v []byte, ok bool) {
+	i, ok := tx.fileByTS(ts)
+	if !ok {
+		return nil, false
+	}
+
+	offset := tx.statelessIdxReader(i).OrdinalLookup(ts)
+
+	g := tx.statelessGetter(i)
+	g.Reset(offset)
+	k, _ := g.Next(nil)
+	return k, true
+}
+
 func (tx *ForkableRoTx) fileByTS(ts uint64) (i int, ok bool) {
 	for i = 0; i < len(tx.files); i++ {
 		if tx.files[i].hasTS(ts) {
@@ -379,14 +395,17 @@ func (tx *ForkableRoTx) Put(blockNum uint64, blockHash common.Hash, v []byte, db
 	k := make([]byte, length.BlockNum+length.Hash)
 	binary.BigEndian.PutUint64(k, blockNum)
 	copy(k[length.BlockNum:], blockHash[:])
-	return dbtx.Put(tx.ii.table, k, v)
+	return dbtx.Put(tx.fk.table, k, v)
 }
 
-func (tx *ForkableRoTx) getInDB(blockNum uint64, blockHash common.Hash, dbtx kv.Tx) ([]byte, bool, error) {
+func (fk *Forkable) getFromDBByTs(blockNum uint64, blockHash common.Hash, dbtx kv.Tx) ([]byte, bool, error) {
 	k := make([]byte, length.BlockNum+length.Hash)
 	binary.BigEndian.PutUint64(k, blockNum)
 	copy(k[length.BlockNum:], blockHash[:])
-	v, err := dbtx.GetOne(tx.ii.table, k)
+	return fk.getFromDB(k, dbtx)
+}
+func (fk *Forkable) getFromDB(k []byte, dbtx kv.Tx) ([]byte, bool, error) {
+	v, err := dbtx.GetOne(fk.table, k)
 	if err != nil {
 		return nil, false, err
 	}
@@ -408,7 +427,7 @@ func (w *forkableBufferedWriter) Add(blockNum uint64, blockHash common.Hash, v [
 }
 
 func (tx *ForkableRoTx) NewWriter() *forkableBufferedWriter {
-	return tx.newWriter(tx.ii.dirs.Tmp, false)
+	return tx.newWriter(tx.fk.dirs.Tmp, false)
 }
 
 type forkableBufferedWriter struct {
@@ -455,12 +474,12 @@ func (tx *ForkableRoTx) newWriter(tmpdir string, discard bool) *forkableBuffered
 	w := &forkableBufferedWriter{
 		discard:         discard,
 		tmpdir:          tmpdir,
-		filenameBase:    tx.ii.filenameBase,
-		aggregationStep: tx.ii.aggregationStep,
+		filenameBase:    tx.fk.filenameBase,
+		aggregationStep: tx.fk.aggregationStep,
 
-		table: tx.ii.table,
+		table: tx.fk.table,
 		// etl collector doesn't fsync: means if have enough ram, all files produced by all collectors will be in ram
-		tableCollector: etl.NewCollector("flush "+tx.ii.table, tmpdir, etl.NewSortableBuffer(WALCollectorRAM), tx.ii.logger),
+		tableCollector: etl.NewCollector("flush "+tx.fk.table, tmpdir, etl.NewSortableBuffer(WALCollectorRAM), tx.fk.logger),
 	}
 	w.tableCollector.LogLvl(log.LvlTrace)
 	w.tableCollector.SortAndFlushInBackground(true)
@@ -475,7 +494,7 @@ func (fk *Forkable) BeginFilesRo() *ForkableRoTx {
 		}
 	}
 	return &ForkableRoTx{
-		ii:    fk,
+		fk:    fk,
 		files: files,
 	}
 }
@@ -493,8 +512,8 @@ func (tx *ForkableRoTx) Close() {
 		refCnt := files[i].src.refcount.Add(-1)
 		//GC: last reader responsible to remove useles files: close it and delete
 		if refCnt == 0 && files[i].src.canDelete.Load() {
-			if tx.ii.filenameBase == traceFileLife {
-				tx.ii.logger.Warn(fmt.Sprintf("[agg] real remove at ctx close: %s", files[i].src.decompressor.FileName()))
+			if tx.fk.filenameBase == traceFileLife {
+				tx.fk.logger.Warn(fmt.Sprintf("[agg] real remove at ctx close: %s", files[i].src.decompressor.FileName()))
 			}
 			files[i].src.closeFilesAndRemove()
 		}
@@ -506,7 +525,7 @@ func (tx *ForkableRoTx) Close() {
 }
 
 type ForkableRoTx struct {
-	ii      *Forkable
+	fk      *Forkable
 	files   []ctxItem // have no garbage (overlaps, etc...)
 	getters []ArchiveGetter
 	readers []*recsplit.IndexReader
@@ -516,7 +535,7 @@ type ForkableRoTx struct {
 
 func (tx *ForkableRoTx) statelessHasher() murmur3.Hash128 {
 	if tx._hasher == nil {
-		tx._hasher = murmur3.New128WithSeed(*tx.ii.salt)
+		tx._hasher = murmur3.New128WithSeed(*tx.fk.salt)
 	}
 	return tx._hasher
 }
@@ -534,7 +553,7 @@ func (tx *ForkableRoTx) statelessGetter(i int) ArchiveGetter {
 	r := tx.getters[i]
 	if r == nil {
 		g := tx.files[i].src.decompressor.MakeGetter()
-		r = NewArchiveGetter(g, tx.ii.compression)
+		r = NewArchiveGetter(g, tx.fk.compression)
 		tx.getters[i] = r
 	}
 	return r
@@ -551,22 +570,8 @@ func (tx *ForkableRoTx) statelessIdxReader(i int) *recsplit.IndexReader {
 	return r
 }
 
-func (tx *ForkableRoTx) getInFiles(ts uint64) (v []byte, ok bool) {
-	i, ok := tx.fileByTS(ts)
-	if !ok {
-		return nil, false
-	}
-
-	offset := tx.statelessIdxReader(i).OrdinalLookup(ts)
-
-	g := tx.statelessGetter(i)
-	g.Reset(offset)
-	k, _ := g.Next(nil)
-	return k, true
-}
-
 func (tx *ForkableRoTx) smallestTxNum(dbtx kv.Tx) uint64 {
-	fst, _ := kv.FirstKey(dbtx, tx.ii.table)
+	fst, _ := kv.FirstKey(dbtx, tx.fk.table)
 	if len(fst) > 0 {
 		fstInDb := binary.BigEndian.Uint64(fst)
 		return cmp.Min(fstInDb, math.MaxUint64)
@@ -575,7 +580,7 @@ func (tx *ForkableRoTx) smallestTxNum(dbtx kv.Tx) uint64 {
 }
 
 func (tx *ForkableRoTx) highestTxNum(dbtx kv.Tx) uint64 {
-	lst, _ := kv.LastKey(dbtx, tx.ii.table)
+	lst, _ := kv.LastKey(dbtx, tx.fk.table)
 	if len(lst) > 0 {
 		lstInDb := binary.BigEndian.Uint64(lst)
 		return cmp.Max(lstInDb, 0)
@@ -645,7 +650,7 @@ func (tx *ForkableRoTx) Prune(ctx context.Context, rwTx kv.RwTx, txFrom, txTo, l
 		limit = math.MaxUint64
 	}
 
-	ii := tx.ii
+	ii := tx.fk
 	//defer func() {
 	//	ii.logger.Error("[snapshots] prune index",
 	//		"name", ii.filenameBase,
@@ -655,12 +660,12 @@ func (tx *ForkableRoTx) Prune(ctx context.Context, rwTx kv.RwTx, txFrom, txTo, l
 	//		"tx until limit", limit)
 	//}()
 
-	keysCursor, err := rwTx.RwCursorDupSort(tx.ii.table)
+	keysCursor, err := rwTx.RwCursorDupSort(tx.fk.table)
 	if err != nil {
-		return stat, fmt.Errorf("create %s keys cursor: %w", tx.ii.filenameBase, err)
+		return stat, fmt.Errorf("create %s keys cursor: %w", tx.fk.filenameBase, err)
 	}
 	defer keysCursor.Close()
-	keysCursorForDel, err := rwTx.RwCursorDupSort(tx.ii.table)
+	keysCursorForDel, err := rwTx.RwCursorDupSort(tx.fk.table)
 	if err != nil {
 		return stat, fmt.Errorf("create %s keys cursor: %w", ii.filenameBase, err)
 	}
@@ -819,37 +824,6 @@ func (fk *Forkable) collate(ctx context.Context, step uint64, roTx kv.Tx) (Forka
 	start := time.Now()
 	defer mxCollateTookIndex.ObserveDuration(start)
 
-	keysCursor, err := roTx.CursorDupSort(fk.table)
-	if err != nil {
-		return ForkableCollation{}, fmt.Errorf("create %s keys cursor: %w", fk.filenameBase, err)
-	}
-	defer keysCursor.Close()
-
-	collector := etl.NewCollector("collate "+fk.table, fk.forkableCfg.dirs.Tmp, etl.NewSortableBuffer(CollateETLRAM), fk.logger)
-	defer collector.Close()
-	collector.LogLvl(log.LvlTrace)
-
-	var txKey [8]byte
-	binary.BigEndian.PutUint64(txKey[:], txFrom)
-
-	for k, v, err := keysCursor.Seek(txKey[:]); k != nil; k, v, err = keysCursor.Next() {
-		if err != nil {
-			return ForkableCollation{}, fmt.Errorf("iterate over %s keys cursor: %w", fk.filenameBase, err)
-		}
-		txNum := binary.BigEndian.Uint64(k)
-		if txNum >= txTo { // [txFrom; txTo)
-			break
-		}
-		if err := collector.Collect(v, k); err != nil {
-			return ForkableCollation{}, fmt.Errorf("collect %s history key [%x]=>txn %d [%x]: %w", fk.filenameBase, k, txNum, k, err)
-		}
-		select {
-		case <-ctx.Done():
-			return ForkableCollation{}, ctx.Err()
-		default:
-		}
-	}
-
 	var (
 		coll = ForkableCollation{
 			iiPath: fk.fkFilePath(step, stepTo),
@@ -861,65 +835,36 @@ func (fk *Forkable) collate(ctx context.Context, step uint64, roTx kv.Tx) (Forka
 			coll.Close()
 		}
 	}()
-
 	comp, err := seg.NewCompressor(ctx, "snapshots", coll.iiPath, fk.dirs.Tmp, seg.MinPatternScore, fk.compressWorkers, log.LvlTrace, fk.logger)
 	if err != nil {
 		return ForkableCollation{}, fmt.Errorf("create %s compressor: %w", fk.filenameBase, err)
 	}
 	coll.writer = NewArchiveWriter(comp, fk.compression)
 
-	var (
-		prevEf      []byte
-		prevKey     []byte
-		initialized bool
-		bitmap      = bitmapdb.NewBitmap64()
-	)
-	defer bitmapdb.ReturnToPool64(bitmap)
-
-	loadBitmapsFunc := func(k, v []byte, table etl.CurrentTableReader, next etl.LoadNextFunc) error {
-		txNum := binary.BigEndian.Uint64(v)
-		if !initialized {
-			prevKey = append(prevKey[:0], k...)
-			initialized = true
-		}
-
-		if bytes.Equal(prevKey, k) {
-			bitmap.Add(txNum)
-			prevKey = append(prevKey[:0], k...)
-			return nil
-		}
-
-		ef := eliasfano32.NewEliasFano(bitmap.GetCardinality(), bitmap.Maximum())
-		it := bitmap.Iterator()
-		for it.HasNext() {
-			ef.AddOffset(it.Next())
-		}
-		bitmap.Clear()
-		ef.Build()
-
-		prevEf = ef.AppendBytes(prevEf[:0])
-
-		if err = coll.writer.AddWord(prevKey); err != nil {
-			return fmt.Errorf("add %s efi index key [%x]: %w", fk.filenameBase, prevKey, err)
-		}
-		if err = coll.writer.AddWord(prevEf); err != nil {
-			return fmt.Errorf("add %s efi index val: %w", fk.filenameBase, err)
-		}
-
-		prevKey = append(prevKey[:0], k...)
-		txNum = binary.BigEndian.Uint64(v)
-		bitmap.Add(txNum)
-
-		return nil
-	}
-
-	err = collector.Load(nil, "", loadBitmapsFunc, etl.TransformArgs{Quit: ctx.Done()})
+	from, to := hexutility.EncodeTs(txFrom), hexutility.EncodeTs(txTo)
+	it, err := roTx.Range(fk.canonicalMarkersTable, from, to)
 	if err != nil {
-		return ForkableCollation{}, err
+		return ForkableCollation{}, fmt.Errorf("collate %s: %w", fk.filenameBase, err)
 	}
-	if !bitmap.IsEmpty() {
-		if err = loadBitmapsFunc(nil, make([]byte, 8), nil, nil); err != nil {
-			return ForkableCollation{}, err
+	defer it.Close()
+
+	key := make([]byte, 8+32)
+	for it.HasNext() {
+		k, v, err := it.Next()
+		if err != nil {
+			return ForkableCollation{}, fmt.Errorf("collate %s: %w", fk.filenameBase, err)
+		}
+		copy(key, k)
+		copy(key[8:], v)
+		v, ok, err := fk.getFromDB(k, roTx)
+		if err != nil {
+			return ForkableCollation{}, fmt.Errorf("collate %s: %w", fk.filenameBase, err)
+		}
+		if !ok {
+			continue
+		}
+		if err = coll.writer.AddWord(v); err != nil {
+			return ForkableCollation{}, fmt.Errorf("collate %s: %w", fk.filenameBase, err)
 		}
 	}
 
