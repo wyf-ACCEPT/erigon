@@ -359,12 +359,49 @@ func (tx *ForkableRoTx) Files() (res []string) {
 	return res
 }
 
+func (tx *ForkableRoTx) Get(blockNum uint64, blockHash common.Hash, dbtx kv.Tx) ([]byte, bool, error) {
+	v, ok := tx.getInFiles(blockNum)
+	if ok {
+		return v, true, nil
+	}
+	return tx.getInDB(blockNum, blockHash, dbtx)
+}
+func (tx *ForkableRoTx) fileByTS(ts uint64) (i int, ok bool) {
+	for i = 0; i < len(tx.files); i++ {
+		if tx.files[i].hasTS(ts) {
+			return i, true
+		}
+	}
+	return 0, false
+}
+
+func (tx *ForkableRoTx) Put(blockNum uint64, blockHash common.Hash, v []byte, dbtx kv.RwTx) error {
+	k := make([]byte, length.BlockNum+length.Hash)
+	binary.BigEndian.PutUint64(k, blockNum)
+	copy(k[length.BlockNum:], blockHash[:])
+	return dbtx.Put(tx.ii.table, k, v)
+}
+
+func (tx *ForkableRoTx) getInDB(blockNum uint64, blockHash common.Hash, dbtx kv.Tx) ([]byte, bool, error) {
+	k := make([]byte, length.BlockNum+length.Hash)
+	binary.BigEndian.PutUint64(k, blockNum)
+	copy(k[length.BlockNum:], blockHash[:])
+	v, err := dbtx.GetOne(tx.ii.table, k)
+	if err != nil {
+		return nil, false, err
+	}
+	return v, v != nil, err
+}
+
 // Add - !NotThreadSafe. Must use WalRLock/BatchHistoryWriteEnd
-func (w *forkableBufferedWriter) Add(key []byte) error {
+func (w *forkableBufferedWriter) Add(blockNum uint64, blockHash common.Hash, v []byte) error {
 	if w.discard {
 		return nil
 	}
-	if err := w.tableCollector.Collect(key, w.timestampBytes[:]); err != nil {
+	k := make([]byte, length.BlockNum+length.Hash)
+	binary.BigEndian.PutUint64(k, blockNum)
+	copy(k[length.BlockNum:], blockHash[:])
+	if err := w.tableCollector.Collect(k, v); err != nil {
 		return err
 	}
 	return nil
@@ -526,40 +563,6 @@ func (tx *ForkableRoTx) getInFiles(ts uint64) (v []byte, ok bool) {
 	g.Reset(offset)
 	k, _ := g.Next(nil)
 	return k, true
-}
-
-func (tx *ForkableRoTx) Get(blockNum uint64, blockHash common.Hash, dbtx kv.Tx) ([]byte, bool, error) {
-	v, ok := tx.getInFiles(blockNum)
-	if ok {
-		return v, true, nil
-	}
-	return tx.getInDB(blockNum, blockHash, dbtx)
-}
-func (tx *ForkableRoTx) fileByTS(ts uint64) (i int, ok bool) {
-	for i = 0; i < len(tx.files); i++ {
-		if tx.files[i].hasTS(ts) {
-			return i, true
-		}
-	}
-	return 0, false
-}
-
-func (tx *ForkableRoTx) Put(blockNum uint64, blockHash common.Hash, v []byte, dbtx kv.RwTx) error {
-	k := make([]byte, length.BlockNum+length.Hash)
-	binary.BigEndian.PutUint64(k, blockNum)
-	copy(k[length.BlockNum:], blockHash[:])
-	return dbtx.Put(tx.ii.table, k, v)
-}
-
-func (tx *ForkableRoTx) getInDB(blockNum uint64, blockHash common.Hash, dbtx kv.Tx) ([]byte, bool, error) {
-	k := make([]byte, length.BlockNum+length.Hash)
-	binary.BigEndian.PutUint64(k, blockNum)
-	copy(k[length.BlockNum:], blockHash[:])
-	v, err := dbtx.GetOne(tx.ii.table, k)
-	if err != nil {
-		return nil, false, err
-	}
-	return v, v != nil, err
 }
 
 func (tx *ForkableRoTx) smallestTxNum(dbtx kv.Tx) uint64 {

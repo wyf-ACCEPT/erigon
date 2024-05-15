@@ -233,6 +233,7 @@ func filledForkableOfSize(tb testing.TB, txs, aggStep, module uint64, logger log
 	defer tx.Rollback()
 	ic := ii.BeginFilesRo()
 	defer ic.Close()
+
 	writer := ic.NewWriter()
 	defer writer.close()
 
