@@ -11,19 +11,18 @@ import (
 	"github.com/google/btree"
 	"github.com/ledgerwatch/erigon-lib/common"
 	"github.com/ledgerwatch/erigon-lib/common/cryptozerocopy"
-	"github.com/ledgerwatch/erigon-lib/types"
-	"golang.org/x/crypto/sha3"
-
 	"github.com/ledgerwatch/erigon-lib/metrics"
+	"github.com/ledgerwatch/erigon-lib/types"
 	"github.com/ledgerwatch/log/v3"
+	"golang.org/x/crypto/sha3"
 
 	"github.com/ledgerwatch/erigon-lib/common/length"
 	"github.com/ledgerwatch/erigon-lib/etl"
 )
 
 var (
-	mxCommitmentKeys          = metrics.GetOrCreateCounter("domain_commitment_keys")
-	mxCommitmentBranchUpdates = metrics.GetOrCreateCounter("domain_commitment_updates_applied")
+	mxKeys                 = metrics.GetOrCreateCounter("domain_commitment_keys")
+	mxBranchUpdatesApplied = metrics.GetOrCreateCounter("domain_commitment_updates_applied")
 )
 
 // Trie represents commitment variant.
@@ -185,6 +184,7 @@ func (be *BranchEncoder) Load(pc PatriciaContext, args etl.TransformArgs) error 
 		if err = pc.PutBranch(cp, cu, stateValue, stateStep); err != nil {
 			return err
 		}
+		mxBranchUpdatesApplied.Inc()
 		return nil
 	}, args); err != nil {
 		return err
@@ -221,7 +221,6 @@ func (be *BranchEncoder) CollectUpdate(
 	if err = be.updates.Collect(prefix, update); err != nil {
 		return 0, err
 	}
-	mxCommitmentBranchUpdates.Inc()
 	return lastNibble, nil
 }
 

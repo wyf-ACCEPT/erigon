@@ -22,7 +22,6 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
-	"github.com/ledgerwatch/erigon-lib/etl"
 	"hash"
 	"io"
 	"math/bits"
@@ -32,6 +31,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/ledgerwatch/erigon-lib/etl"
 
 	"github.com/ledgerwatch/erigon-lib/common/dbg"
 
@@ -1345,7 +1346,7 @@ func (hph *HexPatriciaHashed) ProcessTree(ctx context.Context, tree *UpdateTree,
 			}
 			hph.deleteCell(hashedKey)
 		}
-		mxCommitmentKeys.Inc()
+		mxKeys.Inc()
 		ki++
 		return nil
 	})
@@ -1450,7 +1451,7 @@ func (hph *HexPatriciaHashed) ProcessKeys(ctx context.Context, plainKeys [][]byt
 			}
 			hph.deleteCell(hashedKey)
 		}
-		mxCommitmentKeys.Inc()
+		mxKeys.Inc()
 	}
 	// Folding everything up to the root
 	for hph.activeRows > 0 {
@@ -1546,7 +1547,7 @@ func (hph *HexPatriciaHashed) ProcessUpdates(ctx context.Context, plainKeys [][]
 			}
 		}
 
-		mxCommitmentKeys.Inc()
+		mxKeys.Inc()
 	}
 	// Folding everything up to the root
 	for hph.activeRows > 0 {
