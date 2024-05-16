@@ -247,6 +247,8 @@ func (ot *OeTracer) CaptureTxStart(gasLimit uint64) {}
 func (ot *OeTracer) CaptureTxEnd(restGas uint64) {}
 
 func (ot *OeTracer) captureStartOrEnter(deep bool, typ vm.OpCode, from libcommon.Address, to libcommon.Address, precompile bool, create bool, input []byte, gas uint64, value *uint256.Int, code []byte) {
+	panic(1)
+
 	//fmt.Printf("captureStartOrEnter deep %t, typ %s, from %x, to %x, create %t, input %x, gas %d, value %d, precompile %t\n", deep, typ.String(), from, to, create, input, gas, value, precompile)
 	if ot.r.VmTrace != nil {
 		var vmTrace *VmTrace
@@ -301,16 +303,12 @@ func (ot *OeTracer) captureStartOrEnter(deep bool, typ vm.OpCode, from libcommon
 		ot.traceAddr = append(ot.traceAddr, traceIdx)
 		topTrace.Subtraces++
 		if typ == vm.DELEGATECALL {
+
 			switch action := topTrace.Action.(type) {
 			case *CreateTraceAction:
 				value, _ = uint256.FromBig(action.Value.ToInt())
 			case *CallTraceAction:
 				value, _ = uint256.FromBig(action.Value.ToInt())
-			default:
-				log.Warn("[dbg] DELEGATECALL", "topTrace.Action", fmt.Sprintf("%T", topTrace.Action))
-			}
-			if value == nil {
-				log.Warn("[dbg] DELEGATECALL", "val is nil", fmt.Sprintf("%T", topTrace.Action))
 			}
 		}
 		if typ == vm.STATICCALL {
