@@ -17,12 +17,9 @@
 package vm
 
 import (
-	"fmt"
 	"sync/atomic"
 
 	"github.com/holiman/uint256"
-	"github.com/ledgerwatch/log/v3"
-
 	"github.com/ledgerwatch/erigon-lib/chain"
 	libcommon "github.com/ledgerwatch/erigon-lib/common"
 
@@ -218,11 +215,6 @@ func (evm *EVM) call(typ OpCode, caller ContractRef, addr libcommon.Address, inp
 		// but is the correct thing to do and matters on other networks, in tests, and potential
 		// future scenarios
 		evm.intraBlockState.AddBalance(addr, u256.Num0)
-	}
-	if typ == DELEGATECALL && gas == 1651 &&
-		libcommon.HexToAddress("0x3328f7f4a1d1c57c35df56bbf0c9dcafca309c49") == caller.Address() &&
-		libcommon.HexToAddress("0xbcd3a47e4d0000cf170e25d1bd3d53f7c08be0a6") == addr {
-		log.Warn("[dbg] evm", "gas", fmt.Sprintf("%x", gas), "gas", fmt.Sprintf("%x", input), "value", fmt.Sprintf("%#v", value), "stack", dbg.Stack())
 	}
 
 	if evm.config.Debug {
