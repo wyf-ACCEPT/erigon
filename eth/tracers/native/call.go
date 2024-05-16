@@ -19,10 +19,12 @@ package native
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math/big"
 	"sync/atomic"
 
 	"github.com/holiman/uint256"
+	"github.com/ledgerwatch/log/v3"
 
 	libcommon "github.com/ledgerwatch/erigon-lib/common"
 	"github.com/ledgerwatch/erigon-lib/common/hexutil"
@@ -204,6 +206,9 @@ func (t *callTracer) CaptureEnter(typ vm.OpCode, from libcommon.Address, to libc
 		return
 	}
 
+	if typ == vm.DELEGATECALL && libcommon.HexToAddress("0x3328f7f4a1d1c57c35df56bbf0c9dcafca309c49") == from {
+		log.Warn("[dbg] CaptureEnter", "value", fmt.Sprintf("%#v", value))
+	}
 	call := callFrame{
 		Type:  typ,
 		From:  from,
