@@ -22,7 +22,6 @@ import (
 	"github.com/ledgerwatch/erigon/eth/tracers/logger"
 	"github.com/ledgerwatch/erigon/turbo/rpchelper"
 	"github.com/ledgerwatch/erigon/turbo/services"
-	"github.com/ledgerwatch/log/v3"
 )
 
 type BlockGetter interface {
@@ -157,7 +156,6 @@ func ExecuteTraceTx(
 	streaming bool,
 	execCb func(evm *vm.EVM, refunds bool) (*core.ExecutionResult, error),
 ) error {
-	log.Warn("[dbg] ExecuteTraceTx", "ctx", fmt.Sprintf("%T", tracer))
 	// Run the transaction with tracing enabled.
 	evm := vm.NewEVM(blockCtx, txCtx, ibs, chainConfig, vm.Config{Debug: true, Tracer: tracer})
 
