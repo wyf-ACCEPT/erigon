@@ -26,7 +26,6 @@ type entityStoreImpl[TEntity Entity] struct {
 	tx    kv.RwTx
 	table string
 
-	makeEntity      func() TEntity
 	getLastEntityId func(ctx context.Context, tx kv.Tx) (uint64, bool, error)
 	loadEntityBytes func(ctx context.Context, tx kv.Getter, id uint64) ([]byte, error)
 
@@ -38,7 +37,6 @@ type entityStoreImpl[TEntity Entity] struct {
 func newEntityStore[TEntity Entity](
 	tx kv.RwTx,
 	table string,
-	makeEntity func() TEntity,
 	getLastEntityId func(ctx context.Context, tx kv.Tx) (uint64, bool, error),
 	loadEntityBytes func(ctx context.Context, tx kv.Getter, id uint64) ([]byte, error),
 	blockNumToIdIndexFactory func(ctx context.Context) (*RangeIndex, error),
@@ -47,7 +45,6 @@ func newEntityStore[TEntity Entity](
 		tx:    tx,
 		table: table,
 
-		makeEntity:      makeEntity,
 		getLastEntityId: getLastEntityId,
 		loadEntityBytes: loadEntityBytes,
 
@@ -103,7 +100,7 @@ func entityStoreKey(id uint64) [8]byte {
 }
 
 func (s *entityStoreImpl[TEntity]) entityUnmarshalJSON(jsonBytes []byte) (TEntity, error) {
-	entity := s.makeEntity()
+	var entity TEntity
 	if err := json.Unmarshal(jsonBytes, entity); err != nil {
 		return Zero[TEntity](), err
 	}

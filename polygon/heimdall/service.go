@@ -27,18 +27,15 @@ type service struct {
 }
 
 func newCheckpointStore(tx kv.RwTx, reader services.BorCheckpointReader, blockNumToIdIndexFactory func(context.Context) (*RangeIndex, error)) entityStore[*Checkpoint] {
-	makeEntity := func() *Checkpoint { return new(Checkpoint) }
-	return newEntityStore(tx, kv.BorCheckpoints, makeEntity, reader.LastCheckpointId, reader.Checkpoint, blockNumToIdIndexFactory)
+	return newEntityStore[*Checkpoint](tx, kv.BorCheckpoints, reader.LastCheckpointId, reader.Checkpoint, blockNumToIdIndexFactory)
 }
 
 func newMilestoneStore(tx kv.RwTx, reader services.BorMilestoneReader, blockNumToIdIndexFactory func(context.Context) (*RangeIndex, error)) entityStore[*Milestone] {
-	makeEntity := func() *Milestone { return new(Milestone) }
-	return newEntityStore(tx, kv.BorMilestones, makeEntity, reader.LastMilestoneId, reader.Milestone, blockNumToIdIndexFactory)
+	return newEntityStore[*Milestone](tx, kv.BorMilestones, reader.LastMilestoneId, reader.Milestone, blockNumToIdIndexFactory)
 }
 
 func newSpanStore(tx kv.RwTx, reader services.BorSpanReader, blockNumToIdIndexFactory func(context.Context) (*RangeIndex, error)) entityStore[*Span] {
-	makeEntity := func() *Span { return new(Span) }
-	return newEntityStore(tx, kv.BorSpans, makeEntity, reader.LastSpanId, reader.Span, blockNumToIdIndexFactory)
+	return newEntityStore[*Span](tx, kv.BorSpans, reader.LastSpanId, reader.Span, blockNumToIdIndexFactory)
 }
 
 func NewService(
