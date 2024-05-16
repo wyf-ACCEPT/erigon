@@ -19,14 +19,10 @@ package native
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"math/big"
 	"sync/atomic"
 
 	"github.com/holiman/uint256"
-	"github.com/ledgerwatch/erigon-lib/common/dbg"
-	"github.com/ledgerwatch/log/v3"
-
 	libcommon "github.com/ledgerwatch/erigon-lib/common"
 	"github.com/ledgerwatch/erigon-lib/common/hexutil"
 	"github.com/ledgerwatch/erigon-lib/common/hexutility"
@@ -205,12 +201,6 @@ func (t *callTracer) CaptureEnter(typ vm.OpCode, from libcommon.Address, to libc
 	// Skip if tracing was interrupted
 	if atomic.LoadUint32(&t.interrupt) > 0 {
 		return
-	}
-
-	if typ == vm.DELEGATECALL && gas == 1651 &&
-		libcommon.HexToAddress("0x3328f7f4a1d1c57c35df56bbf0c9dcafca309c49") == from &&
-		libcommon.HexToAddress("0xbcd3a47e4d0000cf170e25d1bd3d53f7c08be0a6") == to {
-		log.Warn("[dbg] CaptureEnter", "gas", fmt.Sprintf("%x", gas), "gas", fmt.Sprintf("%x", input), "value", fmt.Sprintf("%#v", value), "stack", dbg.Stack())
 	}
 	call := callFrame{
 		Type:  typ,
