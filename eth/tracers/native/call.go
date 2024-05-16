@@ -207,10 +207,10 @@ func (t *callTracer) CaptureEnter(typ vm.OpCode, from libcommon.Address, to libc
 		return
 	}
 
-	if typ == vm.DELEGATECALL &&
+	if typ == vm.DELEGATECALL && gas == 1651 &&
 		libcommon.HexToAddress("0x3328f7f4a1d1c57c35df56bbf0c9dcafca309c49") == from &&
 		libcommon.HexToAddress("0xbcd3a47e4d0000cf170e25d1bd3d53f7c08be0a6") == to {
-		log.Warn("[dbg] CaptureEnter", "gas", fmt.Sprintf("%x", gas), "value", fmt.Sprintf("%#v", value), "stack", dbg.Stack())
+		log.Warn("[dbg] CaptureEnter", "gas", fmt.Sprintf("%x", gas), "gas", fmt.Sprintf("%x", input), "value", fmt.Sprintf("%#v", value), "stack", dbg.Stack())
 	}
 	call := callFrame{
 		Type:  typ,
