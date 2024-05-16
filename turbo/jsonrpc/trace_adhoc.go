@@ -306,6 +306,11 @@ func (ot *OeTracer) captureStartOrEnter(deep bool, typ vm.OpCode, from libcommon
 				value, _ = uint256.FromBig(action.Value.ToInt())
 			case *CallTraceAction:
 				value, _ = uint256.FromBig(action.Value.ToInt())
+			default:
+				log.Warn("[dbg] DELEGATECALL", "topTrace.Action", fmt.Sprintf("%T", topTrace.Action))
+			}
+			if value == nil {
+				log.Warn("[dbg] DELEGATECALL", "val is nil", fmt.Sprintf("%T", topTrace.Action))
 			}
 		}
 		if typ == vm.STATICCALL {
