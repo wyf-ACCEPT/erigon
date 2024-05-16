@@ -24,6 +24,7 @@ import (
 	"sync/atomic"
 
 	"github.com/holiman/uint256"
+	"github.com/ledgerwatch/erigon-lib/common/dbg"
 	"github.com/ledgerwatch/log/v3"
 
 	libcommon "github.com/ledgerwatch/erigon-lib/common"
@@ -209,7 +210,7 @@ func (t *callTracer) CaptureEnter(typ vm.OpCode, from libcommon.Address, to libc
 	if typ == vm.DELEGATECALL &&
 		libcommon.HexToAddress("0x3328f7f4a1d1c57c35df56bbf0c9dcafca309c49") == from &&
 		libcommon.HexToAddress("0xbcd3a47e4d0000cf170e25d1bd3d53f7c08be0a6") == to {
-		log.Warn("[dbg] CaptureEnter", "value", fmt.Sprintf("%#v", value))
+		log.Warn("[dbg] CaptureEnter", "value", fmt.Sprintf("%#v", value), "stack", dbg.Stack())
 	}
 	call := callFrame{
 		Type:  typ,
