@@ -186,16 +186,6 @@ func (s *EngineServer) newPayload(ctx context.Context, req *engine_types.Executi
 	if version >= clparams.CapellaVersion && req.DepositRequests != nil {
 		requests = req.DepositRequests.ToRequests()
 	}
-
-	if requests != nil {
-		rh := types.DeriveSha(requests)
-		header.RequestsRoot = &rh
-	}
-
-	var requests types.Requests
-	if version >= clparams.ElectraVersion && req.DepositRequests != nil {
-		requests = req.DepositRequests.ToRequests()
-	}
 	if err := s.checkRequestsPresence(header.Time, requests); err != nil {
 		return nil, err
 	}
