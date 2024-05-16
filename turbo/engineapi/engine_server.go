@@ -115,12 +115,22 @@ func (e *EngineServer) Start(
 	}
 }
 
-func (s *EngineServer) checkWithdrawalsPresence(time uint64, withdrawals []*types.Withdrawal) error {
+func (s *EngineServer) checkWithdrawalsPresence(time uint64, withdrawals types.Withdrawals) error {
 	if !s.config.IsShanghai(time) && withdrawals != nil {
-		return &rpc.InvalidParamsError{Message: "withdrawals before shanghai"}
+		return &rpc.InvalidParamsError{Message: "withdrawals before Shanghai"}
 	}
 	if s.config.IsShanghai(time) && withdrawals == nil {
 		return &rpc.InvalidParamsError{Message: "missing withdrawals list"}
+	}
+	return nil
+}
+
+func (s *EngineServer) checkRequestsPresence(time uint64, requests types.Requests) error {
+	if !s.config.IsPrague(time) && requests != nil {
+		return &rpc.InvalidParamsError{Message: "requests before Prague"}
+	}
+	if s.config.IsPrague(time) && requests == nil {
+		return &rpc.InvalidParamsError{Message: "missing requests list"}
 	}
 	return nil
 }
@@ -159,13 +169,16 @@ func (s *EngineServer) newPayload(ctx context.Context, req *engine_types.Executi
 		ReceiptHash: req.ReceiptsRoot,
 		TxHash:      types.DeriveSha(types.BinaryTransactions(txs)),
 	}
-	var withdrawals []*types.Withdrawal
+
+	var withdrawals types.Withdrawals
 	if version >= clparams.CapellaVersion {
 		withdrawals = req.Withdrawals
 	}
-
+	if err := s.checkWithdrawalsPresence(header.Time, withdrawals); err != nil {
+		return nil, err
+	}
 	if withdrawals != nil {
-		wh := types.DeriveSha(types.Withdrawals(withdrawals))
+		wh := types.DeriveSha(withdrawals)
 		header.WithdrawalsHash = &wh
 	}
 
@@ -179,8 +192,16 @@ func (s *EngineServer) newPayload(ctx context.Context, req *engine_types.Executi
 		header.RequestsRoot = &rh
 	}
 
-	if err := s.checkWithdrawalsPresence(header.Time, withdrawals); err != nil {
+	var requests types.Requests
+	if version >= clparams.ElectraVersion && req.DepositRequests != nil {
+		requests = req.DepositRequests.ToRequests()
+	}
+	if err := s.checkRequestsPresence(header.Time, requests); err != nil {
 		return nil, err
+	}
+	if requests != nil {
+		rh := types.DeriveSha(requests)
+		header.RequestsRoot = &rh
 	}
 
 	if version <= clparams.CapellaVersion {
@@ -627,12 +648,12 @@ func (e *EngineServer) GetPayloadV3(ctx context.Context, payloadID hexutility.By
 	return e.getPayload(ctx, decodedPayloadId, clparams.DenebVersion)
 }
 
-// Same as [GetPayloadV3]
-// See https://github.com/ethereum/execution-apis/blob/main/src/engine/cancun.md#engine_getpayloadv3
+// Same as [GetPayloadV3], but returning ExecutionPayloadV4 (= ExecutionPayloadV3 + requests)
+// See https://github.com/ethereum/execution-apis/blob/main/src/engine/prague.md#engine_getpayloadv4
 func (e *EngineServer) GetPayloadV4(ctx context.Context, payloadID hexutility.Bytes) (*engine_types.GetPayloadResponse, error) {
 	decodedPayloadId := binary.BigEndian.Uint64(payloadID)
 	e.logger.Info("Received GetPayloadV4", "payloadId", decodedPayloadId)
-	return e.getPayload(ctx, decodedPayloadId, clparams.DenebVersion)
+	return e.getPayload(ctx, decodedPayloadId, clparams.ElectraVersion)
 }
 
 // Updates the forkchoice state after validating the headBlockHash
@@ -674,11 +695,13 @@ func (e *EngineServer) NewPayloadV3(ctx context.Context, payload *engine_types.E
 	return e.newPayload(ctx, payload, expectedBlobHashes, parentBeaconBlockRoot, clparams.DenebVersion)
 }
 
-// NewPayloadV3 processes new payloads (blocks) from the beacon chain with withdrawals & blob gas.
-// See https://github.com/ethereum/execution-apis/blob/main/src/engine/cancun.md#engine_newpayloadv3
+// NewPayloadV4 processes new payloads (blocks) from the beacon chain with withdrawals, blob gas and requests.
+// See https://github.com/ethereum/execution-apis/blob/main/src/engine/prague.md#engine_newpayloadv4
 func (e *EngineServer) NewPayloadV4(ctx context.Context, payload *engine_types.ExecutionPayload,
 	expectedBlobHashes []libcommon.Hash, parentBeaconBlockRoot *libcommon.Hash) (*engine_types.PayloadStatus, error) {
-	return e.newPayload(ctx, payload, expectedBlobHashes, parentBeaconBlockRoot, clparams.DenebVersion)
+	// TODO(racytech): add proper version or refactor this part
+	// add all version ralated checks here so the newpayload doesn't have to deal with checks
+	return e.newPayload(ctx, payload, expectedBlobHashes, parentBeaconBlockRoot, clparams.ElectraVersion)
 }
 
 // Receives consensus layer's transition configuration and checks if the execution layer has the correct configuration.
