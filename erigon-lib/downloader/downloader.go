@@ -825,6 +825,7 @@ func (d *Downloader) mainLoop(silent bool) error {
 			for _, t := range d.torrentClient.Torrents() {
 				if urls, ok := d.webseeds.ByFileName(t.Name()); ok {
 					t.AddWebSeeds(urls)
+					fmt.Println("B", t.Name(), urls)
 				}
 			}
 		}()
@@ -2525,6 +2526,7 @@ func (d *Downloader) AddMagnetLink(ctx context.Context, infoHash metainfo.Hash, 
 		urls, ok := d.webseeds.ByFileName(t.Name())
 		if ok {
 			t.AddWebSeeds(urls)
+			fmt.Println("C", t.Name(), urls)
 		}
 	}(t)
 	//log.Debug("[downloader] downloaded both seg and torrent files", "hash", infoHash)

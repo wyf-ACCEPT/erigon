@@ -338,6 +338,7 @@ func _addTorrentFile(ctx context.Context, ts *torrent.TorrentSpec, torrentClient
 				return nil, false, fmt.Errorf("addTorrentFile %s: update failed: %w", ts.DisplayName, err)
 			}
 		} else {
+			fmt.Println("A", t.Name(), ts.Webseeds)
 			t.AddWebSeeds(ts.Webseeds)
 			if err := db.Update(ctx, torrentInfoReset(ts.DisplayName, ts.InfoHash.Bytes(), 0)); err != nil {
 				return nil, false, fmt.Errorf("addTorrentFile %s: reset failed: %w", ts.DisplayName, err)
@@ -349,6 +350,7 @@ func _addTorrentFile(ctx context.Context, ts *torrent.TorrentSpec, torrentClient
 
 	if t.Info() != nil {
 		t.AddWebSeeds(ts.Webseeds)
+		fmt.Println("B", t.Name(), ts.Webseeds)
 		if err := db.Update(ctx, torrentInfoUpdater(ts.DisplayName, ts.InfoHash.Bytes(), t.Info().Length, nil)); err != nil {
 			return nil, false, fmt.Errorf("update torrent info %s: %w", ts.DisplayName, err)
 		}
