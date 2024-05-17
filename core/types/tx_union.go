@@ -204,8 +204,20 @@ func (tx *TxUnion) SigningHash(chainID *big.Int) libcommon.Hash {
 func (tx *TxUnion) GetData() []byte                  { return tx.data }
 func (tx *TxUnion) GetAccessList() types2.AccessList { return tx.accessList }
 func (tx *TxUnion) Protected() bool                  { return true }
-func (tx *TxUnion) RawSignatureValues() (*uint256.Int, *uint256.Int, *uint256.Int)
-func (tx *TxUnion) EncodingSize() int               { return 0 }
+func (tx *TxUnion) RawSignatureValues() (*uint256.Int, *uint256.Int, *uint256.Int) {
+	/* unimplemented(racytech) */
+	return nil, nil, nil
+}
+func (tx *TxUnion) EncodingSize() (size int) {
+	if tx.chainID != nil {
+		size++
+		size += rlp.Uint256LenExcludingHead(tx.chainID)
+	}
+	size++
+	size += rlp.IntLenExcludingHead(tx.nonce)
+
+	return size
+}
 func (tx *TxUnion) EncodeRLP(w io.Writer) error     { return nil }
 func (tx *TxUnion) DecodeRLP(s *rlp.Stream) error   { return nil }
 func (tx *TxUnion) MarshalBinary(w io.Writer) error { return nil }
