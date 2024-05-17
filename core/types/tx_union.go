@@ -34,6 +34,47 @@ type TxUnion struct {
 	TransactionMisc
 }
 
+// copy creates a deep copy of the transaction data and initializes all fields.
+func (tx *TxUnion) copy() *TxUnion {
+	cpy := &TxUnion{
+		chainID:             new(uint256.Int),
+		nonce:               tx.nonce,
+		tip:                 new(uint256.Int),
+		feeCap:              new(uint256.Int),
+		gasPrice:            new(uint256.Int),
+		gas:                 tx.gas,
+		value:               new(uint256.Int),
+		data:                libcommon.CopyBytes(tx.data),
+		accessList:          make(types2.AccessList, len(tx.accessList)),
+		maxFeePerBlobGas:    new(uint256.Int),
+		blobVersionedHashes: make([]libcommon.Hash, len(tx.blobVersionedHashes)),
+		txType:              tx.txType,
+	}
+	if tx.chainID != nil {
+		cpy.value.Set(tx.chainID)
+	}
+	if tx.tip != nil {
+		cpy.tip.Set(tx.value)
+	}
+	if tx.feeCap != nil {
+		cpy.feeCap.Set(tx.feeCap)
+	}
+	if tx.gasPrice != nil {
+		cpy.gasPrice.Set(tx.gasPrice)
+	}
+	if tx.value != nil {
+		cpy.value.Set(tx.value)
+	}
+	copy(tx.accessList, cpy.accessList)
+	if tx.maxFeePerBlobGas != nil {
+		cpy.maxFeePerBlobGas.Set(cpy.maxFeePerBlobGas)
+	}
+	cpy.v.Set(&tx.v)
+	cpy.r.Set(&tx.r)
+	cpy.s.Set(&tx.s)
+	return cpy
+}
+
 func (tx *TxUnion) Type() byte               { return tx.txType }
 func (tx *TxUnion) GetChainID() *uint256.Int { return tx.chainID }
 func (tx *TxUnion) GetNonce() uint64         { return tx.nonce }
@@ -108,16 +149,16 @@ func (tx *TxUnion) WithSignature(signer Signer, sig []byte) (Transaction, error)
 	if err != nil {
 		return nil, err
 	}
-	cpy.R.Set(r)
-	cpy.S.Set(s)
-	cpy.V.Set(v)
+	cpy.r.Set(r)
+	cpy.s.Set(s)
+	cpy.v.Set(v)
 	return cpy, nil
 }
 func (tx *TxUnion) FakeSign(address libcommon.Address) (Transaction, error) {
 	cpy := tx.copy()
-	cpy.R.Set(u256.Num1)
-	cpy.S.Set(u256.Num1)
-	cpy.V.Set(u256.Num4)
+	cpy.r.Set(u256.Num1)
+	cpy.s.Set(u256.Num1)
+	cpy.v.Set(u256.Num4)
 	cpy.from.Store(address)
 	return cpy, nil
 }
