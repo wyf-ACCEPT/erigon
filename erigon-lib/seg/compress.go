@@ -203,6 +203,9 @@ func (c *Compressor) Compress() error {
 	if c.lvl < log.LvlTrace {
 		c.logger.Log(c.lvl, fmt.Sprintf("[%s] BuildDict", c.logPrefix), "took", time.Since(t))
 	}
+	if c.Count() == 0 {
+		panic(fmt.Sprintf("empty file creation: %s", c.outputFile))
+	}
 
 	cf, err := os.Create(c.tmpOutFilePath)
 	if err != nil {
