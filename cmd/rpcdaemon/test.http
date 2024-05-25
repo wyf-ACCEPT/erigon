@@ -18,6 +18,23 @@ Content-Type: application/json
 
 ###
 
+# curl --data '{"method":"trace_transaction","params":["0x2674a276af2e3b39a4bcd75203b4257e403b90eb583ed7cd42bcb5ca5b6b0635"],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST localhost:8545
+POST 127.0.0.1:8545
+Content-Type: application/json
+
+{
+  "method": "trace_replayBlockTransactions",
+  "params": [
+    "0x12A570",
+    [
+      "trace"
+    ]
+  ],
+  "id": 1,
+  "jsonrpc": "2.0"
+}
+
+
 
 ###
 
