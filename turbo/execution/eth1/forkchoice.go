@@ -203,10 +203,13 @@ func (e *EthereumExecutionModule) updateForkChoice(ctx context.Context, original
 		sendForkchoiceErrorWithoutWaiting(outcomeCh, err)
 		return
 	}
+	log.Info("[dbg] here1")
 
 	var unwindToGenesis bool
 	if fcuHeader.Number.Uint64() > 0 {
+		log.Info("[dbg] here2")
 		if canonicalHash == blockHash {
+			log.Info("[dbg] here3")
 			// if block hash is part of the canonical chain treat it as no-op.
 			writeForkChoiceHashes(tx, blockHash, safeHash, finalizedHash)
 			valid, err := e.verifyForkchoiceHashes(ctx, tx, blockHash, finalizedHash, safeHash)
@@ -230,6 +233,7 @@ func (e *EthereumExecutionModule) updateForkChoice(ctx context.Context, original
 
 		// If we don't have it, too bad
 		if fcuHeader == nil {
+			log.Info("[dbg] here4")
 			sendForkchoiceReceiptWithoutWaiting(outcomeCh, &execution.ForkChoiceReceipt{
 				LatestValidHash: gointerfaces.ConvertHashToH256(common.Hash{}),
 				Status:          execution.ExecutionStatus_MissingSegment,
@@ -279,10 +283,12 @@ func (e *EthereumExecutionModule) updateForkChoice(ctx context.Context, original
 			}
 		}
 
+		log.Info("[dbg] here5")
 		if err := e.executionPipeline.UnwindTo(currentParentNumber, stagedsync.ForkChoice, tx); err != nil {
 			sendForkchoiceErrorWithoutWaiting(outcomeCh, err)
 			return
 		}
+		log.Info("[dbg] here6")
 		if e.hook != nil {
 			if err = e.hook.BeforeRun(tx, isSynced); err != nil {
 				sendForkchoiceErrorWithoutWaiting(outcomeCh, err)
@@ -293,6 +299,7 @@ func (e *EthereumExecutionModule) updateForkChoice(ctx context.Context, original
 			unwindToGenesis = e.executionPipeline.UnwindPoint() == 0
 		}
 
+		log.Info("[dbg] here7")
 		// Run the unwind
 		if err := e.executionPipeline.RunUnwind(e.db, wrap.TxContainer{Tx: tx}); err != nil {
 			err = fmt.Errorf("updateForkChoice: %w", err)
@@ -306,6 +313,7 @@ func (e *EthereumExecutionModule) updateForkChoice(ctx context.Context, original
 			}
 		}
 
+		log.Info("[dbg] here8")
 		if err := rawdbv3.TxNums.Truncate(tx, currentParentNumber+1); err != nil {
 			sendForkchoiceErrorWithoutWaiting(outcomeCh, err)
 			return
@@ -349,7 +357,9 @@ func (e *EthereumExecutionModule) updateForkChoice(ctx context.Context, original
 			}
 		}
 	}
+	log.Info("[dbg] here9")
 	if isDomainAheadOfBlocks(tx) {
+		log.Info("[dbg] here10")
 		sendForkchoiceReceiptWithoutWaiting(outcomeCh, &execution.ForkChoiceReceipt{
 			LatestValidHash: gointerfaces.ConvertHashToH256(common.Hash{}),
 			Status:          execution.ExecutionStatus_TooFarAway,
@@ -375,6 +385,7 @@ func (e *EthereumExecutionModule) updateForkChoice(ctx context.Context, original
 		sendForkchoiceErrorWithoutWaiting(outcomeCh, err)
 		return
 	}
+	log.Info("[dbg] here10")
 	if blockHash == e.forkValidator.ExtendingForkHeadHash() && !unwindToGenesis {
 		e.logger.Info("[updateForkchoice] Fork choice update: flushing in-memory state (built by previous newPayload)")
 		if err := e.forkValidator.FlushExtendingFork(tx, e.accumulator); err != nil {
