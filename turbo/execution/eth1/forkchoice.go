@@ -33,6 +33,7 @@ type forkchoiceOutcome struct {
 }
 
 func sendForkchoiceReceiptWithoutWaiting(ch chan forkchoiceOutcome, receipt *execution.ForkChoiceReceipt) {
+	log.Info("[dbg] sendForkchoiceReceiptWithoutWaiting", "stack", dbg.Stack())
 	select {
 	case ch <- forkchoiceOutcome{receipt: receipt}:
 	default:
@@ -240,6 +241,7 @@ func (e *EthereumExecutionModule) updateForkChoice(ctx context.Context, original
 			})
 			return
 		}
+		log.Info("[dbg] here4.1")
 
 		currentParentHash := fcuHeader.ParentHash
 		currentParentNumber := fcuHeader.Number.Uint64() - 1
@@ -254,6 +256,7 @@ func (e *EthereumExecutionModule) updateForkChoice(ctx context.Context, original
 			hash:   fcuHeader.Hash(),
 			number: fcuHeader.Number.Uint64(),
 		})
+		log.Info("[dbg] here4.2")
 		for !isCanonicalHash {
 			newCanonicals = append(newCanonicals, &canonicalEntry{
 				hash:   currentParentHash,
@@ -265,6 +268,7 @@ func (e *EthereumExecutionModule) updateForkChoice(ctx context.Context, original
 				return
 			}
 			if currentHeader == nil {
+				log.Info("[dbg] here4.3")
 				sendForkchoiceReceiptWithoutWaiting(outcomeCh, &execution.ForkChoiceReceipt{
 					LatestValidHash: gointerfaces.ConvertHashToH256(common.Hash{}),
 					Status:          execution.ExecutionStatus_MissingSegment,
@@ -273,6 +277,7 @@ func (e *EthereumExecutionModule) updateForkChoice(ctx context.Context, original
 			}
 			currentParentHash = currentHeader.ParentHash
 			if currentHeader.Number.Uint64() == 0 {
+				log.Info("[dbg] here4.4")
 				panic("assert:uint64 underflow") //uint-underflow
 			}
 			currentParentNumber = currentHeader.Number.Uint64() - 1
