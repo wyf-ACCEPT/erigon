@@ -256,7 +256,7 @@ func (e *EthereumExecutionModule) updateForkChoice(ctx context.Context, original
 			hash:   fcuHeader.Hash(),
 			number: fcuHeader.Number.Uint64(),
 		})
-		log.Info("[dbg] here4.2")
+		log.Info("[dbg] here4.2", "isCanonicalHash", isCanonicalHash)
 		for !isCanonicalHash {
 			newCanonicals = append(newCanonicals, &canonicalEntry{
 				hash:   currentParentHash,
@@ -268,7 +268,7 @@ func (e *EthereumExecutionModule) updateForkChoice(ctx context.Context, original
 				return
 			}
 			if currentHeader == nil {
-				log.Info("[dbg] here4.3")
+				log.Info("[dbg] here4.3", "currentParentNumber", currentParentNumber, "currentParentHash", currentParentHash)
 				sendForkchoiceReceiptWithoutWaiting(outcomeCh, &execution.ForkChoiceReceipt{
 					LatestValidHash: gointerfaces.ConvertHashToH256(common.Hash{}),
 					Status:          execution.ExecutionStatus_MissingSegment,
