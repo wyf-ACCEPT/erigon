@@ -339,7 +339,7 @@ func (c ChainReaderWriterEth1) ValidateChain(ctx context.Context, hash libcommon
 }
 
 func (c ChainReaderWriterEth1) UpdateForkChoice(ctx context.Context, headHash, safeHash, finalizeHash libcommon.Hash) (execution.ExecutionStatus, *string, libcommon.Hash, error) {
-	log.Warn("[dbg] UpdateForkChoice", "stack", dbg.Stack())
+	log.Warn("[dbg] ChainReaderWriterEth1.UpdateForkChoice", "stack", dbg.Stack())
 	resp, err := c.executionModule.UpdateForkChoice(ctx, &execution.ForkChoice{
 		HeadBlockHash:      gointerfaces.ConvertHashToH256(headHash),
 		SafeBlockHash:      gointerfaces.ConvertHashToH256(safeHash),
