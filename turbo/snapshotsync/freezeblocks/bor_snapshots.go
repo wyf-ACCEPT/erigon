@@ -85,11 +85,11 @@ func (br *BlockRetire) retireBorBlocks(ctx context.Context, minBlockNum uint64, 
 		logger.Log(lvl, "[bor snapshots] Retire Bor Blocks", "rangesToMerge", Ranges(r))
 		break
 	}
-
-	if len(rangesToMerge) == 0 {
-		return blocksRetired, nil
+	for _, r := range rangesToMerge {
+		if len(r) > 0 {
+			blocksRetired = true // have something to merge
+		}
 	}
-	blocksRetired = true // have something to merge
 	onMerge := func(r Range) error {
 		if notifier != nil && !reflect.ValueOf(notifier).IsNil() { // notify about new snapshots of any size
 			notifier.OnNewSnapshot()

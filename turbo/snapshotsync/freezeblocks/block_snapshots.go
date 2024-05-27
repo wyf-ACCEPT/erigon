@@ -1309,10 +1309,12 @@ func (br *BlockRetire) retireBlocks(ctx context.Context, minBlockNum uint64, max
 
 	merger := NewMerger(tmpDir, workers, lvl, db, br.chainConfig, logger)
 	rangesToMerge := merger.FindMergeRanges(snapshots.Ranges(snapshots.Types()), snapshots.BlocksAvailable())
-	if len(rangesToMerge) == 0 {
-		return ok, nil
+	fmt.Printf("[dbg] rangesToMerge: %v\n", rangesToMerge)
+	for _, r := range rangesToMerge {
+		if len(r) > 0 {
+			ok = true // have something to merge
+		}
 	}
-	ok = true // have something to merge
 	onMerge := func(r Range) error {
 		if notifier != nil && !reflect.ValueOf(notifier).IsNil() { // notify about new snapshots of any size
 			notifier.OnNewSnapshot()
@@ -2001,7 +2003,6 @@ func (m *Merger) mergeSubSegment(ctx context.Context, sn snaptype.FileInfo, toMe
 
 // Merge does merge segments in given ranges
 func (m *Merger) Merge(ctx context.Context, snapshots *RoSnapshots, mergeRanges map[snaptype.Enum][]Range, snapDir string, doIndex bool, onMerge func(r Range) error, onDelete func(l []string) error) (err error) {
-	fmt.Printf("[dbg] mergeRanges %v\n", mergeRanges)
 	if len(mergeRanges) == 0 {
 		return nil
 	}
