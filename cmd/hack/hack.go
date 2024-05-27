@@ -960,6 +960,64 @@ func trimTxs(chaindata string) error {
 	return nil
 }
 
+func scanLogTopics(chaindata string) error {
+	db := mdbx.MustOpen(chaindata)
+	defer db.Close()
+	tx, err := db.BeginRo(context.Background())
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	{
+
+		c, err := tx.CursorDupSort(kv.TblLogTopicsIdx)
+		if err != nil {
+			return err
+		}
+		defer c.Close()
+
+		m := map[int]int{}
+		for k, v, err := c.First(); k != nil; k, v, err = c.NextNoDup() {
+			if err != nil {
+				return err
+			}
+			var i int
+			for ; v != nil; _, v, err = c.NextDup() {
+				i++
+			}
+			if _, ok := m[i]; !ok {
+				m[i] = 0
+			}
+			m[i]++
+		}
+		fmt.Printf("LogTopicIndex: %v\n", m)
+	}
+
+	c, err := tx.CursorDupSort(kv.TblLogTopicsKeys)
+	if err != nil {
+		return err
+	}
+	defer c.Close()
+	m := map[int]int{}
+	for k, v, err := c.First(); k != nil; k, v, err = c.NextNoDup() {
+		if err != nil {
+			return err
+		}
+		var i int
+		for ; v != nil; _, v, err = c.NextDup() {
+			i++
+		}
+		if _, ok := m[i]; !ok {
+			m[i] = 0
+		}
+		m[i]++
+	}
+	fmt.Printf("LogTopicIndex: %v\n", m)
+
+	return nil
+}
+
 func scanTxs(chaindata string) error {
 	db := mdbx.MustOpen(chaindata)
 	defer db.Close()
@@ -1463,6 +1521,9 @@ func main() {
 
 	case "scanTxs":
 		err = scanTxs(*chaindata)
+
+	case "scanLogTopics":
+		err = scanLogTopics(*chaindata)
 
 	case "scanReceipts2":
 		err = scanReceipts2(*chaindata)
