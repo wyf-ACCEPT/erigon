@@ -1308,6 +1308,7 @@ func (br *BlockRetire) retireBlocks(ctx context.Context, minBlockNum uint64, max
 	}
 
 	merger := NewMerger(tmpDir, workers, lvl, db, br.chainConfig, logger)
+	fmt.Printf("[dbg] snapshots.Types() %s\n", snapshots.Types())
 	rangesToMerge := merger.FindMergeRanges(snapshots.Ranges(snapshots.Types()), snapshots.BlocksAvailable())
 	fmt.Printf("[dbg] rangesToMerge: %v\n", rangesToMerge)
 	for _, r := range rangesToMerge {
@@ -2179,12 +2180,10 @@ func (v *View) Segment(t snaptype.Type, blockNum uint64) (*Segment, bool) {
 func (v *View) Ranges(types []snaptype.Type) (ranges map[snaptype.Enum][]Range) {
 	ranges = make(map[snaptype.Enum][]Range, len(types))
 	for _, t := range types {
-		fmt.Printf("[dbg] Ranges: %s\n", t.Name())
 		for _, sn := range v.Segments(v.baseSegType) {
 			ranges[t.Enum()] = append(ranges[t.Enum()], sn.Range)
 		}
 	}
-	fmt.Printf("[dbg] Ranges2: %v\n", ranges)
 	return ranges
 }
 
