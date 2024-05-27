@@ -958,6 +958,7 @@ func noGaps(in []snaptype.FileInfo) (out []snaptype.FileInfo, missingSnapshots [
 			continue
 		}
 		if f.From != prevTo { // no gaps
+			log.Debug("[dbg] noGaps", "f.Type.Enum().String()", f.Type.Enum().String(), "f.From", f.From, "prevTo", prevTo)
 			missingSnapshots = append(missingSnapshots, Range{prevTo, f.From})
 			continue
 		}
