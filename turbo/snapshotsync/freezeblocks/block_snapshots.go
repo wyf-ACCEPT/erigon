@@ -1903,8 +1903,9 @@ func (m *Merger) DisableFsync() { m.noFsync = true }
 
 func (m *Merger) FindMergeRanges(currentRanges map[snaptype.Enum][]Range, maxBlockNum uint64) (toMerge map[snaptype.Enum][]Range) {
 	toMerge = make(map[snaptype.Enum][]Range, len(currentRanges))
-
 	for t, ranges := range currentRanges {
+		fmt.Printf("[dbg] FindMergeRanges: %s, %v\n", t.String(), ranges)
+
 		for i := len(ranges) - 1; i > 0; i-- {
 			r := ranges[i]
 			mergeLimit := snapcfg.MergeLimit(m.chainConfig.ChainName, snaptype.Unknown, r.from)
