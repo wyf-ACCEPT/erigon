@@ -1955,6 +1955,10 @@ func (m *Merger) filesByRangeOfType(view *View, from, to uint64, snapshotType sn
 }
 
 func (m *Merger) mergeSubSegment(ctx context.Context, sn snaptype.FileInfo, toMerge []string, snapDir string, doIndex bool, onMerge func(r Range) error) (err error) {
+	if len(toMerge) == 0 {
+		return
+	}
+
 	defer func() {
 		if err == nil {
 			if rec := recover(); rec != nil {
@@ -1974,9 +1978,6 @@ func (m *Merger) mergeSubSegment(ctx context.Context, sn snaptype.FileInfo, toMe
 			}
 		}
 	}()
-	if len(toMerge) == 0 {
-		return
-	}
 	if err = m.merge(ctx, toMerge, sn.Path, nil); err != nil {
 		err = fmt.Errorf("mergeByAppendSegments: %w", err)
 		return
@@ -1994,6 +1995,7 @@ func (m *Merger) mergeSubSegment(ctx context.Context, sn snaptype.FileInfo, toMe
 
 // Merge does merge segments in given ranges
 func (m *Merger) Merge(ctx context.Context, snapshots *RoSnapshots, snapTypes []snaptype.Type, mergeRanges []Range, snapDir string, doIndex bool, onMerge func(r Range) error, onDelete func(l []string) error) (err error) {
+	fmt.Printf("[dbg] mergeRanges %v\n", mergeRanges)
 	if len(mergeRanges) == 0 {
 		return nil
 	}
@@ -2006,9 +2008,12 @@ func (m *Merger) Merge(ctx context.Context, snapshots *RoSnapshots, snapTypes []
 		}
 
 		for _, t := range snapTypes {
+			fmt.Printf("[dbg] merge type %s: %d-%d, len(toMerge[t.Enum()])=%d\n", t.Name(), r.from, r.to, len(toMerge[t.Enum()]))
 			if err := m.mergeSubSegment(ctx, t.FileInfo(snapDir, r.from, r.to), toMerge[t.Enum()], snapDir, doIndex, onMerge); err != nil {
+				fmt.Printf("[dbg] merge type err %s, %s\n", t.Name(), err)
 				return err
 			}
+			fmt.Printf("[dbg] merge type success %s, %s\n", t.Name(), err)
 		}
 		if err := snapshots.ReopenFolder(); err != nil {
 			return fmt.Errorf("ReopenSegments: %w", err)
