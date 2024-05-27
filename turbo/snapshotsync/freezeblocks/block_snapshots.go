@@ -976,6 +976,7 @@ MainLoop:
 		for _, t := range types {
 			p := filepath.Join(dir, snaptype.SegmentFileName(f.Version, f.From, f.To, t.Enum()))
 			if !dir2.FileExist(p) {
+				fmt.Printf("[dbg] file not exists: %s\n", p)
 				continue MainLoop
 			}
 			res = append(res, f)
