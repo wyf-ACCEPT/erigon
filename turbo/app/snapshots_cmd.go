@@ -781,6 +781,7 @@ func doRetireCommand(cliCtx *cli.Context) error {
 		}
 	}
 
+	return nil
 	logger.Info("Params", "from", from, "to", to, "every", every)
 	if err := br.RetireBlocks(ctx, 0, forwardProgress, log.LvlInfo, nil, nil, nil); err != nil {
 		return err
