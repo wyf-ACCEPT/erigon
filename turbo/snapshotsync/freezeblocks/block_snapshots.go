@@ -584,10 +584,10 @@ func (s *RoSnapshots) rebuildSegments(fileNames []string, open bool, optimistic 
 	return nil
 }
 
-func (s *RoSnapshots) Ranges() []Range {
+func (s *RoSnapshots) Ranges(types []snaptype.Type) (ranges map[snaptype.Enum][]Range) {
 	view := s.View()
 	defer view.Close()
-	return view.Ranges()
+	return view.Ranges(types)
 }
 
 func (s *RoSnapshots) OptimisticalyReopenFolder()           { _ = s.ReopenFolder() }
@@ -1306,12 +1306,9 @@ func (br *BlockRetire) retireBlocks(ctx context.Context, minBlockNum uint64, max
 			notifier.OnNewSnapshot()
 		}
 	}
-	fmt.Printf("[dbg] before merege\n")
 
 	merger := NewMerger(tmpDir, workers, lvl, db, br.chainConfig, logger)
-	fmt.Printf("[dbg] %d, ranges=%v\n", snapshots.BlocksAvailable(), snapshots.Ranges())
-	rangesToMerge := merger.FindMergeRanges(snapshots.Ranges(), snapshots.BlocksAvailable())
-	fmt.Printf("[dbg] rangesToMerge=%d\n", len(rangesToMerge))
+	rangesToMerge := merger.FindMergeRanges(snapshots.Ranges(snapshots.Types()), snapshots.BlocksAvailable())
 	if len(rangesToMerge) == 0 {
 		return ok, nil
 	}
@@ -1331,7 +1328,7 @@ func (br *BlockRetire) retireBlocks(ctx context.Context, minBlockNum uint64, max
 		}
 		return nil
 	}
-	err := merger.Merge(ctx, snapshots, snapshots.Types(), rangesToMerge, snapshots.Dir(), true /* doIndex */, onMerge, onDelete)
+	err := merger.Merge(ctx, snapshots, rangesToMerge, snapshots.Dir(), true /* doIndex */, onMerge, onDelete)
 	if err != nil {
 		return ok, err
 	}
@@ -1902,32 +1899,34 @@ func NewMerger(tmpDir string, compressWorkers int, lvl log.Lvl, chainDB kv.RoDB,
 }
 func (m *Merger) DisableFsync() { m.noFsync = true }
 
-func (m *Merger) FindMergeRanges(currentRanges []Range, maxBlockNum uint64) (toMerge []Range) {
-	for i := len(currentRanges) - 1; i > 0; i-- {
-		r := currentRanges[i]
-		mergeLimit := snapcfg.MergeLimit(m.chainConfig.ChainName, snaptype.Unknown, r.from)
-		if r.to-r.from >= mergeLimit {
-			continue
-		}
-		for _, span := range snapcfg.MergeSteps(m.chainConfig.ChainName, snaptype.Unknown, r.from) {
-			if r.to%span != 0 {
-				fmt.Printf("[dbg] skip1: span=%d, r=%d-%d\n", span, r.from, r.to)
+func (m *Merger) FindMergeRanges(currentRanges map[snaptype.Enum][]Range, maxBlockNum uint64) (toMerge map[snaptype.Enum][]Range) {
+	toMerge = make(map[snaptype.Enum][]Range, len(currentRanges))
+
+	for t, ranges := range currentRanges {
+		for i := len(ranges) - 1; i > 0; i-- {
+			r := ranges[i]
+			mergeLimit := snapcfg.MergeLimit(m.chainConfig.ChainName, snaptype.Unknown, r.from)
+			if r.to-r.from >= mergeLimit {
 				continue
 			}
-			if r.to-r.from == span {
-				fmt.Printf("[dbg] skip2: span=%d, r=%d-%d\n", span, r.from, r.to)
+			for _, span := range snapcfg.MergeSteps(m.chainConfig.ChainName, snaptype.Unknown, r.from) {
+				if r.to%span != 0 {
+					continue
+				}
+				if r.to-r.from == span {
+					break
+				}
+				aggFrom := r.to - span
+				toMerge[t] = append(toMerge[t], Range{from: aggFrom, to: r.to})
+				for ranges[i].from > aggFrom {
+					i--
+				}
 				break
 			}
-			aggFrom := r.to - span
-			toMerge = append(toMerge, Range{from: aggFrom, to: r.to})
-			for currentRanges[i].from > aggFrom {
-				i--
-			}
-			fmt.Printf("[dbg] skip3: span=%d, r=%d-%d\n", span, r.from, r.to)
-			break
 		}
+
+		slices.SortFunc(toMerge[t], func(i, j Range) int { return cmp.Compare(i.from, j.from) })
 	}
-	slices.SortFunc(toMerge, func(i, j Range) int { return cmp.Compare(i.from, j.from) })
 	return toMerge
 }
 
@@ -2001,40 +2000,40 @@ func (m *Merger) mergeSubSegment(ctx context.Context, sn snaptype.FileInfo, toMe
 }
 
 // Merge does merge segments in given ranges
-func (m *Merger) Merge(ctx context.Context, snapshots *RoSnapshots, snapTypes []snaptype.Type, mergeRanges []Range, snapDir string, doIndex bool, onMerge func(r Range) error, onDelete func(l []string) error) (err error) {
+func (m *Merger) Merge(ctx context.Context, snapshots *RoSnapshots, mergeRanges map[snaptype.Enum][]Range, snapDir string, doIndex bool, onMerge func(r Range) error, onDelete func(l []string) error) (err error) {
 	fmt.Printf("[dbg] mergeRanges %v\n", mergeRanges)
 	if len(mergeRanges) == 0 {
 		return nil
 	}
 	logEvery := time.NewTicker(30 * time.Second)
 	defer logEvery.Stop()
-	for _, r := range mergeRanges {
-		toMerge, err := m.filesByRange(snapshots, r.from, r.to)
-		if err != nil {
-			return err
-		}
+	for en, ranges := range mergeRanges {
+		t := en.Type()
+		for _, r := range ranges {
 
-		for _, t := range snapTypes {
+			toMerge, err := m.filesByRange(snapshots, r.from, r.to)
+			if err != nil {
+				return err
+			}
+
 			fmt.Printf("[dbg] merge type %s: %d-%d, len(toMerge[t.Enum()])=%d\n", t.Name(), r.from, r.to, len(toMerge[t.Enum()]))
 			if err := m.mergeSubSegment(ctx, t.FileInfo(snapDir, r.from, r.to), toMerge[t.Enum()], snapDir, doIndex, onMerge); err != nil {
 				fmt.Printf("[dbg] merge type err %s, %s\n", t.Name(), err)
 				return err
 			}
 			fmt.Printf("[dbg] merge type success %s, %s\n", t.Name(), err)
-		}
-		if err := snapshots.ReopenFolder(); err != nil {
-			return fmt.Errorf("ReopenSegments: %w", err)
-		}
-
-		snapshots.LogStat("merge")
-
-		if onMerge != nil {
-			if err := onMerge(r); err != nil {
-				return err
+			if err := snapshots.ReopenFolder(); err != nil {
+				return fmt.Errorf("ReopenSegments: %w", err)
 			}
-		}
 
-		for _, t := range snapTypes {
+			snapshots.LogStat("merge")
+
+			if onMerge != nil {
+				if err := onMerge(r); err != nil {
+					return err
+				}
+			}
+
 			if len(toMerge[t.Enum()]) == 0 {
 				continue
 			}
@@ -2051,7 +2050,13 @@ func (m *Merger) Merge(ctx context.Context, snapshots *RoSnapshots, snapTypes []
 	if err = snapshots.removeOverlaps(); err != nil {
 		return err
 	}
-	m.logger.Log(m.lvl, "[snapshots] Merge done", "from", mergeRanges[0].from, "to", mergeRanges[0].to)
+	for _, r := range mergeRanges {
+		if len(r) == 0 {
+			continue
+		}
+		m.logger.Log(m.lvl, "[snapshots] Merge done", "from", r[0].from, "to", r[0].to)
+		break
+	}
 
 	return nil
 }
@@ -2169,12 +2174,13 @@ func (v *View) Segment(t snaptype.Type, blockNum uint64) (*Segment, bool) {
 	return nil, false
 }
 
-func (v *View) Ranges() (ranges []Range) {
-	fmt.Printf("[dbg] alex: %s\n", v.baseSegType)
-	for _, sn := range v.Segments(v.baseSegType) {
-		ranges = append(ranges, sn.Range)
+func (v *View) Ranges(types []snaptype.Type) (ranges map[snaptype.Enum][]Range) {
+	ranges = make(map[snaptype.Enum][]Range, len(types))
+	for _, t := range types {
+		for _, sn := range v.Segments(v.baseSegType) {
+			ranges[t.Enum()] = append(ranges[t.Enum()], sn.Range)
+		}
 	}
-
 	return ranges
 }
 

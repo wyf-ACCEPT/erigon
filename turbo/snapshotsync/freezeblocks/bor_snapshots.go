@@ -77,10 +77,15 @@ func (br *BlockRetire) retireBorBlocks(ctx context.Context, minBlockNum uint64, 
 	}
 
 	merger := NewMerger(tmpDir, workers, lvl, db, chainConfig, logger)
-	rangesToMerge := merger.FindMergeRanges(snapshots.Ranges(), snapshots.BlocksAvailable())
-	if len(rangesToMerge) > 0 {
-		logger.Log(lvl, "[bor snapshots] Retire Bor Blocks", "rangesToMerge", Ranges(rangesToMerge))
+	rangesToMerge := merger.FindMergeRanges(snapshots.Ranges(borsnaptype.BorSnapshotTypes()), snapshots.BlocksAvailable())
+	for _, r := range rangesToMerge {
+		if len(r) == 0 {
+			continue
+		}
+		logger.Log(lvl, "[bor snapshots] Retire Bor Blocks", "rangesToMerge", Ranges(r))
+		break
 	}
+
 	if len(rangesToMerge) == 0 {
 		return blocksRetired, nil
 	}
@@ -101,8 +106,7 @@ func (br *BlockRetire) retireBorBlocks(ctx context.Context, minBlockNum uint64, 
 		return nil
 	}
 
-	err := merger.Merge(ctx, &snapshots.RoSnapshots, borsnaptype.BorSnapshotTypes(), rangesToMerge, snapshots.Dir(), true /* doIndex */, onMerge, onDelete)
-
+	err := merger.Merge(ctx, &snapshots.RoSnapshots, rangesToMerge, snapshots.Dir(), true /* doIndex */, onMerge, onDelete)
 	if err != nil {
 		return blocksRetired, err
 	}
@@ -130,10 +134,10 @@ func NewBorRoSnapshots(cfg ethconfig.BlocksFreezing, snapDir string, segmentsMin
 	return &BorRoSnapshots{*newRoSnapshots(cfg, snapDir, borsnaptype.BorSnapshotTypes(), segmentsMin, logger)}
 }
 
-func (s *BorRoSnapshots) Ranges() []Range {
+func (s *BorRoSnapshots) Ranges(types []snaptype.Type) (ranges map[snaptype.Enum][]Range) {
 	view := s.View()
 	defer view.Close()
-	return view.base.Ranges()
+	return view.base.Ranges(types)
 }
 
 // this is one off code to fix an issue in 2.49.x->2.52.x which missed
