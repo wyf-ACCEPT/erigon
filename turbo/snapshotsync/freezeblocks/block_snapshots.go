@@ -1310,6 +1310,7 @@ func (br *BlockRetire) retireBlocks(ctx context.Context, minBlockNum uint64, max
 
 	merger := NewMerger(tmpDir, workers, lvl, db, br.chainConfig, logger)
 	rangesToMerge := merger.FindMergeRanges(snapshots.Ranges(), snapshots.BlocksAvailable())
+	fmt.Printf("[dbg] rangesToMerge=%d\n", len(rangesToMerge))
 	if len(rangesToMerge) == 0 {
 		return ok, nil
 	}
