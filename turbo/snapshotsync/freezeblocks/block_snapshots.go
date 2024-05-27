@@ -958,7 +958,6 @@ func noGaps(in []snaptype.FileInfo) (out []snaptype.FileInfo, missingSnapshots [
 			continue
 		}
 		if f.From != prevTo { // no gaps
-			log.Debug("[dbg] noGaps", "f.Type.Enum().String()", f.Type.Enum().String(), "f.From", f.From, "prevTo", prevTo)
 			missingSnapshots = append(missingSnapshots, Range{prevTo, f.From})
 			continue
 		}
@@ -1114,6 +1113,9 @@ func typedSegments(dir string, minBlock uint64, types []snaptype.Type, allowGaps
 			if allowGaps {
 				l = noOverlaps(segmentsTypeCheck(dir, l))
 			} else {
+				log.Debug("[dbg] l", "l", l)
+				log.Debug("[dbg] segmentsTypeCheck(dir, l)", "segmentsTypeCheck(dir, l)", segmentsTypeCheck(dir, l))
+				log.Debug("[dbg] noOverlaps", "noOverlaps", noOverlaps(segmentsTypeCheck(dir, l)))
 				l, m = noGaps(noOverlaps(segmentsTypeCheck(dir, l)))
 			}
 			if len(m) > 0 {
