@@ -990,7 +990,7 @@ func scanLogTopics(chaindata string) error {
 			}
 			m[i]++
 		}
-		for k, amount := range m {
+		for k := range m {
 			if k < 100 {
 				delete(m, k)
 			}
@@ -1017,7 +1017,7 @@ func scanLogTopics(chaindata string) error {
 		}
 		m[i]++
 	}
-	for k, amount := range m {
+	for k := range m {
 		if k < 100 {
 			delete(m, k)
 		}
