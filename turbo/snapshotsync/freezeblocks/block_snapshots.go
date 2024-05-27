@@ -1072,10 +1072,6 @@ func Segments(dir string, minBlock uint64) (res []snaptype.FileInfo, missingSnap
 }
 
 func typedSegments(dir string, minBlock uint64, types []snaptype.Type, allowGaps bool) (res []snaptype.FileInfo, missingSnapshots []Range, err error) {
-	segmentsTypeCheck := func(dir string, in []snaptype.FileInfo) (res []snaptype.FileInfo) {
-		return in
-	}
-
 	list, err := snaptype.Segments(dir)
 
 	if err != nil {
@@ -1099,11 +1095,6 @@ func typedSegments(dir string, minBlock uint64, types []snaptype.Type, allowGaps
 				for _, ll := range l {
 					if strings.Contains(ll.Name(), "trans") && strings.Contains(ll.Name(), "0341") {
 						log.Debug("[dbg] l", "l", ll.Name())
-					}
-				}
-				for _, ll := range segmentsTypeCheck(dir, l) {
-					if strings.Contains(ll.Name(), "trans") && strings.Contains(ll.Name(), "0341") {
-						log.Debug("[dbg] segmentsTypeCheck(dir, l)", "segmentsTypeCheck(dir, l)", ll.Name())
 					}
 				}
 				for _, ll := range noOverlaps(l) {
