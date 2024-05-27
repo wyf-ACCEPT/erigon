@@ -972,13 +972,13 @@ func typeOfSegmentsMustExist(dir string, in []snaptype.FileInfo, types []snaptyp
 		if f.From == f.To {
 			continue
 		}
-		for _, t := range types {
-			p := filepath.Join(dir, snaptype.SegmentFileName(f.Version, f.From, f.To, t.Enum()))
-			if !dir2.FileExist(p) {
-				fmt.Printf("[dbg] file not exists: %s\n", p)
-			}
-			res = append(res, f)
-		}
+		//for _, t := range types {
+		//	p := filepath.Join(dir, snaptype.SegmentFileName(f.Version, f.From, f.To, t.Enum()))
+		//	if !dir2.FileExist(p) {
+		//		fmt.Printf("[dbg] file not exists: %s\n", p)
+		//	}
+		//	res = append(res, f)
+		//}
 	}
 	return res
 }
@@ -1089,7 +1089,8 @@ func Segments(dir string, minBlock uint64) (res []snaptype.FileInfo, missingSnap
 
 func typedSegments(dir string, minBlock uint64, types []snaptype.Type, allowGaps bool) (res []snaptype.FileInfo, missingSnapshots []Range, err error) {
 	segmentsTypeCheck := func(dir string, in []snaptype.FileInfo) (res []snaptype.FileInfo) {
-		return typeOfSegmentsMustExist(dir, in, types)
+		return in
+		//return typeOfSegmentsMustExist(dir, in, types)
 	}
 
 	list, err := snaptype.Segments(dir)
