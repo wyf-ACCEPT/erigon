@@ -675,7 +675,6 @@ func (s *RoSnapshots) removeOverlaps() error {
 	defer s.unlockSegments()
 
 	list, err := snaptype.Segments(s.dir)
-
 	if err != nil {
 		return err
 	}
@@ -978,8 +977,8 @@ MainLoop:
 			if !dir2.FileExist(p) {
 				continue MainLoop
 			}
-			res = append(res, f)
 		}
+		res = append(res, f)
 	}
 	return res
 }
@@ -1322,8 +1321,6 @@ func (br *BlockRetire) retireBlocks(ctx context.Context, minBlockNum uint64, max
 		if err := DumpBlocks(ctx, blockFrom, blockTo, br.chainConfig, tmpDir, snapshots.Dir(), db, workers, lvl, logger, blockReader); err != nil {
 			return ok, fmt.Errorf("DumpBlocks: %w", err)
 		}
-
-		snapshots.removeOverlaps()
 
 		if err := snapshots.ReopenFolder(); err != nil {
 			return ok, fmt.Errorf("reopen: %w", err)
@@ -2062,7 +2059,12 @@ func (m *Merger) Merge(ctx context.Context, snapshots *RoSnapshots, snapTypes []
 			removeOldFiles(toMerge[t.Enum()], snapDir)
 		}
 	}
+
+	if err = snapshots.removeOverlaps(); err != nil {
+		return err
+	}
 	m.logger.Log(m.lvl, "[snapshots] Merge done", "from", mergeRanges[0].from, "to", mergeRanges[0].to)
+
 	return nil
 }
 
