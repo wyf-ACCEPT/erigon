@@ -781,7 +781,6 @@ func doRetireCommand(cliCtx *cli.Context) error {
 		}
 	}
 
-	return nil
 	logger.Info("Params", "from", from, "to", to, "every", every)
 	if err := br.RetireBlocks(ctx, 0, forwardProgress, log.LvlInfo, nil, nil, nil); err != nil {
 		return err
@@ -798,6 +797,8 @@ func doRetireCommand(cliCtx *cli.Context) error {
 	}); err != nil {
 		return err
 	}
+
+	return nil
 
 	for j := 0; j < 10_000; j++ { // prune happens by small steps, so need many runs
 		if err := db.UpdateNosync(ctx, func(tx kv.RwTx) error {
