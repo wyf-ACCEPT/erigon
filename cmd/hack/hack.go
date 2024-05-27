@@ -970,7 +970,6 @@ func scanLogTopics(chaindata string) error {
 	defer tx.Rollback()
 
 	{
-
 		c, err := tx.CursorDupSort(kv.TblLogTopicsIdx)
 		if err != nil {
 			return err
@@ -990,6 +989,11 @@ func scanLogTopics(chaindata string) error {
 				m[i] = 0
 			}
 			m[i]++
+		}
+		for k, amount := range m {
+			if amount < 100 {
+				delete(m, k)
+			}
 		}
 		fmt.Printf("LogTopicIndex: %v\n", m)
 	}
@@ -1013,7 +1017,12 @@ func scanLogTopics(chaindata string) error {
 		}
 		m[i]++
 	}
-	fmt.Printf("LogTopicIndex: %v\n", m)
+	for k, amount := range m {
+		if amount < 100 {
+			delete(m, k)
+		}
+	}
+	fmt.Printf("TblLogTopicsKeys: %v\n", m)
 
 	return nil
 }
