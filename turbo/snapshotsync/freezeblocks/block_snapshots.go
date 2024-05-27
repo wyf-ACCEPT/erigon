@@ -1911,9 +1911,11 @@ func (m *Merger) FindMergeRanges(currentRanges []Range, maxBlockNum uint64) (toM
 		}
 		for _, span := range snapcfg.MergeSteps(m.chainConfig.ChainName, snaptype.Unknown, r.from) {
 			if r.to%span != 0 {
+				fmt.Printf("[dbg] skip1: span=%d, r=%d-%d\n", span, r.from, r.to)
 				continue
 			}
 			if r.to-r.from == span {
+				fmt.Printf("[dbg] skip2: span=%d, r=%d-%d\n", span, r.from, r.to)
 				break
 			}
 			aggFrom := r.to - span
@@ -1921,6 +1923,7 @@ func (m *Merger) FindMergeRanges(currentRanges []Range, maxBlockNum uint64) (toM
 			for currentRanges[i].from > aggFrom {
 				i--
 			}
+			fmt.Printf("[dbg] skip3: span=%d, r=%d-%d\n", span, r.from, r.to)
 			break
 		}
 	}
