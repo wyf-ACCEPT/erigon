@@ -967,22 +967,6 @@ func noGaps(in []snaptype.FileInfo) (out []snaptype.FileInfo, missingSnapshots [
 	return out, missingSnapshots
 }
 
-func typeOfSegmentsMustExist(dir string, in []snaptype.FileInfo, types []snaptype.Type) (res []snaptype.FileInfo) {
-	for _, f := range in {
-		if f.From == f.To {
-			continue
-		}
-		//for _, t := range types {
-		//	p := filepath.Join(dir, snaptype.SegmentFileName(f.Version, f.From, f.To, t.Enum()))
-		//	if !dir2.FileExist(p) {
-		//		fmt.Printf("[dbg] file not exists: %s\n", p)
-		//	}
-		//	res = append(res, f)
-		//}
-	}
-	return res
-}
-
 // noOverlaps - keep largest ranges and avoid overlap
 func noOverlaps(in []snaptype.FileInfo) (res []snaptype.FileInfo) {
 	for i := range in {
@@ -1090,7 +1074,6 @@ func Segments(dir string, minBlock uint64) (res []snaptype.FileInfo, missingSnap
 func typedSegments(dir string, minBlock uint64, types []snaptype.Type, allowGaps bool) (res []snaptype.FileInfo, missingSnapshots []Range, err error) {
 	segmentsTypeCheck := func(dir string, in []snaptype.FileInfo) (res []snaptype.FileInfo) {
 		return in
-		//return typeOfSegmentsMustExist(dir, in, types)
 	}
 
 	list, err := snaptype.Segments(dir)
@@ -1111,7 +1094,7 @@ func typedSegments(dir string, minBlock uint64, types []snaptype.Type, allowGaps
 			}
 
 			if allowGaps {
-				l = noOverlaps(segmentsTypeCheck(dir, l))
+				l = noOverlaps(l)
 			} else {
 				for _, ll := range l {
 					if strings.Contains(ll.Name(), "trans") && strings.Contains(ll.Name(), "0341") {
@@ -1123,12 +1106,12 @@ func typedSegments(dir string, minBlock uint64, types []snaptype.Type, allowGaps
 						log.Debug("[dbg] segmentsTypeCheck(dir, l)", "segmentsTypeCheck(dir, l)", ll.Name())
 					}
 				}
-				for _, ll := range noOverlaps(segmentsTypeCheck(dir, l)) {
+				for _, ll := range noOverlaps(l) {
 					if strings.Contains(ll.Name(), "trans") && strings.Contains(ll.Name(), "0341") {
 						log.Debug("[dbg] noOverlaps", "noOverlaps", ll.Name())
 					}
 				}
-				l, m = noGaps(noOverlaps(segmentsTypeCheck(dir, l)))
+				l, m = noGaps(noOverlaps(l))
 			}
 			if len(m) > 0 {
 				lst := m[len(m)-1]
