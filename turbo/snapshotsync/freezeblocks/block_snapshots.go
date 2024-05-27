@@ -2167,6 +2167,7 @@ func (v *View) Segment(t snaptype.Type, blockNum uint64) (*Segment, bool) {
 }
 
 func (v *View) Ranges() (ranges []Range) {
+	fmt.Printf("[dbg] alex: %s\n", v.baseSegType)
 	for _, sn := range v.Segments(v.baseSegType) {
 		ranges = append(ranges, sn.Range)
 	}
