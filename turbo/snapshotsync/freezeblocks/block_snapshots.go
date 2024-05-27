@@ -1918,7 +1918,7 @@ func (m *Merger) FindMergeRanges(currentRanges map[snaptype.Enum][]Range, maxBlo
 					continue
 				}
 				if r.to-r.from == span {
-					fmt.Printf("[dbg] break1: %s, %v\n", r)
+					fmt.Printf("[dbg] break1: %s, %d-%d, %d\n", t, r.from, r.to, span)
 					break
 				}
 				aggFrom := r.to - span
