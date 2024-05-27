@@ -1092,27 +1092,13 @@ func typedSegments(dir string, minBlock uint64, types []snaptype.Type, allowGaps
 			if allowGaps {
 				l = noOverlaps(l)
 			} else {
-				for _, ll := range l {
-					if strings.Contains(ll.Name(), "trans") && strings.Contains(ll.Name(), "0341") {
-						log.Debug("[dbg] l", "l", ll.Name())
-					}
-				}
-				for _, ll := range noOverlaps(l) {
-					if strings.Contains(ll.Name(), "trans") && strings.Contains(ll.Name(), "0341") {
-						log.Debug("[dbg] noOverlaps", "noOverlaps", ll.Name())
-					}
-				}
 				l, m = noGaps(noOverlaps(l))
 			}
 			if len(m) > 0 {
 				lst := m[len(m)-1]
-				log.Debug("[snapshots] see gap2", "type", segType, "from", lst.from)
+				log.Debug("[snapshots] see gap", "type", segType, "from", lst.from)
 			}
 			res = append(res, l...)
-			if len(m) > 0 {
-				lst := m[len(m)-1]
-				log.Debug("[snapshots] see gap3", "type", segType, "from", lst.from)
-			}
 
 			missingSnapshots = append(missingSnapshots, m...)
 		}
