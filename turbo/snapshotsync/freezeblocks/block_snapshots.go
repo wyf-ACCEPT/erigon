@@ -2179,10 +2179,12 @@ func (v *View) Segment(t snaptype.Type, blockNum uint64) (*Segment, bool) {
 func (v *View) Ranges(types []snaptype.Type) (ranges map[snaptype.Enum][]Range) {
 	ranges = make(map[snaptype.Enum][]Range, len(types))
 	for _, t := range types {
+		fmt.Printf("[dbg] Ranges: %s\n", t.Name())
 		for _, sn := range v.Segments(v.baseSegType) {
 			ranges[t.Enum()] = append(ranges[t.Enum()], sn.Range)
 		}
 	}
+	fmt.Printf("[dbg] Ranges2: %v\n", ranges)
 	return ranges
 }
 
