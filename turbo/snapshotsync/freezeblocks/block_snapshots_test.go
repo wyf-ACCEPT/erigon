@@ -23,6 +23,8 @@ import (
 )
 
 func createTestSegmentFile(t *testing.T, from, to uint64, name snaptype.Enum, dir string, version snaptype.Version, logger log.Logger) {
+	t.Helper()
+
 	c, err := seg.NewCompressor(context.Background(), "test", filepath.Join(dir, snaptype.SegmentFileName(version, from, to, name)), dir, 100, 1, log.LvlDebug, logger)
 	require.NoError(t, err)
 	defer c.Close()
@@ -435,4 +437,59 @@ func TestParseCompressedFileName(t *testing.T) {
 	require.Equal(f.Type.Enum(), coresnaptype.Bodies.Enum())
 	require.Equal(1_000, int(f.From))
 	require.Equal(2_000, int(f.To))
+}
+
+func TestUnfinishedMerge(t *testing.T) {
+	// if `kill -9` happened in the middle for the merge
+
+	logger := log.New()
+	t.Run("unfinished merge", func(t *testing.T) {
+		dir, require := t.TempDir(), require.New(t)
+		createFile := func(from, to uint64, name snaptype.Type) {
+			createTestSegmentFile(t, from, to, name.Enum(), dir, 1, logger)
+		}
+		createFile(0, 10_000, coresnaptype.Bodies)
+		createFile(0, 10_000, coresnaptype.Headers)
+		createFile(0, 1_000, coresnaptype.Transactions)
+		createFile(1_000, 2_000, coresnaptype.Transactions)
+		createFile(2_000, 3_000, coresnaptype.Transactions)
+		createFile(3_000, 4_000, coresnaptype.Transactions)
+		createFile(4_000, 5_000, coresnaptype.Transactions)
+		createFile(5_000, 6_000, coresnaptype.Transactions)
+		createFile(6_000, 7_000, coresnaptype.Transactions)
+		createFile(7_000, 8_000, coresnaptype.Transactions)
+		createFile(8_000, 9_000, coresnaptype.Transactions)
+		createFile(9_000, 10_000, coresnaptype.Transactions)
+
+		l, missing, err := typedSegments(dir, 0, coresnaptype.BlockSnapshotTypes, false)
+		require.NoError(err)
+		require.Equal(0, len(missing))
+		require.Equal(12, len(l))
+	})
+
+	t.Run("unfinished merge with gap", func(t *testing.T) {
+		dir, require := t.TempDir(), require.New(t)
+		createFile := func(from, to uint64, name snaptype.Type) {
+			t.Helper()
+			createTestSegmentFile(t, from, to, name.Enum(), dir, 1, logger)
+		}
+		createFile(0, 10_000, coresnaptype.Bodies)
+		createFile(0, 10_000, coresnaptype.Headers)
+		createFile(0, 1_000, coresnaptype.Transactions)
+		createFile(1_000, 2_000, coresnaptype.Transactions)
+		createFile(2_000, 3_000, coresnaptype.Transactions)
+		createFile(3_000, 4_000, coresnaptype.Transactions)
+		createFile(4_000, 5_000, coresnaptype.Transactions)
+		createFile(5_000, 6_000, coresnaptype.Transactions)
+		createFile(6_000, 7_000, coresnaptype.Transactions)
+		//createFile(7_000, 8_000, coresnaptype.Transactions)
+		createFile(8_000, 9_000, coresnaptype.Transactions)
+		createFile(9_000, 10_000, coresnaptype.Transactions)
+
+		l, missing, err := typedSegments(dir, 0, coresnaptype.BlockSnapshotTypes, false)
+		require.NoError(err)
+		require.Equal(2, len(missing))
+		require.Equal(9, len(l))
+	})
+
 }
