@@ -1113,9 +1113,21 @@ func typedSegments(dir string, minBlock uint64, types []snaptype.Type, allowGaps
 			if allowGaps {
 				l = noOverlaps(segmentsTypeCheck(dir, l))
 			} else {
-				log.Debug("[dbg] l", "l", l)
-				log.Debug("[dbg] segmentsTypeCheck(dir, l)", "segmentsTypeCheck(dir, l)", segmentsTypeCheck(dir, l))
-				log.Debug("[dbg] noOverlaps", "noOverlaps", noOverlaps(segmentsTypeCheck(dir, l)))
+				for _, ll := range l {
+					if strings.Contains(ll.Name(), "trans") {
+						log.Debug("[dbg] l", "l", ll.Name())
+					}
+				}
+				for _, ll := range segmentsTypeCheck(dir, l) {
+					if strings.Contains(ll.Name(), "trans") {
+						log.Debug("[dbg] segmentsTypeCheck(dir, l)", "segmentsTypeCheck(dir, l)", ll.Name())
+					}
+				}
+				for _, ll := range noOverlaps(segmentsTypeCheck(dir, l)) {
+					if strings.Contains(ll.Name(), "trans") {
+						log.Debug("[dbg] noOverlaps", "noOverlaps", ll.Name())
+					}
+				}
 				l, m = noGaps(noOverlaps(segmentsTypeCheck(dir, l)))
 			}
 			if len(m) > 0 {
