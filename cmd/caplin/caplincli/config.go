@@ -36,6 +36,7 @@ type CaplinCliCfg struct {
 	RunEngineAPI          bool          `json:"run_engine_api"`
 	EngineAPIAddr         string        `json:"engine_api_addr"`
 	EngineAPIPort         int           `json:"engine_api_port"`
+	MevRelayUrl           string        `json:"mev_relay_url"`
 	JwtSecret             []byte
 
 	AllowedMethods   []string `json:"allowed_methods"`
@@ -106,6 +107,7 @@ func SetupCaplinCli(ctx *cli.Context) (cfg *CaplinCliCfg, err error) {
 
 	cfg.TransitionChain = ctx.Bool(caplinflags.TransitionChainFlag.Name)
 	cfg.InitialSync = ctx.Bool(caplinflags.InitSyncFlag.Name)
+	cfg.MevRelayUrl = ctx.String(caplinflags.MevRelayUrl.Name)
 
 	return cfg, err
 }
