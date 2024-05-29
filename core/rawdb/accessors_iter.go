@@ -17,6 +17,7 @@ type CanonicalTxs struct {
 
 	// input params
 	fromTxNum, toTxNum uint64
+	orderAscend        order.By
 	limit              int
 
 	// private fields
@@ -25,6 +26,12 @@ type CanonicalTxs struct {
 }
 
 func CanonicalTxNums(ctx context.Context, fromTxNum, toTxNum uint64, tx kv.Tx, asc order.By, limit int) (iter.U64, error) {
+	if asc && fromTxNum > 0 && toTxNum > 0 && fromTxNum >= toTxNum {
+		return nil, fmt.Errorf("fromTxNum >= toTxNum: %d, %d", fromTxNum, toTxNum)
+	}
+	if !asc && fromTxNum > 0 && toTxNum > 0 && fromTxNum <= toTxNum {
+		return nil, fmt.Errorf("fromTxNum <= toTxNum: %d, %d", fromTxNum, toTxNum)
+	}
 	if !asc {
 		return nil, fmt.Errorf("CanonicalTxNums: iteration Desc not supported yet")
 	}
@@ -52,7 +59,7 @@ func CanonicalTxNums(ctx context.Context, fromTxNum, toTxNum uint64, tx kv.Tx, a
 
 	var blocks iter.KV
 	var err error
-	if order.Asc {
+	if asc {
 		blocks, err = tx.RangeAscend(kv.HeaderCanonical, from, to, -1)
 		if err != nil {
 			return nil, err
@@ -68,7 +75,7 @@ func CanonicalTxNums(ctx context.Context, fromTxNum, toTxNum uint64, tx kv.Tx, a
 		return iter.EmptyU64, nil
 	}
 
-	it := &CanonicalTxs{blocks: blocks, fromTxNum: fromTxNum, toTxNum: toTxNum, limit: limit}
+	it := &CanonicalTxs{blocks: blocks, fromTxNum: fromTxNum, toTxNum: toTxNum, orderAscend: asc, limit: limit}
 	if err := it.init(tx); err != nil {
 		it.Close() //it's responsibility of constructor (our) to close resource on error
 		return nil, err
@@ -76,19 +83,7 @@ func CanonicalTxNums(ctx context.Context, fromTxNum, toTxNum uint64, tx kv.Tx, a
 	return it, nil
 }
 
-func (s *CanonicalTxs) init(table string, tx kv.Tx) error {
-	if s.orderAscend && s.fromPrefix != nil && s.toPrefix != nil && bytes.Compare(s.fromPrefix, s.toPrefix) >= 0 {
-		return fmt.Errorf("tx.Dual: %x must be lexicographicaly before %x", s.fromPrefix, s.toPrefix)
-	}
-	if !s.orderAscend && s.fromPrefix != nil && s.toPrefix != nil && bytes.Compare(s.fromPrefix, s.toPrefix) <= 0 {
-		return fmt.Errorf("tx.Dual: %x must be lexicographicaly before %x", s.toPrefix, s.fromPrefix)
-	}
-	c, err := tx.Cursor(table)
-	if err != nil {
-		return err
-	}
-	s.c = c
-
+func (s *CanonicalTxs) init(tx kv.Tx) error {
 	if s.fromPrefix == nil { // no initial position
 		if s.orderAscend {
 			s.nextK, s.nextV, err = s.c.First()
@@ -148,6 +143,7 @@ func (s *CanonicalTxs) init(table string, tx kv.Tx) error {
 	}
 	return nil
 }
+
 func (s *CanonicalTxs) advance() (err error) {
 	if s.orderAscend {
 		s.nextK, s.nextV, err = s.c.Next()
@@ -189,8 +185,8 @@ func (s *CanonicalTxs) Next() (k, v []byte, err error) {
 	return k, v, nil
 }
 
-func (it *CanonicalTxs) HasNext() bool {
-	return it.blocks.HasNext()
+func (s *CanonicalTxs) HasNext() bool {
+	return s.blocks.HasNext()
 }
 
 func (s *CanonicalTxs) Close() {
