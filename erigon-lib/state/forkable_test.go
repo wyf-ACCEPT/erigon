@@ -49,7 +49,7 @@ func testDbAndForkable(tb testing.TB, aggStep uint64, logger log.Logger) (kv.RwD
 	tb.Cleanup(db.Close)
 	salt := uint32(1)
 	cfg := forkableCfg{salt: &salt, dirs: dirs, db: db}
-	ii, err := NewForkable(cfg, aggStep, "inv", table, nil, logger)
+	ii, err := NewForkable(cfg, aggStep, "receipt", table, nil, logger)
 	require.NoError(tb, err)
 	ii.DisableFsync()
 	tb.Cleanup(ii.Close)
