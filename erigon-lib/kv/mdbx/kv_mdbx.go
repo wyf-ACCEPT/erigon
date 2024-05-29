@@ -2002,7 +2002,7 @@ func (tx *MdbxTx) rangeOrderLimit(table string, fromPrefix, toPrefix []byte, ord
 	}
 	tx.streams[s.id] = s
 	if err := s.init(table, tx); err != nil {
-		s.Close()
+		s.Close() //it's responsibility of constructor (our) to close resource on error
 		return nil, err
 	}
 	return s, nil

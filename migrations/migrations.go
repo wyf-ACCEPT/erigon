@@ -34,7 +34,6 @@ import (
 var migrations = map[kv.Label][]Migration{
 	kv.ChainDB: {
 		dbSchemaVersion5,
-		TxsV3,
 		ProhibitNewDownloadsLock,
 		SqueezeCommitmentFiles,
 		ProhibitNewDownloadsLock2,
