@@ -36,7 +36,7 @@ import (
 	btree2 "github.com/tidwall/btree"
 )
 
-func testDbAndForkable(tb testing.TB, aggStep uint64, logger log.Logger) (kv.RwDB, *Forkable) {
+func testDbAndAppendable(tb testing.TB, aggStep uint64, logger log.Logger) (kv.RwDB, *Appendable) {
 	tb.Helper()
 	dirs := datadir.New(tb.TempDir())
 	table := "Forkable"
@@ -49,15 +49,15 @@ func testDbAndForkable(tb testing.TB, aggStep uint64, logger log.Logger) (kv.RwD
 	}).MustOpen()
 	tb.Cleanup(db.Close)
 	salt := uint32(1)
-	cfg := forkableCfg{salt: &salt, dirs: dirs, db: db, canonicalMarkersTable: kv.HeaderCanonical}
-	ii, err := NewForkable(cfg, aggStep, "receipt", table, nil, logger)
+	cfg := appendableCfg{salt: &salt, dirs: dirs, db: db, canonicalMarkersTable: kv.HeaderCanonical}
+	ii, err := NewAppendable(cfg, aggStep, "receipt", table, nil, logger)
 	require.NoError(tb, err)
 	ii.DisableFsync()
 	tb.Cleanup(ii.Close)
 	return db, ii
 }
 
-func TestForkableCollationBuild(t *testing.T) {
+func TestAppendableCollationBuild(t *testing.T) {
 	logEvery := time.NewTicker(30 * time.Second)
 	defer logEvery.Stop()
 	aggStep := uint64(16)
@@ -136,7 +136,7 @@ func TestForkableCollationBuild(t *testing.T) {
 
 }
 
-func TestForkableAfterPrune(t *testing.T) {
+func TestAppendableAfterPrune(t *testing.T) {
 	logger := log.New()
 	logEvery := time.NewTicker(30 * time.Second)
 	defer logEvery.Stop()
@@ -222,12 +222,12 @@ func TestForkableAfterPrune(t *testing.T) {
 	require.Equal(t, float64(0), to)
 }
 
-func filledForkable(tb testing.TB, logger log.Logger) (kv.RwDB, *Forkable, uint64) {
+func filledAppendable(tb testing.TB, logger log.Logger) (kv.RwDB, *Forkable, uint64) {
 	tb.Helper()
 	return filledForkableOfSize(tb, uint64(1000), 16, 31, logger)
 }
 
-func filledForkableOfSize(tb testing.TB, txs, aggStep, module uint64, logger log.Logger) (kv.RwDB, *Forkable, uint64) {
+func filledAppendableOfSize(tb testing.TB, txs, aggStep, module uint64, logger log.Logger) (kv.RwDB, *Forkable, uint64) {
 	panic("implement me")
 	//tb.Helper()
 	//db, ii := testDbAndForkable(tb, aggStep, logger)
@@ -273,7 +273,7 @@ func filledForkableOfSize(tb testing.TB, txs, aggStep, module uint64, logger log
 	//return db, ii, txs
 }
 
-func checkRangesForkable(t *testing.T, db kv.RwDB, ii *Forkable, txs uint64) {
+func checkRangesAppendable(t *testing.T, db kv.RwDB, ii *Forkable, txs uint64) {
 	//t.Helper()
 	//ctx := context.Background()
 	//ic := ii.BeginFilesRo()
@@ -354,7 +354,7 @@ func checkRangesForkable(t *testing.T, db kv.RwDB, ii *Forkable, txs uint64) {
 	//}
 }
 
-func mergeForkable(tb testing.TB, db kv.RwDB, ii *Forkable, txs uint64) {
+func mergeAppendable(tb testing.TB, db kv.RwDB, ii *Forkable, txs uint64) {
 	tb.Helper()
 	logEvery := time.NewTicker(30 * time.Second)
 	defer logEvery.Stop()
@@ -407,7 +407,7 @@ func mergeForkable(tb testing.TB, db kv.RwDB, ii *Forkable, txs uint64) {
 	require.NoError(tb, err)
 }
 
-func TestForkableRanges(t *testing.T) {
+func TestAppendableRanges(t *testing.T) {
 	logger := log.New()
 	logEvery := time.NewTicker(30 * time.Second)
 	defer logEvery.Stop()
@@ -438,7 +438,7 @@ func TestForkableRanges(t *testing.T) {
 	checkRangesForkable(t, db, ii, txs)
 }
 
-func TestForkableMerge(t *testing.T) {
+func TestAppendableMerge(t *testing.T) {
 	logger := log.New()
 	db, ii, txs := filledForkable(t, logger)
 
@@ -446,7 +446,7 @@ func TestForkableMerge(t *testing.T) {
 	checkRangesForkable(t, db, ii, txs)
 }
 
-func TestForkableScanFiles(t *testing.T) {
+func TestAppendableScanFiles(t *testing.T) {
 	logger := log.New()
 	db, ii, txs := filledForkable(t, logger)
 
@@ -462,7 +462,7 @@ func TestForkableScanFiles(t *testing.T) {
 	checkRangesForkable(t, db, ii, txs)
 }
 
-func TestForkableKeysIterator(t *testing.T) {
+func TestAppendableKeysIterator(t *testing.T) {
 	logger := log.New()
 	db, ii, txs := filledForkable(t, logger)
 	ctx := context.Background()
@@ -525,15 +525,15 @@ func TestForkableKeysIterator(t *testing.T) {
 	//}, keys)
 }
 
-func emptyTestForkable(aggStep uint64) *Forkable {
+func emptyTestAppendable(aggStep uint64) *Appendable {
 	salt := uint32(1)
 	logger := log.New()
-	return &Forkable{forkableCfg: forkableCfg{salt: &salt, db: nil, canonicalMarkersTable: kv.HeaderCanonical},
+	return &Appendable{appendableCfg: appendableCfg{salt: &salt, db: nil, canonicalMarkersTable: kv.HeaderCanonical},
 		logger:       logger,
 		filenameBase: "test", aggregationStep: aggStep, dirtyFiles: btree2.NewBTreeG[*filesItem](filesItemLess)}
 }
 
-func TestForkableScanStaticFiles(t *testing.T) {
+func TestAppendableScanStaticFiles(t *testing.T) {
 	ii := emptyTestForkable(1)
 	files := []string{
 		"v1-test.0-1.ef",
@@ -553,8 +553,8 @@ func TestForkableScanStaticFiles(t *testing.T) {
 	require.Equal(t, 0, ii.dirtyFiles.Len())
 }
 
-func TestForkableCtxFiles(t *testing.T) {
-	ii := emptyTestForkable(1)
+func TestAppendableCtxFiles(t *testing.T) {
+	ii := emptyTestAppendable(1)
 	files := []string{
 		"v1-test.0-1.ef", // overlap with same `endTxNum=4`
 		"v1-test.1-2.ef",
@@ -599,7 +599,7 @@ func TestForkableCtxFiles(t *testing.T) {
 	require.Equal(t, 512, int(visibleFiles[2].endTxNum))
 }
 
-func TestForkable_OpenFolder(t *testing.T) {
+func TestAppendable_OpenFolder(t *testing.T) {
 	db, ii, txs := filledForkable(t, log.New())
 
 	mergeForkable(t, db, ii, txs)

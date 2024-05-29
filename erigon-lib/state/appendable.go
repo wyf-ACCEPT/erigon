@@ -49,17 +49,14 @@ import (
 	"github.com/ledgerwatch/erigon-lib/recsplit/eliasfano32"
 )
 
-// Forkable - data type allows store data for different blockchain forks. Example: headers, bodies, receipts.
-// Each record key has `timestamp + hash` format. It allows store multiple values for same timestamp.
-// Keys may be canonical and non-canonical.
-// Invariants:
-//   - Forkable doesn't require unwind on re-org
-//   - Forkable doesn't have Delete method - all data are immutable
-//   - Only canonical keys will be moved to files
-//   - Only 1 canonical key per 1 timestamp is allowed.
-//   - Prune method delete canonical and non-canonical.
-type Forkable struct {
-	forkableCfg
+// Appendable - data type allows store data for different blockchain forks.
+// - It assign new AutoIncrementID to each entity. Example: receipts, logs.
+// - Each record key has `AutoIncrementID` format.
+// - Use external table to refer it.
+// - Only data which belongs to `canonical` block moving from DB to files.
+// - It doesn't need Unwind
+type Appendable struct {
+	appendableCfg
 
 	// dirtyFiles - list of ALL files - including: un-indexed-yet, garbage, merged-into-bigger-one, ...
 	// thread-safe, but maybe need 1 RWLock for all trees in Aggregator
@@ -93,7 +90,7 @@ type Forkable struct {
 	indexList       idxList
 }
 
-type forkableCfg struct {
+type appendableCfg struct {
 	salt *uint32
 	dirs datadir.Dirs
 	db   kv.RoDB // global db pointer. mostly for background warmup.
@@ -101,12 +98,12 @@ type forkableCfg struct {
 	canonicalMarkersTable string
 }
 
-func NewForkable(cfg forkableCfg, aggregationStep uint64, filenameBase, table string, integrityCheck func(fromStep uint64, toStep uint64) bool, logger log.Logger) (*Forkable, error) {
+func NewAppendable(cfg appendableCfg, aggregationStep uint64, filenameBase, table string, integrityCheck func(fromStep uint64, toStep uint64) bool, logger log.Logger) (*Appendable, error) {
 	if cfg.dirs.SnapDomain == "" {
 		panic("empty `dirs` varialbe")
 	}
-	fk := Forkable{
-		forkableCfg:     cfg,
+	fk := Appendable{
+		appendableCfg:   cfg,
 		dirtyFiles:      btree2.NewBTreeGOptions[*filesItem](filesItemLess, btree2.Options{Degree: 128, NoLocks: false}),
 		aggregationStep: aggregationStep,
 		filenameBase:    filenameBase,
@@ -122,14 +119,14 @@ func NewForkable(cfg forkableCfg, aggregationStep uint64, filenameBase, table st
 	return &fk, nil
 }
 
-func (fk *Forkable) fkAccessorFilePath(fromStep, toStep uint64) string {
-	return filepath.Join(fk.dirs.SnapAccessors, fmt.Sprintf("v1-%s.%d-%d.fki", fk.filenameBase, fromStep, toStep))
+func (fk *Appendable) fkAccessorFilePath(fromStep, toStep uint64) string {
+	return filepath.Join(fk.dirs.SnapAccessors, fmt.Sprintf("v1-%s.%d-%d.api", fk.filenameBase, fromStep, toStep))
 }
-func (fk *Forkable) fkFilePath(fromStep, toStep uint64) string {
-	return filepath.Join(fk.dirs.SnapForkable, fmt.Sprintf("v1-%s.%d-%d.fk", fk.filenameBase, fromStep, toStep))
+func (fk *Appendable) fkFilePath(fromStep, toStep uint64) string {
+	return filepath.Join(fk.dirs.SnapForkable, fmt.Sprintf("v1-%s.%d-%d.ap", fk.filenameBase, fromStep, toStep))
 }
 
-func (fk *Forkable) fileNamesOnDisk() (idx, hist, domain []string, err error) {
+func (fk *Appendable) fileNamesOnDisk() (idx, hist, domain []string, err error) {
 	idx, err = filesFromDir(fk.dirs.SnapIdx)
 	if err != nil {
 		return
@@ -145,7 +142,7 @@ func (fk *Forkable) fileNamesOnDisk() (idx, hist, domain []string, err error) {
 	return
 }
 
-func (fk *Forkable) OpenList(fNames []string, readonly bool) error {
+func (fk *Appendable) OpenList(fNames []string, readonly bool) error {
 	fk.closeWhatNotInList(fNames)
 	fk.scanStateFiles(fNames)
 	if err := fk.openFiles(); err != nil {
@@ -155,7 +152,7 @@ func (fk *Forkable) OpenList(fNames []string, readonly bool) error {
 	return nil
 }
 
-func (fk *Forkable) OpenFolder(readonly bool) error {
+func (fk *Appendable) OpenFolder(readonly bool) error {
 	idxFiles, _, _, err := fk.fileNamesOnDisk()
 	if err != nil {
 		return err
@@ -163,7 +160,7 @@ func (fk *Forkable) OpenFolder(readonly bool) error {
 	return fk.OpenList(idxFiles, readonly)
 }
 
-func (fk *Forkable) scanStateFiles(fileNames []string) (garbageFiles []*filesItem) {
+func (fk *Appendable) scanStateFiles(fileNames []string) (garbageFiles []*filesItem) {
 	re := regexp.MustCompile("^v([0-9]+)-" + fk.filenameBase + ".([0-9]+)-([0-9]+).ef$")
 	var err error
 	for _, name := range fileNames {
@@ -204,11 +201,11 @@ func (fk *Forkable) scanStateFiles(fileNames []string) (garbageFiles []*filesIte
 	return garbageFiles
 }
 
-func (fk *Forkable) reCalcVisibleFiles() {
+func (fk *Appendable) reCalcVisibleFiles() {
 	fk._visibleFiles = calcVisibleFiles(fk.dirtyFiles, fk.indexList, false)
 }
 
-func (fk *Forkable) missedIdxFiles() (l []*filesItem) {
+func (fk *Appendable) missedIdxFiles() (l []*filesItem) {
 	fk.dirtyFiles.Walk(func(items []*filesItem) bool {
 		for _, item := range items {
 			fromStep, toStep := item.startTxNum/fk.aggregationStep, item.endTxNum/fk.aggregationStep
@@ -221,7 +218,7 @@ func (fk *Forkable) missedIdxFiles() (l []*filesItem) {
 	return l
 }
 
-func (fk *Forkable) buildIdx(ctx context.Context, fromStep, toStep uint64, d *seg.Decompressor, ps *background.ProgressSet) error {
+func (fk *Appendable) buildIdx(ctx context.Context, fromStep, toStep uint64, d *seg.Decompressor, ps *background.ProgressSet) error {
 	if d == nil {
 		return fmt.Errorf("buildIdx: passed item with nil decompressor %s %d-%d", fk.filenameBase, fromStep, toStep)
 	}
@@ -257,7 +254,7 @@ func (fk *Forkable) buildIdx(ctx context.Context, fromStep, toStep uint64, d *se
 }
 
 // BuildMissedIndices - produce .efi/.vi/.kvi from .ef/.v/.kv
-func (fk *Forkable) BuildMissedIndices(ctx context.Context, g *errgroup.Group, ps *background.ProgressSet) {
+func (fk *Appendable) BuildMissedIndices(ctx context.Context, g *errgroup.Group, ps *background.ProgressSet) {
 	for _, item := range fk.missedIdxFiles() {
 		item := item
 		g.Go(func() error {
@@ -267,7 +264,7 @@ func (fk *Forkable) BuildMissedIndices(ctx context.Context, g *errgroup.Group, p
 	}
 }
 
-func (fk *Forkable) openFiles() error {
+func (fk *Appendable) openFiles() error {
 	var invalidFileItems []*filesItem
 	invalidFileItemsLock := sync.Mutex{}
 	fk.dirtyFiles.Walk(func(items []*filesItem) bool {
@@ -323,7 +320,7 @@ func (fk *Forkable) openFiles() error {
 	return nil
 }
 
-func (fk *Forkable) closeWhatNotInList(fNames []string) {
+func (fk *Appendable) closeWhatNotInList(fNames []string) {
 	var toDelete []*filesItem
 	fk.dirtyFiles.Walk(func(items []*filesItem) bool {
 	Loop1:
@@ -343,14 +340,14 @@ func (fk *Forkable) closeWhatNotInList(fNames []string) {
 	}
 }
 
-func (fk *Forkable) Close() {
+func (fk *Appendable) Close() {
 	fk.closeWhatNotInList([]string{})
 }
 
 // DisableFsync - just for tests
-func (fk *Forkable) DisableFsync() { fk.noFsync = true }
+func (fk *Appendable) DisableFsync() { fk.noFsync = true }
 
-func (tx *ForkableRoTx) Files() (res []string) {
+func (tx *AppendableRoTx) Files() (res []string) {
 	for _, item := range tx.files {
 		if item.src.decompressor != nil {
 			res = append(res, item.src.decompressor.FileName())
@@ -359,15 +356,15 @@ func (tx *ForkableRoTx) Files() (res []string) {
 	return res
 }
 
-func (tx *ForkableRoTx) Get(ts uint64, blockHash common.Hash, dbtx kv.Tx) ([]byte, bool, error) {
+func (tx *AppendableRoTx) Get(ts uint64, dbtx kv.Tx) ([]byte, bool, error) {
 	v, ok := tx.getFromFiles(ts)
 	if ok {
 		return v, true, nil
 	}
-	return tx.fk.getFromDBByTs(ts, blockHash, dbtx)
+	return tx.fk.getFromDBByTs(ts, dbtx)
 }
 
-func (tx *ForkableRoTx) getFromFiles(ts uint64) (v []byte, ok bool) {
+func (tx *AppendableRoTx) getFromFiles(ts uint64) (v []byte, ok bool) {
 	i, ok := tx.fileByTS(ts)
 	if !ok {
 		return nil, false
@@ -381,7 +378,7 @@ func (tx *ForkableRoTx) getFromFiles(ts uint64) (v []byte, ok bool) {
 	return k, true
 }
 
-func (tx *ForkableRoTx) fileByTS(ts uint64) (i int, ok bool) {
+func (tx *AppendableRoTx) fileByTS(ts uint64) (i int, ok bool) {
 	for i = 0; i < len(tx.files); i++ {
 		if tx.files[i].hasTS(ts) {
 			return i, true
@@ -390,20 +387,14 @@ func (tx *ForkableRoTx) fileByTS(ts uint64) (i int, ok bool) {
 	return 0, false
 }
 
-func (tx *ForkableRoTx) Put(blockNum uint64, blockHash common.Hash, v []byte, dbtx kv.RwTx) error {
-	k := make([]byte, length.BlockNum+length.Hash)
-	binary.BigEndian.PutUint64(k, blockNum)
-	copy(k[length.BlockNum:], blockHash[:])
-	return dbtx.Put(tx.fk.table, k, v)
+func (tx *AppendableRoTx) Put(ts uint64, v []byte, dbtx kv.RwTx) error {
+	return dbtx.Put(tx.fk.table, hexutility.EncodeTs(ts), v)
 }
 
-func (fk *Forkable) getFromDBByTs(blockNum uint64, blockHash common.Hash, dbtx kv.Tx) ([]byte, bool, error) {
-	k := make([]byte, length.BlockNum+length.Hash)
-	binary.BigEndian.PutUint64(k, blockNum)
-	copy(k[length.BlockNum:], blockHash[:])
-	return fk.getFromDB(k, dbtx)
+func (fk *Appendable) getFromDBByTs(ts uint64, dbtx kv.Tx) ([]byte, bool, error) {
+	return fk.getFromDB(hexutility.EncodeTs(ts), dbtx)
 }
-func (fk *Forkable) getFromDB(k []byte, dbtx kv.Tx) ([]byte, bool, error) {
+func (fk *Appendable) getFromDB(k []byte, dbtx kv.Tx) ([]byte, bool, error) {
 	v, err := dbtx.GetOne(fk.table, k)
 	if err != nil {
 		return nil, false, err
@@ -412,7 +403,7 @@ func (fk *Forkable) getFromDB(k []byte, dbtx kv.Tx) ([]byte, bool, error) {
 }
 
 // Add - !NotThreadSafe. Must use WalRLock/BatchHistoryWriteEnd
-func (w *forkableBufferedWriter) Add(blockNum uint64, blockHash common.Hash, v []byte) error {
+func (w *appendableBufferedWriter) Add(blockNum uint64, blockHash common.Hash, v []byte) error {
 	if w.discard {
 		return nil
 	}
@@ -425,11 +416,11 @@ func (w *forkableBufferedWriter) Add(blockNum uint64, blockHash common.Hash, v [
 	return nil
 }
 
-func (tx *ForkableRoTx) NewWriter() *forkableBufferedWriter {
+func (tx *AppendableRoTx) NewWriter() *appendableBufferedWriter {
 	return tx.newWriter(tx.fk.dirs.Tmp, false)
 }
 
-type forkableBufferedWriter struct {
+type appendableBufferedWriter struct {
 	tableCollector *etl.Collector
 	tmpdir         string
 	discard        bool
@@ -444,12 +435,12 @@ type forkableBufferedWriter struct {
 	timestampBytes [8]byte
 }
 
-func (w *forkableBufferedWriter) SetTimeStamp(ts uint64) {
+func (w *appendableBufferedWriter) SetTimeStamp(ts uint64) {
 	w.timestamp = ts
 	binary.BigEndian.PutUint64(w.timestampBytes[:], w.timestamp)
 }
 
-func (w *forkableBufferedWriter) Flush(ctx context.Context, tx kv.RwTx) error {
+func (w *appendableBufferedWriter) Flush(ctx context.Context, tx kv.RwTx) error {
 	if w.discard {
 		return nil
 	}
@@ -460,7 +451,7 @@ func (w *forkableBufferedWriter) Flush(ctx context.Context, tx kv.RwTx) error {
 	return nil
 }
 
-func (w *forkableBufferedWriter) close() {
+func (w *appendableBufferedWriter) close() {
 	if w == nil {
 		return
 	}
@@ -469,8 +460,8 @@ func (w *forkableBufferedWriter) close() {
 	}
 }
 
-func (tx *ForkableRoTx) newWriter(tmpdir string, discard bool) *forkableBufferedWriter {
-	w := &forkableBufferedWriter{
+func (tx *AppendableRoTx) newWriter(tmpdir string, discard bool) *appendableBufferedWriter {
+	w := &appendableBufferedWriter{
 		discard:         discard,
 		tmpdir:          tmpdir,
 		filenameBase:    tx.fk.filenameBase,
@@ -485,20 +476,20 @@ func (tx *ForkableRoTx) newWriter(tmpdir string, discard bool) *forkableBuffered
 	return w
 }
 
-func (fk *Forkable) BeginFilesRo() *ForkableRoTx {
+func (fk *Appendable) BeginFilesRo() *AppendableRoTx {
 	files := fk._visibleFiles
 	for i := 0; i < len(files); i++ {
 		if !files[i].src.frozen {
 			files[i].src.refcount.Add(1)
 		}
 	}
-	return &ForkableRoTx{
+	return &AppendableRoTx{
 		fk:    fk,
 		files: files,
 	}
 }
 
-func (tx *ForkableRoTx) Close() {
+func (tx *AppendableRoTx) Close() {
 	if tx.files == nil { // invariant: it's safe to call Close multiple times
 		return
 	}
@@ -523,8 +514,8 @@ func (tx *ForkableRoTx) Close() {
 	}
 }
 
-type ForkableRoTx struct {
-	fk      *Forkable
+type AppendableRoTx struct {
+	fk      *Appendable
 	files   []ctxItem // have no garbage (overlaps, etc...)
 	getters []ArchiveGetter
 	readers []*recsplit.IndexReader
@@ -532,20 +523,20 @@ type ForkableRoTx struct {
 	_hasher murmur3.Hash128
 }
 
-func (tx *ForkableRoTx) statelessHasher() murmur3.Hash128 {
+func (tx *AppendableRoTx) statelessHasher() murmur3.Hash128 {
 	if tx._hasher == nil {
 		tx._hasher = murmur3.New128WithSeed(*tx.fk.salt)
 	}
 	return tx._hasher
 }
-func (tx *ForkableRoTx) hashKey(k []byte) (hi, lo uint64) {
+func (tx *AppendableRoTx) hashKey(k []byte) (hi, lo uint64) {
 	hasher := tx.statelessHasher()
 	tx._hasher.Reset()
 	_, _ = hasher.Write(k) //nolint:errcheck
 	return hasher.Sum128()
 }
 
-func (tx *ForkableRoTx) statelessGetter(i int) ArchiveGetter {
+func (tx *AppendableRoTx) statelessGetter(i int) ArchiveGetter {
 	if tx.getters == nil {
 		tx.getters = make([]ArchiveGetter, len(tx.files))
 	}
@@ -557,7 +548,7 @@ func (tx *ForkableRoTx) statelessGetter(i int) ArchiveGetter {
 	}
 	return r
 }
-func (tx *ForkableRoTx) statelessIdxReader(i int) *recsplit.IndexReader {
+func (tx *AppendableRoTx) statelessIdxReader(i int) *recsplit.IndexReader {
 	if tx.readers == nil {
 		tx.readers = make([]*recsplit.IndexReader, len(tx.files))
 	}
@@ -569,7 +560,7 @@ func (tx *ForkableRoTx) statelessIdxReader(i int) *recsplit.IndexReader {
 	return r
 }
 
-func (tx *ForkableRoTx) smallestTxNum(dbtx kv.Tx) uint64 {
+func (tx *AppendableRoTx) smallestTxNum(dbtx kv.Tx) uint64 {
 	fst, _ := kv.FirstKey(dbtx, tx.fk.table)
 	if len(fst) > 0 {
 		fstInDb := binary.BigEndian.Uint64(fst)
@@ -578,7 +569,7 @@ func (tx *ForkableRoTx) smallestTxNum(dbtx kv.Tx) uint64 {
 	return math.MaxUint64
 }
 
-func (tx *ForkableRoTx) highestTxNum(dbtx kv.Tx) uint64 {
+func (tx *AppendableRoTx) highestTxNum(dbtx kv.Tx) uint64 {
 	lst, _ := kv.LastKey(dbtx, tx.fk.table)
 	if len(lst) > 0 {
 		lstInDb := binary.BigEndian.Uint64(lst)
@@ -587,11 +578,11 @@ func (tx *ForkableRoTx) highestTxNum(dbtx kv.Tx) uint64 {
 	return 0
 }
 
-func (tx *ForkableRoTx) CanPrune(dbtx kv.Tx) bool {
+func (tx *AppendableRoTx) CanPrune(dbtx kv.Tx) bool {
 	return tx.smallestTxNum(dbtx) < tx.maxTxNumInFiles(false)
 }
 
-func (tx *ForkableRoTx) maxTxNumInFiles(cold bool) uint64 {
+func (tx *AppendableRoTx) maxTxNumInFiles(cold bool) uint64 {
 	if len(tx.files) == 0 {
 		return 0
 	}
@@ -607,21 +598,21 @@ func (tx *ForkableRoTx) maxTxNumInFiles(cold bool) uint64 {
 	return 0
 }
 
-type ForkablePruneStat struct {
+type AppendablePruneStat struct {
 	MinTxNum         uint64
 	MaxTxNum         uint64
 	PruneCountTx     uint64
 	PruneCountValues uint64
 }
 
-func (is *ForkablePruneStat) String() string {
+func (is *AppendablePruneStat) String() string {
 	if is.MinTxNum == math.MaxUint64 && is.PruneCountTx == 0 {
 		return ""
 	}
 	return fmt.Sprintf("ii %d txs and %d vals in %.2fM-%.2fM", is.PruneCountTx, is.PruneCountValues, float64(is.MinTxNum)/1_000_000.0, float64(is.MaxTxNum)/1_000_000.0)
 }
 
-func (is *ForkablePruneStat) Accumulate(other *InvertedIndexPruneStat) {
+func (is *AppendablePruneStat) Accumulate(other *InvertedIndexPruneStat) {
 	if other == nil {
 		return
 	}
@@ -633,8 +624,8 @@ func (is *ForkablePruneStat) Accumulate(other *InvertedIndexPruneStat) {
 
 // [txFrom; txTo)
 // forced - prune even if CanPrune returns false, so its true only when we do Unwind.
-func (tx *ForkableRoTx) Prune(ctx context.Context, rwTx kv.RwTx, txFrom, txTo, limit uint64, logEvery *time.Ticker, forced, withWarmup bool, fn func(key []byte, txnum []byte) error) (stat *InvertedIndexPruneStat, err error) {
-	stat = &InvertedIndexPruneStat{MinTxNum: math.MaxUint64}
+func (tx *AppendableRoTx) Prune(ctx context.Context, rwTx kv.RwTx, txFrom, txTo, limit uint64, logEvery *time.Ticker, forced, withWarmup bool, fn func(key []byte, txnum []byte) error) (stat *AppendablePruneStat, err error) {
+	stat = &AppendablePruneStat{MinTxNum: math.MaxUint64}
 	if !forced && !tx.CanPrune(rwTx) {
 		return stat, nil
 	}
@@ -766,7 +757,7 @@ func (tx *ForkableRoTx) Prune(ctx context.Context, rwTx kv.RwTx, txFrom, txTo, l
 	return stat, err
 }
 
-func (tx *ForkableRoTx) DebugEFAllValuesAreInRange(ctx context.Context) error {
+func (tx *AppendableRoTx) DebugEFAllValuesAreInRange(ctx context.Context) error {
 	logEvery := time.NewTicker(30 * time.Second)
 	defer logEvery.Stop()
 	iterStep := func(item ctxItem) error {
@@ -816,8 +807,7 @@ func (tx *ForkableRoTx) DebugEFAllValuesAreInRange(ctx context.Context) error {
 	return nil
 }
 
-// collate [stepFrom, stepTo)
-func (fk *Forkable) collate(ctx context.Context, step uint64, roTx kv.Tx) (ForkableCollation, error) {
+func (fk *Appendable) collate(ctx context.Context, step uint64, roTx kv.Tx) (ForkableCollation, error) {
 	stepTo := step + 1
 	txFrom, txTo := step*fk.aggregationStep, stepTo*fk.aggregationStep
 	start := time.Now()
@@ -871,11 +861,11 @@ func (fk *Forkable) collate(ctx context.Context, step uint64, roTx kv.Tx) (Forka
 	return coll, nil
 }
 
-func (fk *Forkable) stepsRangeInDBAsStr(tx kv.Tx) string {
+func (fk *Appendable) stepsRangeInDBAsStr(tx kv.Tx) string {
 	a1, a2 := fk.stepsRangeInDB(tx)
 	return fmt.Sprintf("%s: %.1f", fk.filenameBase, a2-a1)
 }
-func (fk *Forkable) stepsRangeInDB(tx kv.Tx) (from, to float64) {
+func (fk *Appendable) stepsRangeInDB(tx kv.Tx) (from, to float64) {
 	fst, _ := kv.FirstKey(tx, fk.table)
 	if len(fst) > 0 {
 		from = float64(binary.BigEndian.Uint64(fst)) / float64(fk.aggregationStep)
@@ -890,12 +880,12 @@ func (fk *Forkable) stepsRangeInDB(tx kv.Tx) (from, to float64) {
 	return from, to
 }
 
-type ForkableFiles struct {
+type AppendableFiles struct {
 	decomp *seg.Decompressor
 	index  *recsplit.Index
 }
 
-func (sf ForkableFiles) CleanupOnError() {
+func (sf AppendableFiles) CleanupOnError() {
 	if sf.decomp != nil {
 		sf.decomp.Close()
 	}
@@ -904,19 +894,19 @@ func (sf ForkableFiles) CleanupOnError() {
 	}
 }
 
-type ForkableCollation struct {
+type AppendableCollation struct {
 	iiPath string
 	writer ArchiveWriter
 }
 
-func (ic ForkableCollation) Close() {
+func (ic AppendableCollation) Close() {
 	if ic.writer != nil {
 		ic.writer.Close()
 	}
 }
 
 // buildFiles - `step=N` means build file `[N:N+1)` which is equal to [N:N+1)
-func (fk *Forkable) buildFiles(ctx context.Context, step uint64, coll ForkableCollation, ps *background.ProgressSet) (ForkableFiles, error) {
+func (fk *Appendable) buildFiles(ctx context.Context, step uint64, coll ForkableCollation, ps *background.ProgressSet) (ForkableFiles, error) {
 	var (
 		decomp *seg.Decompressor
 		index  *recsplit.Index
@@ -968,14 +958,14 @@ func (fk *Forkable) buildFiles(ctx context.Context, step uint64, coll ForkableCo
 	return ForkableFiles{decomp: decomp, index: index}, nil
 }
 
-func (fk *Forkable) integrateDirtyFiles(sf ForkableFiles, txNumFrom, txNumTo uint64) {
+func (fk *Appendable) integrateDirtyFiles(sf ForkableFiles, txNumFrom, txNumTo uint64) {
 	fi := newFilesItem(txNumFrom, txNumTo, fk.aggregationStep)
 	fi.decompressor = sf.decomp
 	fi.index = sf.index
 	fk.dirtyFiles.Set(fi)
 }
 
-func (fk *Forkable) collectFilesStat() (filesCount, filesSize, idxSize uint64) {
+func (fk *Appendable) collectFilesStat() (filesCount, filesSize, idxSize uint64) {
 	if fk.dirtyFiles == nil {
 		return 0, 0, 0
 	}

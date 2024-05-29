@@ -2145,7 +2145,7 @@ func (tx *MdbxTx) RangeDupSort(table string, key []byte, fromPrefix, toPrefix []
 	}
 	tx.streams[s.id] = s
 	if err := s.init(table, tx); err != nil {
-		s.Close()
+		s.Close() //it's responsibility of constructor (our) to close resource on error
 		return nil, err
 	}
 	return s, nil
@@ -2163,7 +2163,7 @@ type cursorDup2iter struct {
 	ctx                         context.Context
 }
 
-func (s *cursorDup2iter) init(table string, tx kv.Tx) error {
+func (s *cursorDup2iter) init(table string, tx kv.Tx) (err error) {
 	if s.orderAscend && s.fromPrefix != nil && s.toPrefix != nil && bytes.Compare(s.fromPrefix, s.toPrefix) >= 0 {
 		return fmt.Errorf("tx.Dual: %x must be lexicographicaly before %x", s.fromPrefix, s.toPrefix)
 	}

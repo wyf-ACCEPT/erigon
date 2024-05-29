@@ -1719,7 +1719,7 @@ func DumpTxs(ctx context.Context, db kv.RoDB, chainConfig *chain.Config, blockFr
 					collections.Wait()
 				}
 
-				// first tx byte => sender adress => tx rlp
+				// first byte of tx hash => sender adress => tx rlp
 				if err := collect(valueBuf); err != nil {
 					return err
 				}
