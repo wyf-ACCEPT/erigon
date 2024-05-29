@@ -17,7 +17,7 @@ type CanonicalTxnIds struct {
 	tx               kv.Tx
 
 	// input params
-	fromTxNum, toTxNum uint64
+	fromTxNum, toTxNum int
 	orderAscend        order.By
 	limit              int
 
@@ -28,7 +28,7 @@ type CanonicalTxnIds struct {
 }
 
 // TxnIdsOfCanonicalBlocks - returns non-canonical txnIds of canonical block range
-func TxnIdsOfCanonicalBlocks(tx kv.Tx, fromTxNum, toTxNum uint64, asc order.By, limit int) (iter.U64, error) {
+func TxnIdsOfCanonicalBlocks(tx kv.Tx, fromTxNum, toTxNum int, asc order.By, limit int) (iter.U64, error) {
 	if asc && fromTxNum > 0 && toTxNum > 0 && fromTxNum >= toTxNum {
 		return nil, fmt.Errorf("fromTxNum >= toTxNum: %d, %d", fromTxNum, toTxNum)
 	}
@@ -39,7 +39,7 @@ func TxnIdsOfCanonicalBlocks(tx kv.Tx, fromTxNum, toTxNum uint64, asc order.By, 
 		return nil, fmt.Errorf("CanonicalTxNums: iteration Desc not supported yet")
 	}
 
-	it := &CanonicalTxnIds{tx: tx, fromTxNum: fromTxNum, toTxNum: toTxNum, orderAscend: asc, limit: limit}
+	it := &CanonicalTxnIds{tx: tx, fromTxNum: fromTxNum, toTxNum: toTxNum, orderAscend: asc, limit: limit, currentTxNum: -1}
 	if err := it.init(); err != nil {
 		it.Close() //it's responsibility of constructor (our) to close resource on error
 		return nil, err
@@ -54,8 +54,8 @@ func TxnIdsOfCanonicalBlocks(tx kv.Tx, fromTxNum, toTxNum uint64, asc order.By, 
 func (s *CanonicalTxnIds) init() (err error) {
 	tx := s.tx
 	var from, to []byte
-	if s.fromTxNum > 0 {
-		ok, blockFrom, err := rawdbv3.TxNums.FindBlockNum(tx, s.fromTxNum)
+	if s.fromTxNum >= 0 {
+		ok, blockFrom, err := rawdbv3.TxNums.FindBlockNum(tx, uint64(s.fromTxNum))
 		if err != nil {
 			return err
 		}
@@ -64,8 +64,8 @@ func (s *CanonicalTxnIds) init() (err error) {
 		}
 	}
 
-	if s.toTxNum > 0 {
-		ok, blockTo, err := rawdbv3.TxNums.FindBlockNum(tx, s.toTxNum)
+	if s.toTxNum >= 0 {
+		ok, blockTo, err := rawdbv3.TxNums.FindBlockNum(tx, uint64(s.toTxNum))
 		if err != nil {
 			return err
 		}
@@ -85,17 +85,24 @@ func (s *CanonicalTxnIds) init() (err error) {
 			return err
 		}
 	}
+	if err := s.advance(); err != nil {
+		return err
+	}
 	return nil
 }
 
 func (s *CanonicalTxnIds) advance() (err error) {
 	var endOfBlock bool
-	if s.orderAscend {
-		s.currentTxNum++
-		endOfBlock = s.currentTxNum >= int(s.endOfCurrentBlock)
+	if s.currentTxNum < 0 {
+		endOfBlock = true
 	} else {
-		s.currentTxNum--
-		endOfBlock = s.currentTxNum <= int(s.endOfCurrentBlock)
+		if s.orderAscend {
+			s.currentTxNum++
+			endOfBlock = s.currentTxNum >= int(s.endOfCurrentBlock)
+		} else {
+			s.currentTxNum--
+			endOfBlock = s.currentTxNum <= int(s.endOfCurrentBlock)
+		}
 	}
 
 	if !endOfBlock {
