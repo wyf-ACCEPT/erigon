@@ -41,7 +41,6 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/ledgerwatch/erigon-lib/common/background"
-	"github.com/ledgerwatch/erigon-lib/common/cmp"
 	"github.com/ledgerwatch/erigon-lib/common/datadir"
 	"github.com/ledgerwatch/erigon-lib/common/dir"
 	"github.com/ledgerwatch/erigon-lib/etl"
@@ -574,7 +573,7 @@ func (tx *ForkableRoTx) smallestTxNum(dbtx kv.Tx) uint64 {
 	fst, _ := kv.FirstKey(dbtx, tx.fk.table)
 	if len(fst) > 0 {
 		fstInDb := binary.BigEndian.Uint64(fst)
-		return cmp.Min(fstInDb, math.MaxUint64)
+		return min(fstInDb, math.MaxUint64)
 	}
 	return math.MaxUint64
 }
@@ -583,7 +582,7 @@ func (tx *ForkableRoTx) highestTxNum(dbtx kv.Tx) uint64 {
 	lst, _ := kv.LastKey(dbtx, tx.fk.table)
 	if len(lst) > 0 {
 		lstInDb := binary.BigEndian.Uint64(lst)
-		return cmp.Max(lstInDb, 0)
+		return max(lstInDb, 0)
 	}
 	return 0
 }

@@ -90,7 +90,7 @@ func (fk *Forkable) endIndexedTxNumMinimax(needFrozen bool) uint64 {
 			if item.index == nil || (needFrozen && !item.frozen) {
 				continue
 			}
-			_max = cmp.Max(_max, item.endTxNum)
+			_max = max(_max, item.endTxNum)
 		}
 		return true
 	})
@@ -299,7 +299,7 @@ func (tx *ForkableRoTx) findMergeRange(maxEndTxNum, maxSpan uint64) (bool, uint6
 		}
 		endStep := item.endTxNum / tx.fk.aggregationStep
 		spanStep := endStep & -endStep // Extract rightmost bit in the binary representation of endStep, this corresponds to size of maximally possible merge ending at endStep
-		span := cmp.Min(spanStep*tx.fk.aggregationStep, maxSpan)
+		span := min(spanStep*tx.fk.aggregationStep, maxSpan)
 		start := item.endTxNum - span
 		foundSuperSet := startTxNum == item.startTxNum && item.endTxNum >= endTxNum
 		if foundSuperSet {

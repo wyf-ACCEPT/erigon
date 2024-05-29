@@ -15,8 +15,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ledgerwatch/erigon-lib/common"
-
 	"github.com/c2h5oh/datasize"
 	"github.com/edsrzf/mmap-go"
 	"github.com/ledgerwatch/log/v3"
