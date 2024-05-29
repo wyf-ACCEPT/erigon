@@ -1,10 +1,10 @@
 package rawdb
 
 import (
-	"bytes"
-	"context"
+	"encoding/binary"
 	"fmt"
 
+	common2 "github.com/ledgerwatch/erigon-lib/common"
 	"github.com/ledgerwatch/erigon-lib/common/hexutility"
 	"github.com/ledgerwatch/erigon-lib/kv"
 	"github.com/ledgerwatch/erigon-lib/kv/iter"
@@ -12,8 +12,9 @@ import (
 	"github.com/ledgerwatch/erigon-lib/kv/rawdbv3"
 )
 
-type CanonicalTxs struct {
-	blocks iter.KV
+type CanonicalTxnIds struct {
+	canonicalMarkers iter.KV
+	tx               kv.Tx
 
 	// input params
 	fromTxNum, toTxNum uint64
@@ -21,11 +22,13 @@ type CanonicalTxs struct {
 	limit              int
 
 	// private fields
-	currentTxNum          int
-	currentBlockLastTxNum int
+	currentTxNum      int
+	hasNext           bool
+	endOfCurrentBlock uint64
 }
 
-func CanonicalTxNums(ctx context.Context, fromTxNum, toTxNum uint64, tx kv.Tx, asc order.By, limit int) (iter.U64, error) {
+// TxnIdsOfCanonicalBlocks - returns non-canonical txnIds of canonical block range
+func TxnIdsOfCanonicalBlocks(tx kv.Tx, fromTxNum, toTxNum uint64, asc order.By, limit int) (iter.U64, error) {
 	if asc && fromTxNum > 0 && toTxNum > 0 && fromTxNum >= toTxNum {
 		return nil, fmt.Errorf("fromTxNum >= toTxNum: %d, %d", fromTxNum, toTxNum)
 	}
@@ -36,166 +39,136 @@ func CanonicalTxNums(ctx context.Context, fromTxNum, toTxNum uint64, tx kv.Tx, a
 		return nil, fmt.Errorf("CanonicalTxNums: iteration Desc not supported yet")
 	}
 
+	it := &CanonicalTxnIds{tx: tx, fromTxNum: fromTxNum, toTxNum: toTxNum, orderAscend: asc, limit: limit}
+	if err := it.init(); err != nil {
+		it.Close() //it's responsibility of constructor (our) to close resource on error
+		return nil, err
+	}
+	if !it.HasNext() {
+		it.Close()
+		return iter.EmptyU64, nil
+	}
+	return it, nil
+}
+
+func (s *CanonicalTxnIds) init() (err error) {
+	tx := s.tx
 	var from, to []byte
-	if fromTxNum > 0 {
-		ok, blockFrom, err := rawdbv3.TxNums.FindBlockNum(tx, fromTxNum)
+	if s.fromTxNum > 0 {
+		ok, blockFrom, err := rawdbv3.TxNums.FindBlockNum(tx, s.fromTxNum)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		if ok {
 			to = hexutility.EncodeTs(blockFrom)
 		}
 	}
 
-	if toTxNum > 0 {
-		ok, blockTo, err := rawdbv3.TxNums.FindBlockNum(tx, toTxNum)
+	if s.toTxNum > 0 {
+		ok, blockTo, err := rawdbv3.TxNums.FindBlockNum(tx, s.toTxNum)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		if ok {
 			to = hexutility.EncodeTs(blockTo + 1)
 		}
 	}
 
-	var blocks iter.KV
-	var err error
-	if asc {
-		blocks, err = tx.RangeAscend(kv.HeaderCanonical, from, to, -1)
+	if s.orderAscend {
+		s.canonicalMarkers, err = s.tx.RangeAscend(kv.HeaderCanonical, from, to, -1)
 		if err != nil {
-			return nil, err
+			return err
 		}
 	} else {
-		blocks, err = tx.RangeDescend(kv.HeaderCanonical, from, to, -1)
+		s.canonicalMarkers, err = tx.RangeDescend(kv.HeaderCanonical, from, to, -1)
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
-
-	if !blocks.HasNext() {
-		return iter.EmptyU64, nil
-	}
-
-	it := &CanonicalTxs{blocks: blocks, fromTxNum: fromTxNum, toTxNum: toTxNum, orderAscend: asc, limit: limit}
-	if err := it.init(tx); err != nil {
-		it.Close() //it's responsibility of constructor (our) to close resource on error
-		return nil, err
-	}
-	return it, nil
+	return nil
 }
 
-func (s *CanonicalTxs) init(tx kv.Tx) error {
-	if s.fromPrefix == nil { // no initial position
-		if s.orderAscend {
-			s.nextK, s.nextV, err = s.c.First()
-			if err != nil {
-				return err
-			}
-		} else {
-			s.nextK, s.nextV, err = s.c.Last()
-			if err != nil {
-				return err
-			}
+func (s *CanonicalTxnIds) advance() (err error) {
+	var endOfBlock bool
+	if s.orderAscend {
+		s.currentTxNum++
+		endOfBlock = s.currentTxNum >= int(s.endOfCurrentBlock)
+	} else {
+		s.currentTxNum--
+		endOfBlock = s.currentTxNum <= int(s.endOfCurrentBlock)
+	}
 
-		}
+	if !endOfBlock {
 		return nil
 	}
 
-	if s.orderAscend {
-		s.nextK, s.nextV, err = s.c.Seek(s.fromPrefix)
-		if err != nil {
-			return err
-		}
+	if !s.canonicalMarkers.HasNext() {
+		s.currentTxNum = -1
+		return nil
+	}
+
+	k, v, err := s.canonicalMarkers.Next()
+	if err != nil {
 		return err
 	}
-
-	// to find LAST key with given prefix:
-	nextSubtree, ok := kv.NextSubtree(s.fromPrefix)
-	if ok {
-		s.nextK, s.nextV, err = s.c.SeekExact(nextSubtree)
-		if err != nil {
-			return err
-		}
-		s.nextK, s.nextV, err = s.c.Prev()
-		if err != nil {
-			return err
-		}
-		if s.nextK != nil { // go to last value of this key
-			if casted, ok := s.c.(kv.CursorDupSort); ok {
-				s.nextV, err = casted.LastDup()
-				if err != nil {
-					return err
-				}
-			}
-		}
-	} else {
-		s.nextK, s.nextV, err = s.c.Last()
-		if err != nil {
-			return err
-		}
-		if s.nextK != nil { // go to last value of this key
-			if casted, ok := s.c.(kv.CursorDupSort); ok {
-				s.nextV, err = casted.LastDup()
-				if err != nil {
-					return err
-				}
-			}
-		}
+	blockNum := binary.BigEndian.Uint64(k)
+	blockHash := common2.BytesToHash(v)
+	//if blockNum >= blockTo { // [from, to)
+	//	return false, nil
+	//}
+	body, err := readBodyForStorage(s.tx, blockHash, blockNum)
+	if err != nil {
+		return err
 	}
-	return nil
-}
+	if body == nil {
+		return fmt.Errorf("body not found: %d, %x", blockNum, blockHash)
+	}
 
-func (s *CanonicalTxs) advance() (err error) {
 	if s.orderAscend {
-		s.nextK, s.nextV, err = s.c.Next()
-		if err != nil {
-			return err
-		}
+		s.currentTxNum = int(body.BaseTxId)
+		s.endOfCurrentBlock = body.BaseTxId + uint64(body.TxAmount) + 2 // 2 system txs
 	} else {
-		s.nextK, s.nextV, err = s.c.Prev()
-		if err != nil {
-			return err
-		}
+		s.currentTxNum = int(body.BaseTxId) + int(body.TxAmount) + 2 // 2 system txs
+		s.endOfCurrentBlock = body.BaseTxId
 	}
 	return nil
 }
 
-func (s *CanonicalTxs) HasNext() bool {
+func (s *CanonicalTxnIds) HasNext() bool {
 	if s.limit == 0 { // limit reached
 		return false
 	}
-	if s.nextK == nil { // EndOfTable
+	if s.currentTxNum < 0 {
 		return false
 	}
-	if s.toPrefix == nil { // s.nextK == nil check is above
+	if s.currentTxNum < 0 { // EndOfTable
+		return false
+	}
+	if s.toTxNum == 0 {
 		return true
 	}
 
 	//Asc:  [from, to) AND from < to
 	//Desc: [from, to) AND from > to
-	cmp := bytes.Compare(s.nextK, s.toPrefix)
-	return (bool(s.orderAscend) && cmp < 0) || (!bool(s.orderAscend) && cmp > 0)
+	return (bool(s.orderAscend) && s.currentTxNum < int(s.toTxNum)) ||
+		(!bool(s.orderAscend) && s.currentTxNum > int(s.toTxNum))
 }
 
-func (s *CanonicalTxs) Next() (k, v []byte, err error) {
+func (s *CanonicalTxnIds) Next() (uint64, error) {
 	s.limit--
-	k, v = s.nextK, s.nextV
-	if err = s.advance(); err != nil {
-		return nil, nil, err
+	v := uint64(s.currentTxNum)
+	if err := s.advance(); err != nil {
+		return 0, err
 	}
-	return k, v, nil
+	return v, nil
 }
 
-func (s *CanonicalTxs) HasNext() bool {
-	return s.blocks.HasNext()
-}
-
-func (s *CanonicalTxs) Close() {
+func (s *CanonicalTxnIds) Close() {
 	if s == nil {
 		return
 	}
-	if s.c != nil {
-		s.c.Close()
-		delete(s.tx.streams, s.id)
-		s.c = nil
+	if s.canonicalMarkers != nil {
+		s.canonicalMarkers.Close()
+		s.canonicalMarkers = nil
 	}
 }

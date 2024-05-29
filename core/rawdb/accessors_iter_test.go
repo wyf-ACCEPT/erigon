@@ -17,14 +17,15 @@
 package rawdb_test
 
 import (
+	"bytes"
 	"testing"
 
 	libcommon "github.com/ledgerwatch/erigon-lib/common"
-	"github.com/ledgerwatch/erigon/common/u256"
+	"github.com/ledgerwatch/erigon-lib/common/u256"
+	"github.com/ledgerwatch/erigon-lib/kv/iter"
+	"github.com/ledgerwatch/erigon-lib/kv/order"
 	"github.com/ledgerwatch/erigon/core/rawdb"
 	"github.com/ledgerwatch/erigon/core/types"
-	"github.com/ledgerwatch/erigon/crypto"
-	"github.com/ledgerwatch/erigon/params"
 	"github.com/ledgerwatch/erigon/turbo/stages/mock"
 	"github.com/stretchr/testify/require"
 )
@@ -32,33 +33,42 @@ import (
 // Tests block header storage and retrieval operations.
 func TestCanonicalIter(t *testing.T) {
 	t.Parallel()
-	m := mock.Mock(t)
+	m, require := mock.Mock(t), require.New(t)
+
+	txn := &types.DynamicFeeTransaction{Tip: u256.N1, FeeCap: u256.N1, ChainID: u256.N1, CommonTx: types.CommonTx{Value: u256.N1, Gas: 1, Nonce: 1}}
+	buf := bytes.NewBuffer(nil)
+	err := txn.MarshalBinary(buf)
+	require.NoError(err)
+	rlpTxn := buf.Bytes()
+	b := &types.RawBody{Transactions: [][]byte{rlpTxn, rlpTxn, rlpTxn}}
+
 	tx, err := m.DB.BeginRw(m.Ctx)
-	require.NoError(t, err)
+	require.NoError(err)
 	defer tx.Rollback()
-	ctx := m.Ctx
-	br := m.BlockReader
 
-	var testKey, _ = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
-	testAddr := crypto.PubkeyToAddress(testKey.PublicKey)
+	// write 2 forks - 3 blocks in each fork
+	_, err = rawdb.WriteRawBodyIfNotExists(tx, libcommon.Hash{10}, 0, b)
+	require.NoError(err)
+	_, err = rawdb.WriteRawBodyIfNotExists(tx, libcommon.Hash{20}, 0, b)
+	require.NoError(err)
 
-	mustSign := func(tx types.Transaction, s types.Signer) types.Transaction {
-		r, err := types.SignTx(tx, s, testKey)
-		require.NoError(err)
-		return r
-	}
+	_, err = rawdb.WriteRawBodyIfNotExists(tx, libcommon.Hash{11}, 1, b)
+	require.NoError(err)
+	_, err = rawdb.WriteRawBodyIfNotExists(tx, libcommon.Hash{21}, 1, b)
+	require.NoError(err)
 
-	// prepare db so it works with our test
-	signer1 := types.MakeSigner(params.MainnetChainConfig, 1, 0)
-	body := &types.Body{
-		Transactions: []types.Transaction{
-			mustSign(types.NewTransaction(1, testAddr, u256.Num1, 1, u256.Num1, nil), *signer1),
-			mustSign(types.NewTransaction(2, testAddr, u256.Num1, 2, u256.Num1, nil), *signer1),
-		},
-		Uncles: []*types.Header{{Extra: []byte("test header")}},
-	}
+	_, err = rawdb.WriteRawBodyIfNotExists(tx, libcommon.Hash{12}, 2, b)
+	require.NoError(err)
+	_, err = rawdb.WriteRawBodyIfNotExists(tx, libcommon.Hash{22}, 2, b)
+	require.NoError(err)
 
-	// Create a test header to move around the database and make sure it's really new
-	require.NoError(rawdb.WriteBody(tx, libcommon.Hash{1}, 1, body))
+	//mark 3 blocks as canonical
+	require.NoError(rawdb.WriteCanonicalHash(tx, libcommon.Hash{10}, 0))
+	require.NoError(rawdb.WriteCanonicalHash(tx, libcommon.Hash{11}, 1))
+	require.NoError(rawdb.WriteCanonicalHash(tx, libcommon.Hash{12}, 2))
+
+	it, err := rawdb.TxnIdsOfCanonicalBlocks(tx, 0, 1, order.Asc, -1)
+	require.NoError(err)
+	require.Equal([]uint64{0, 1, 4, 5, 7, 8}, iter.ToArrU64Must(it))
 
 }

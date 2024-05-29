@@ -226,7 +226,7 @@ func TestBlockStorage(t *testing.T) {
 		// mark chain as bad
 		//  - it must be not available by hash
 		//  - but available by hash+num - if read num from kv.BadHeaderNumber table
-		//  - prune blocks: must delete Canonical/NonCanonical/BadBlocks also
+		//  - prune canonicalMarkers: must delete Canonical/NonCanonical/BadBlocks also
 		foundBn, _ := br.BadHeaderNumber(ctx, tx, block.Hash())
 		require.Nil(foundBn)
 		found, _ := br.BlockByHash(ctx, tx, block.Hash())
@@ -261,7 +261,7 @@ func TestBlockStorage(t *testing.T) {
 	require.Nil(entry)
 }
 
-// Tests that partial block contents don't get reassembled into full blocks.
+// Tests that partial block contents don't get reassembled into full canonicalMarkers.
 func TestPartialBlockStorage(t *testing.T) {
 	t.Parallel()
 	m := mock.Mock(t)
@@ -399,7 +399,7 @@ func TestCanonicalMappingStorage(t *testing.T) {
 	}
 }
 
-// Tests that head headers and head blocks can be assigned, individually.
+// Tests that head headers and head canonicalMarkers can be assigned, individually.
 func TestHeadStorage2(t *testing.T) {
 	t.Parallel()
 	_, db := memdb.NewTestTx(t)
@@ -427,7 +427,7 @@ func TestHeadStorage2(t *testing.T) {
 	}
 }
 
-// Tests that head headers and head blocks can be assigned, individually.
+// Tests that head headers and head canonicalMarkers can be assigned, individually.
 func TestHeadStorage(t *testing.T) {
 	t.Parallel()
 	m := mock.Mock(t)

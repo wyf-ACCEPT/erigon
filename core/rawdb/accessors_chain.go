@@ -66,7 +66,7 @@ func WriteCanonicalHash(db kv.Putter, hash common.Hash, number uint64) error {
 // Mark chain as bad feature:
 //   - BadBlock must be not available by hash
 //   - but available by hash+num - if read num from kv.BadHeaderNumber table
-//   - prune blocks: must delete Canonical/NonCanonical/BadBlocks also
+//   - prune canonicalMarkers: must delete Canonical/NonCanonical/BadBlocks also
 func TruncateCanonicalHash(tx kv.RwTx, blockFrom uint64, markChainAsBad bool) error {
 	if err := tx.ForEach(kv.HeaderCanonical, hexutility.EncodeTs(blockFrom), func(blockNumBytes, blockHash []byte) error {
 		if markChainAsBad {
@@ -393,7 +393,7 @@ func readBodyForStorage(db kv.Getter, hash common.Hash, number uint64) (*types.B
 	bodyForStorage := new(types.BodyForStorage)
 	err = rlp.DecodeBytes(data, bodyForStorage)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("readBodyForStorage: %w, %d, %x", err, number, hash)
 	}
 	return bodyForStorage, nil
 }
@@ -1017,7 +1017,7 @@ func WriteBlock(db kv.RwTx, block *types.Block) error {
 	return nil
 }
 
-// PruneBlocks - delete [1, to) old blocks after moving it to snapshots.
+// PruneBlocks - delete [1, to) old canonicalMarkers after moving it to snapshots.
 // keeps genesis in db: [1, to)
 // doesn't change sequences of kv.EthTx and kv.NonCanonicalTxs
 // doesn't delete Receipts, Senders, Canonical markers, TotalDifficulty
