@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/c2h5oh/datasize"
+	"github.com/ledgerwatch/erigon/core/rawdb/rawdbhelpers"
 	"github.com/ledgerwatch/log/v3"
 	"golang.org/x/sync/errgroup"
 
@@ -856,6 +857,8 @@ func PruneExecutionStage(s *PruneState, tx kv.RwTx, cfg ExecuteBlockCfg, ctx con
 		defer tx.Rollback()
 	}
 
+	execStepsInDB.Set(rawdbhelpers.IdxStepsCountV3(tx) * 100)
+
 	logEvery := time.NewTicker(logInterval)
 	defer logEvery.Stop()
 
@@ -863,12 +866,10 @@ func PruneExecutionStage(s *PruneState, tx kv.RwTx, cfg ExecuteBlockCfg, ctx con
 	if s.CurrentSyncCycle.IsInitialCycle {
 		pruneTimeout = 12 * time.Hour * 10
 	}
-	t := time.Now()
-	stats, err := tx.(*temporal.Tx).AggTx().(*libstate.AggregatorRoTx).PruneSmallBatches(ctx, pruneTimeout, tx)
+	_, err = tx.(*temporal.Tx).AggTx().(*libstate.AggregatorRoTx).PruneSmallBatches(ctx, pruneTimeout, tx)
 	if err != nil { // prune part of retired data, before commit
 		return err
 	}
-	log.Info("[dbg] prune state", "took", time.Since(t), "stats", fmt.Sprintf("%s", stats))
 
 	if err = s.Done(tx); err != nil {
 		return err
