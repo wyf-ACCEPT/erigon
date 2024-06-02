@@ -58,6 +58,7 @@ func StageLoop(
 ) {
 	defer close(waitForDone)
 
+	sawZeroBlocksTimes := 0
 	i := 0
 	initialCycle, firstCycle := true, true
 	for {
@@ -89,7 +90,21 @@ func StageLoop(
 		if time.Since(t) < 5*time.Minute {
 			initialCycle = false
 		}
-		firstCycle = false
+		if blockReader.FrozenBlocks() == 0 {
+			// having 0 frozen blocks - also may mean we didn't download them. so stages. 1 time is enough.
+			// during testing we may have 0 frozen blocks and firstCycle expected to be false
+			sawZeroBlocksTimes++
+			if sawZeroBlocksTimes > 2 {
+				firstCycle = false
+			} else {
+				firstCycle = true
+				initialCycle = true
+			}
+		} else {
+			firstCycle = false
+			initialCycle = true
+		}
+
 		hd.AfterInitialCycle()
 
 		if loopMinTime != 0 {
