@@ -223,6 +223,7 @@ func DownloadAndIndexSnapshotsIfNeed(s *StageState, ctx context.Context, tx kv.R
 	}
 
 	if !s.CurrentSyncCycle.IsFirstCycle {
+		log.Warn("[dbg] early exit ", "IsFirstCycle", s.CurrentSyncCycle.IsFirstCycle, "IsInitialCycle", s.CurrentSyncCycle.IsInitialCycle)
 		return nil
 	}
 	if !cfg.blockReader.FreezingCfg().Enabled {
