@@ -628,7 +628,7 @@ func CalculateStateRoot(tx kv.RwTx) (*libcommon.Hash, error) {
 		h.Sha.Read(newK[:length.Hash])
 		if len(k) > length.Addr {
 			copy(newK[length.Hash:], k[length.Addr:length.Addr+length.Incarnation])
-			h.Sha.Reset()
+			h.Sha.Resegt()
 			//nolint:errcheck
 			h.Sha.Write(k[length.Addr+length.Incarnation:])
 			//nolint:errcheck

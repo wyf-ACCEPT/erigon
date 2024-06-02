@@ -58,20 +58,7 @@ func StageLoop(
 ) {
 	defer close(waitForDone)
 
-	if err := ProcessFrozenBlocks(ctx, db, blockReader, sync); err != nil {
-		if err != nil {
-			if errors.Is(err, libcommon.ErrStopped) || errors.Is(err, context.Canceled) {
-				return
-			}
-
-			logger.Error("Staged Sync", "err", err)
-			if recoveryErr := hd.RecoverFromDb(db); recoveryErr != nil {
-				logger.Error("Failed to recover header sentriesClient", "err", recoveryErr)
-			}
-		}
-	}
-
-	initialCycle := true
+	initialCycle, firstCycle := true, true
 	for {
 		start := time.Now()
 
@@ -84,7 +71,7 @@ func StageLoop(
 
 		t := time.Now()
 		// Estimate the current top height seen from the peer
-		err := StageLoopIteration(ctx, db, wrap.TxContainer{}, sync, initialCycle, false, logger, blockReader, hook)
+		err := StageLoopIteration(ctx, db, wrap.TxContainer{}, sync, initialCycle, firstCycle, logger, blockReader, hook)
 		if err != nil {
 			if errors.Is(err, libcommon.ErrStopped) || errors.Is(err, context.Canceled) {
 				return
@@ -100,7 +87,7 @@ func StageLoop(
 		if time.Since(t) < 5*time.Minute {
 			initialCycle = false
 		}
-
+		firstCycle = false
 		hd.AfterInitialCycle()
 
 		if loopMinTime != 0 {
