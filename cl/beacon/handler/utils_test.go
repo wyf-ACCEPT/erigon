@@ -148,6 +148,7 @@ func setupTestingHandler(t *testing.T, v clparams.StateVersion, logger log.Logge
 		voluntaryExitService,
 		blsToExecutionChangeService,
 		proposerSlashingService,
+		nil,
 	) // TODO: add tests
 	h.Init()
 	return
