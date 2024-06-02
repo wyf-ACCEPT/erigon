@@ -58,6 +58,7 @@ func StageLoop(
 ) {
 	defer close(waitForDone)
 
+	i := 0
 	initialCycle, firstCycle := true, true
 	for {
 		start := time.Now()
@@ -68,7 +69,8 @@ func StageLoop(
 		default:
 			// continue
 		}
-
+		log.Warn("[dbg] StageLoopIteration", "i", i, "initialCycle", initialCycle, "firstCycle", firstCycle)
+		i++
 		t := time.Now()
 		// Estimate the current top height seen from the peer
 		err := StageLoopIteration(ctx, db, wrap.TxContainer{}, sync, initialCycle, firstCycle, logger, blockReader, hook)
