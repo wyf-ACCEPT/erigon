@@ -42,23 +42,25 @@ func (br *BlockRetire) retireBorBlocks(ctx context.Context, minBlockNum uint64, 
 		blockFrom, blockTo, ok := CanRetire(maxBlockNum, minBlockNum, snaptype.Enum(), br.chainConfig)
 		fmt.Printf("[dbg] canRetire(minSnapNum=%d, borSegmentsmax=%d, maxBlockNum=%d) -> %d-%d-%t\n", minBlockNum, blockReader.BorSnapshots().SegmentsMax(), maxBlockNum, blockFrom, blockTo, ok)
 
-		if ok {
-			blocksRetired = true
+		if !ok {
+			continue
+		}
+		has, err := br.dbHasEnoughDataForBorRetire(ctx)
+		if err != nil {
+			return false, err
+		}
+		if !has {
+			continue
+		}
+		blocksRetired = true
 
-			if has, err := br.dbHasEnoughDataForBorRetire(ctx); err != nil {
-				return false, err
-			} else if !has {
-				return false, nil
-			}
+		logger.Log(lvl, "[bor snapshots] Retire Bor Blocks", "type", snaptype, "range", fmt.Sprintf("%dk-%dk", blockFrom/1000, blockTo/1000))
 
-			logger.Log(lvl, "[bor snapshots] Retire Bor Blocks", "type", snaptype, "range", fmt.Sprintf("%dk-%dk", blockFrom/1000, blockTo/1000))
-
-			panic("early exit1")
-			for i := blockFrom; i < blockTo; i = chooseSegmentEnd(i, blockTo, snaptype.Enum(), chainConfig) {
-				end := chooseSegmentEnd(i, blockTo, snaptype.Enum(), chainConfig)
-				if _, err := snaptype.ExtractRange(ctx, snaptype.FileInfo(snapshots.Dir(), i, end), nil, db, chainConfig, tmpDir, workers, lvl, logger); err != nil {
-					return ok, fmt.Errorf("ExtractRange: %d-%d: %w", i, end, err)
-				}
+		panic("early exit1")
+		for i := blockFrom; i < blockTo; i = chooseSegmentEnd(i, blockTo, snaptype.Enum(), chainConfig) {
+			end := chooseSegmentEnd(i, blockTo, snaptype.Enum(), chainConfig)
+			if _, err := snaptype.ExtractRange(ctx, snaptype.FileInfo(snapshots.Dir(), i, end), nil, db, chainConfig, tmpDir, workers, lvl, logger); err != nil {
+				return ok, fmt.Errorf("ExtractRange: %d-%d: %w", i, end, err)
 			}
 		}
 	}
