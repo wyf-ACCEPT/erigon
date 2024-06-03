@@ -1245,8 +1245,9 @@ func canRetire(from, to uint64, snapType snaptype.Enum, chainConfig *chain.Confi
 	} else if blockFrom%10_000 == 0 {
 		maxJump = 10_000
 	}
-	//roundedTo1K := (to / 1_000) * 1_000
+
 	jump := min(maxJump, roundedTo1K-blockFrom)
+
 	switch { // only next segment sizes are allowed
 	case jump >= mergeLimit:
 		blockTo = blockFrom + mergeLimit
@@ -1259,6 +1260,8 @@ func canRetire(from, to uint64, snapType snaptype.Enum, chainConfig *chain.Confi
 	default:
 		blockTo = blockFrom
 	}
+	fmt.Printf("[dbg] canRetire1(from=%d, to=%d, blockFrom=%d, maxJump=%d,  mergeLimit=%d) -> jump=%d,blockTo=%d\n", from, to, blockFrom, maxJump, mergeLimit, jump, blockTo)
+
 	return blockFrom, blockTo, blockTo-blockFrom >= 1_000
 }
 
