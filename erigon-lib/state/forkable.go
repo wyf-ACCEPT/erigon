@@ -358,7 +358,6 @@ func (tx *ForkableRoTx) Files() (res []string) {
 	}
 	return res
 }
-
 func (tx *ForkableRoTx) Get(ts uint64, blockHash common.Hash, dbtx kv.Tx) ([]byte, bool, error) {
 	v, ok := tx.getFromFiles(ts)
 	if ok {

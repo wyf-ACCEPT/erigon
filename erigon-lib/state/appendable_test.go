@@ -24,7 +24,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ledgerwatch/erigon-lib/common"
 	"github.com/ledgerwatch/erigon-lib/common/background"
 	"github.com/ledgerwatch/erigon-lib/common/datadir"
 	"github.com/ledgerwatch/erigon-lib/kv"
@@ -61,78 +60,74 @@ func TestAppendableCollationBuild(t *testing.T) {
 	logEvery := time.NewTicker(30 * time.Second)
 	defer logEvery.Stop()
 	aggStep := uint64(16)
-	db, ii := testDbAndForkable(t, aggStep, log.New())
+	db, ii := testDbAndAppendable(t, aggStep, log.New())
 	ctx := context.Background()
-	t.Run("nonbuf api can see own writes", func(t *testing.T) {
-		require := require.New(t)
 
-		tx, err := db.BeginRw(ctx)
-		require.NoError(err)
-		defer tx.Rollback()
-		ic := ii.BeginFilesRo()
-		defer ic.Close()
+	//nonbuf api can see own writes
+	require := require.New(t)
 
-		//step 0
-		err = ic.Put(1, common.Hash{1}, []byte{1}, tx)
-		require.NoError(err)
-		err = ic.Put(1, common.Hash{3}, []byte{3}, tx)
-		require.NoError(err)
+	tx, err := db.BeginRw(ctx)
+	require.NoError(err)
+	defer tx.Rollback()
+	ic := ii.BeginFilesRo()
+	defer ic.Close()
 
-		//step 1
-		err = ic.Put(aggStep+1, common.Hash{1}, []byte{1}, tx)
-		require.NoError(err)
-		err = ic.Put(aggStep+1, common.Hash{3}, []byte{3}, tx)
-		require.NoError(err)
+	//step 0
+	err = ic.Put(1, []byte{1}, tx)
+	require.NoError(err)
+	err = ic.Put(2, []byte{2}, tx)
+	require.NoError(err)
 
-		//can see own writes
-		v, ok, err := ic.Get(1, common.Hash{1}, tx)
-		require.NoError(err)
-		require.True(ok)
-		require.Equal([]byte{1}, v)
-		//don't see non-existing forks
-		v, ok, err = ic.Get(1, common.Hash{2}, tx)
-		require.NoError(err)
-		require.False(ok)
-		//can see existing forks
-		v, ok, err = ic.Get(1, common.Hash{3}, tx)
-		require.NoError(err)
-		require.True(ok)
-		require.Equal([]byte{3}, v)
+	//step 1
+	err = ic.Put(aggStep+1, []byte{3}, tx)
+	require.NoError(err)
+	err = ic.Put(aggStep+2, []byte{4}, tx)
+	require.NoError(err)
 
-		err = tx.Commit()
-		require.NoError(err)
-	})
+	//can see own writes
+	v, ok, err := ic.Get(1, tx)
+	require.NoError(err)
+	require.True(ok)
+	require.Equal([]byte{1}, v)
+	//don't see non-existing forks
+	v, ok, err = ic.Get(2, tx)
+	require.NoError(err)
+	require.False(ok)
+	//can see existing forks
+	v, ok, err = ic.Get(3, tx)
+	require.NoError(err)
+	require.False(ok)
 
-	t.Run("see only canonical records in files", func(t *testing.T) {
-		require := require.New(t)
+	err = tx.Commit()
+	require.NoError(err)
 
-		roTx, err := db.BeginRo(ctx)
-		require.NoError(err)
-		defer roTx.Rollback()
+	//see only canonical records in files
+	roTx, err := db.BeginRo(ctx)
+	require.NoError(err)
+	defer roTx.Rollback()
 
-		bs, err := ii.collate(ctx, 0, roTx)
-		require.NoError(err)
+	bs, err := ii.collate(ctx, 0, roTx)
+	require.NoError(err)
 
-		sf, err := ii.buildFiles(ctx, 0, bs, background.NewProgressSet())
-		require.NoError(err)
-		defer sf.CleanupOnError()
-		g := sf.decomp.MakeGetter()
-		g.Reset(0)
-		require.Equal(1, sf.decomp.Count())
-		var words []string
-		for g.HasNext() {
-			w, _ := g.Next(nil)
-			words = append(words, string(w))
-		}
-		require.Equal([]string{"1"}, words)
-		r := recsplit.NewIndexReader(sf.index)
-		for i := 0; i < len(words); i++ {
-			offset, _ := r.TwoLayerLookup([]byte(words[i]))
-			g.Reset(offset)
-			w, _ := g.Next(nil)
-			require.Equal(t, words[i], string(w))
-		}
-	})
+	sf, err := ii.buildFiles(ctx, 0, bs, background.NewProgressSet())
+	require.NoError(err)
+	defer sf.CleanupOnError()
+	g := sf.decomp.MakeGetter()
+	g.Reset(0)
+	require.Equal(1, sf.decomp.Count())
+	var words []string
+	for g.HasNext() {
+		w, _ := g.Next(nil)
+		words = append(words, string(w))
+	}
+	require.Equal([]string{"1"}, words)
+	r := recsplit.NewIndexReader(sf.index)
+	for i := 0; i < len(words); i++ {
+		offset, _ := r.TwoLayerLookup([]byte(words[i]))
+		g.Reset(offset)
+		w, _ := g.Next(nil)
+		require.Equal(t, words[i], string(w))
+	}
 
 }
 

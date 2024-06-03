@@ -830,8 +830,9 @@ func (fk *Appendable) collate(ctx context.Context, step uint64, roTx kv.Tx) (For
 	}
 	coll.writer = NewArchiveWriter(comp, fk.compression)
 
-	from, to := hexutility.EncodeTs(txFrom), hexutility.EncodeTs(txTo)
-	it, err := roTx.Range(fk.canonicalMarkersTable, from, to)
+	it, err := fk.appendableCfg.canonicalTxRange(txFrom, txTo)
+	//from, to := hexutility.EncodeTs(txFrom), hexutility.EncodeTs(txTo)
+	//it, err := roTx.Range(fk.canonicalMarkersTable, from, to)
 	if err != nil {
 		return ForkableCollation{}, fmt.Errorf("collate %s: %w", fk.filenameBase, err)
 	}
