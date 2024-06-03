@@ -21,6 +21,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/ledgerwatch/erigon-lib/kv/iter"
 	"math"
 	"path"
 	"path/filepath"
@@ -96,6 +97,10 @@ type appendableCfg struct {
 	db   kv.RoDB // global db pointer. mostly for background warmup.
 
 	canonicalMarkersTable string
+
+	// convert range of canonical ids to non-canonical ids.
+	// DB has and non-canonical and canonical records, this func allow read only canonical records by their non-canonical ID.
+	nonCanonicalTxs func(canonicalTxnFrom, canonicalTxnTo uint64) iter.U64
 }
 
 func NewAppendable(cfg appendableCfg, aggregationStep uint64, filenameBase, table string, integrityCheck func(fromStep uint64, toStep uint64) bool, logger log.Logger) (*Appendable, error) {
@@ -830,7 +835,7 @@ func (fk *Appendable) collate(ctx context.Context, step uint64, roTx kv.Tx) (For
 	}
 	coll.writer = NewArchiveWriter(comp, fk.compression)
 
-	it, err := fk.appendableCfg.canonicalTxRange(txFrom, txTo)
+	it, err := fk.appendableCfg.nonCanonicalTxs(txFrom, txTo)
 	//from, to := hexutility.EncodeTs(txFrom), hexutility.EncodeTs(txTo)
 	//it, err := roTx.Range(fk.canonicalMarkersTable, from, to)
 	if err != nil {
