@@ -186,7 +186,6 @@ func (a *ApiHandler) init() {
 		r.Route("/v1", func(r chi.Router) {
 			if a.routerCfg.Builder {
 				r.Get("/builder/states/{state_id}/expected_withdrawals", beaconhttp.HandleEndpointFunc(a.GetEth1V1BuilderStatesExpectedWithdrawals))
-				r.Post("/validator/register_validator", beaconhttp.HandleEndpointFunc(a.PostEthV1BuilderRegisterValidator))
 			}
 			if a.routerCfg.Events {
 				r.Get("/events", a.EventSourceGetV1Events)
@@ -215,7 +214,9 @@ func (a *ApiHandler) init() {
 			}
 			if a.routerCfg.Beacon {
 				r.Route("/beacon", func(r chi.Router) {
-					r.Post("/blinded_blocks", a.PostEthV1BlindedBlocks)
+					if a.routerCfg.Builder {
+						r.Post("/blinded_blocks", beaconhttp.HandleEndpointFunc(a.PostEthV1BlindedBlocks))
+					}
 					r.Route("/rewards", func(r chi.Router) {
 						r.Post("/sync_committee/{block_id}", beaconhttp.HandleEndpointFunc(a.PostEthV1BeaconRewardsSyncCommittees))
 						r.Get("/blocks/{block_id}", beaconhttp.HandleEndpointFunc(a.GetEthV1BeaconRewardsBlocks))
@@ -285,6 +286,9 @@ func (a *ApiHandler) init() {
 					r.Post("/contribution_and_proofs", a.PostEthV1ValidatorContributionsAndProofs)
 					r.Post("/prepare_beacon_proposer", a.PostEthV1ValidatorPrepareBeaconProposal)
 					r.Post("/liveness/{epoch}", beaconhttp.HandleEndpointFunc(a.liveness))
+					if a.routerCfg.Builder {
+						r.Post("/register_validator", beaconhttp.HandleEndpointFunc(a.PostEthV1BuilderRegisterValidator))
+					}
 				})
 			}
 
@@ -302,7 +306,9 @@ func (a *ApiHandler) init() {
 				r.Route("/beacon", func(r chi.Router) {
 					r.Get("/blocks/{block_id}", beaconhttp.HandleEndpointFunc(a.GetEthV1BeaconBlock))
 					r.Post("/blocks", a.PostEthV2BeaconBlocks)
-					r.Post("/blinded_blocks", a.PostEthV2BlindedBlocks)
+					if a.routerCfg.Builder {
+						r.Post("/blinded_blocks", beaconhttp.HandleEndpointFunc(a.PostEthV2BlindedBlocks))
+					}
 				})
 			}
 			if a.routerCfg.Validator {
