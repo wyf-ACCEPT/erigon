@@ -815,15 +815,15 @@ func doRetireCommand(cliCtx *cli.Context) error {
 	}
 
 	logger.Info("Prune state history")
-	ac := agg.BeginFilesRo()
-	defer ac.Close()
-	for hasMoreToPrune := true; hasMoreToPrune; {
-		hasMoreToPrune, err = ac.PruneSmallBatchesDb(ctx, 2*time.Minute, db)
-		if err != nil {
-			return err
-		}
-	}
-	ac.Close()
+	//ac := agg.BeginFilesRo()
+	//defer ac.Close()
+	//for hasMoreToPrune := true; hasMoreToPrune; {
+	//	hasMoreToPrune, err = ac.PruneSmallBatchesDb(ctx, 2*time.Minute, db)
+	//	if err != nil {
+	//		return err
+	//	}
+	//}
+	//ac.Close()
 
 	logger.Info("Work on state history snapshots")
 	indexWorkers := estimate.IndexSnapshot.Workers()
@@ -871,7 +871,7 @@ func doRetireCommand(cliCtx *cli.Context) error {
 		return err
 	}
 
-	ac = agg.BeginFilesRo()
+	ac := agg.BeginFilesRo()
 	defer ac.Close()
 	for hasMoreToPrune := true; hasMoreToPrune; {
 		hasMoreToPrune, err = ac.PruneSmallBatchesDb(context.Background(), 2*time.Minute, db)
