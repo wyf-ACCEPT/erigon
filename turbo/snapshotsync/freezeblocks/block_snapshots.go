@@ -1312,16 +1312,19 @@ func (br *BlockRetire) retireBlocks(ctx context.Context, minBlockNum uint64, max
 	notifier, logger, blockReader, tmpDir, db, workers := br.notifier, br.logger, br.blockReader, br.tmpDir, br.db, br.workers
 	snapshots := br.snapshots()
 
+	var hasDataInDB bool
 	blockFrom, blockTo, ok := CanRetire(maxBlockNum, minBlockNum, snaptype.Unknown, br.chainConfig)
-
 	if ok {
-		if has, err := br.dbHasEnoughDataForBlocksRetire(ctx); err != nil {
+		var err error
+		hasDataInDB, err = br.dbHasEnoughDataForBlocksRetire(ctx)
+		if err != nil {
 			return false, err
-		} else if !has {
-			return false, nil
 		}
+	}
+
+	if hasDataInDB {
 		logger.Log(lvl, "[snapshots] Retire Blocks", "range", fmt.Sprintf("%dk-%dk", blockFrom/1000, blockTo/1000))
-		// in future we will do it in background
+		// in the future we will do it in background
 		if err := DumpBlocks(ctx, blockFrom, blockTo, br.chainConfig, tmpDir, snapshots.Dir(), db, workers, lvl, logger, blockReader); err != nil {
 			return ok, fmt.Errorf("DumpBlocks: %w", err)
 		}
