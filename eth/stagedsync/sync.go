@@ -155,13 +155,7 @@ func (s *Sync) UnwindTo(unwindPoint uint64, reason UnwindReason, tx kv.Tx) error
 			if !ok {
 				return fmt.Errorf("too far unwind. requested=%d, minAllowed=%d", unwindPoint, unwindPointWithCommitment)
 			}
-			if unwindPoint > 1000 && unwindPointWithCommitment == 0 {
-				seeNext, _, _ := casted.AggTx().(*state.AggregatorRoTx).CanUnwindBeforeBlockNum(unwindPoint+1, tx)
-				return fmt.Errorf("too far unwind. requested=%d, minAllowed=%d, seeNext=%d", unwindPoint, unwindPointWithCommitment, seeNext)
-			}
 			unwindPoint = unwindPointWithCommitment
-			log.Warn("[dbg] ")
-
 		}
 	}
 
