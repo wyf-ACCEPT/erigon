@@ -790,10 +790,9 @@ func (ac *AggregatorRoTx) CanUnwindBeforeBlockNum(blockNum uint64, tx kv.Tx) (ui
 	}
 	if blockNumWithCommitment == 0 && ac.CanUnwindDomainsToTxNum() > 0 { // don't allow unwind beyond files progress
 		_minBlockNum, _ := ac.MinUnwindDomainsBlockNum(tx)
-		log.Warn("[dbg] see3", "_minBlockNum", _minBlockNum)
-		return _minBlockNum, blockNum >= _minBlockNum, nil
+		return _minBlockNum, blockNum >= _minBlockNum, nil //nolint
 	}
-	log.Warn("[dbg] see2", "blockNumWithCommitment", blockNumWithCommitment)
+
 	return blockNumWithCommitment, true, nil
 }
 
