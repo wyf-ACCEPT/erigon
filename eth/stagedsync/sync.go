@@ -607,7 +607,7 @@ func (s *Sync) pruneStage(initialCycle bool, stage *Stage, db kv.RwDB, tx kv.RwT
 	}
 
 	took := time.Since(start)
-	if took > 30*time.Second {
+	if took > 10*time.Second {
 		s.logger.Info(fmt.Sprintf("[%s] Prune done", s.LogPrefix()), "in", took)
 	}
 	s.timings = append(s.timings, Timing{isPrune: true, stage: stage.ID, took: took})
