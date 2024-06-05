@@ -316,6 +316,7 @@ func FillDBFromSnapshots(logPrefix string, ctx context.Context, tx kv.RwTx, dirs
 		if progress >= blocksAvailable {
 			continue
 		}
+		log.Warn("[dbg] FillDBFromSnapshots", "stage", stage, "progress", progress, "blocksAvailable", blocksAvailable)
 
 		if err = stages.SaveStageProgress(tx, stage, blocksAvailable); err != nil {
 			return fmt.Errorf("advancing %s stage: %w", stage, err)
