@@ -157,6 +157,9 @@ func (s *Sync) UnwindTo(unwindPoint uint64, reason UnwindReason, tx kv.Tx) error
 			}
 			unwindPoint = unwindPointWithCommitment
 		}
+		if casted, ok := tx.(state.HasAggTx); ok {
+
+		}
 	}
 
 	if reason.Block != nil {

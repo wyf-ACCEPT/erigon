@@ -82,6 +82,9 @@ type SharedDomains struct {
 type HasAggTx interface {
 	AggTx() interface{}
 }
+type HasAggTx interface {
+	AggTx() interface{}
+}
 
 func NewSharedDomains(tx kv.Tx, logger log.Logger) (*SharedDomains, error) {
 	sd := &SharedDomains{
