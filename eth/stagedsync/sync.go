@@ -555,7 +555,6 @@ func (s *Sync) runStage(stage *Stage, db kv.RwDB, txc wrap.TxContainer, initialC
 
 func (s *Sync) unwindStage(initialCycle bool, stage *Stage, db kv.RwDB, txc wrap.TxContainer) error {
 	start := time.Now()
-	s.logger.Trace("Unwind...", "stage", stage.ID)
 	stageState, err := s.StageState(stage.ID, txc.Tx, db, initialCycle, false)
 	if err != nil {
 		return err
@@ -589,8 +588,6 @@ func (s *Sync) unwindStage(initialCycle bool, stage *Stage, db kv.RwDB, txc wrap
 // Run the pruning function for the given stage
 func (s *Sync) pruneStage(initialCycle bool, stage *Stage, db kv.RwDB, tx kv.RwTx) error {
 	start := time.Now()
-	s.logger.Debug("Prune...", "stage", stage.ID)
-
 	stageState, err := s.StageState(stage.ID, tx, db, initialCycle, false)
 	if err != nil {
 		return err
@@ -611,11 +608,7 @@ func (s *Sync) pruneStage(initialCycle bool, stage *Stage, db kv.RwDB, tx kv.RwT
 
 	took := time.Since(start)
 	if took > 30*time.Second {
-		logPrefix := s.LogPrefix()
-		s.logger.Info(fmt.Sprintf("[%s] Prune done", logPrefix), "in", took)
-	} else {
-		logPrefix := s.LogPrefix()
-		s.logger.Debug(fmt.Sprintf("[%s] Prune done", logPrefix), "in", took)
+		s.logger.Info(fmt.Sprintf("[%s] Prune done", s.LogPrefix()), "in", took)
 	}
 	s.timings = append(s.timings, Timing{isPrune: true, stage: stage.ID, took: took})
 	return nil
