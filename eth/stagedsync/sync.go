@@ -618,7 +618,6 @@ func (s *Sync) pruneStage(initialCycle bool, stage *Stage, db kv.RwDB, tx kv.RwT
 		s.logger.Debug(fmt.Sprintf("[%s] Prune done", logPrefix), "in", took)
 	}
 	s.timings = append(s.timings, Timing{isPrune: true, stage: stage.ID, took: took})
-	s.logger.Debug("Prune DONE", "stage", stage.ID)
 	return nil
 }
 
