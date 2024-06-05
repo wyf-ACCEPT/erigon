@@ -364,6 +364,7 @@ Loop:
 		logger.Info(fmt.Sprintf("[%s] Processed", logPrefix),
 			"highest", headerInserter.GetHighest(), "age", common.PrettyAge(time.Unix(int64(headerInserter.GetHighestTimestamp()), 0)),
 			"headers", headers, "in", secs, "blk/sec", uint64(float64(headers)/secs))
+
 	}
 
 	return nil

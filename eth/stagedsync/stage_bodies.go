@@ -105,6 +105,7 @@ func BodiesForward(s *StageState, u Unwinder, ctx context.Context, tx kv.RwTx, c
 
 	bodyProgress = s.BlockNumber
 	if bodyProgress >= headerProgress {
+		log.Warn("[dbg] bodies exit1", "bodyProgress", bodyProgress, "headerProgress", headerProgress)
 		return nil
 	}
 
