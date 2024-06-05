@@ -785,8 +785,10 @@ func (ac *AggregatorRoTx) CanUnwindBeforeBlockNum(blockNum uint64, tx kv.Tx) (ui
 	blockNumWithCommitment, _, _, err := domains.LatestCommitmentState(tx, ac.CanUnwindDomainsToTxNum(), unwindToTxNum)
 	if err != nil {
 		_minBlockNum, _ := ac.MinUnwindDomainsBlockNum(tx)
+		log.Warn("[dbg] see1", "_minBlockNum", _minBlockNum)
 		return _minBlockNum, false, nil //nolint
 	}
+	log.Warn("[dbg] see2", "blockNumWithCommitment", blockNumWithCommitment)
 	return blockNumWithCommitment, true, nil
 }
 
