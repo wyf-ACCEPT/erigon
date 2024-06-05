@@ -20,6 +20,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/ledgerwatch/log/v3"
 	"sort"
 
 	"github.com/ledgerwatch/erigon-lib/common/dbg"
@@ -109,6 +110,7 @@ func (txNums) Min(tx kv.Tx, blockNum uint64) (maxTxNum uint64, err error) {
 }
 
 func (txNums) Append(tx kv.RwTx, blockNum, maxTxNum uint64) (err error) {
+	log.Warn("[dbg] txNums.Append", "blockNum", blockNum, "maxTxNum", maxTxNum)
 	lastK, err := LastKey(tx, kv.MaxTxNum)
 	if err != nil {
 		return err
@@ -135,6 +137,7 @@ func (txNums) WriteForGenesis(tx kv.RwTx, maxTxNum uint64) (err error) {
 	return tx.Put(kv.MaxTxNum, k[:], v[:])
 }
 func (txNums) Truncate(tx kv.RwTx, blockNum uint64) (err error) {
+	log.Warn("[dbg] txNums.Truncate", "blockNum", blockNum)
 	var seek [8]byte
 	binary.BigEndian.PutUint64(seek[:], blockNum)
 	c, err := tx.RwCursor(kv.MaxTxNum)
