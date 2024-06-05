@@ -19,9 +19,6 @@ package stages
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/ledgerwatch/erigon-lib/common/dbg"
-	"github.com/ledgerwatch/log/v3"
-
 	"github.com/ledgerwatch/erigon-lib/kv"
 )
 
@@ -95,7 +92,6 @@ func GetStageProgress(db kv.Getter, stage SyncStage) (uint64, error) {
 }
 
 func SaveStageProgress(db kv.Putter, stage SyncStage, progress uint64) error {
-	log.Warn("[dbg] SaveStageProgress", "id", stage, "progress", progress, "dbg", dbg.Stack())
 	if m, ok := SyncMetrics[stage]; ok {
 		m.SetUint64(progress)
 	}
