@@ -154,7 +154,6 @@ func SpawnStageSnapshots(
 		}
 		defer tx.Rollback()
 	}
-	log.Info("[dbg] FillDBFromSnapshots", "useExternalTx", useExternalTx, "s.CurrentSyncCycle.IsInitialCycle", s.CurrentSyncCycle.IsInitialCycle, "s.CurrentSyncCycle.First", s.CurrentSyncCycle.IsFirstCycle, "stack", dbg.Stack())
 
 	if err := DownloadAndIndexSnapshotsIfNeed(s, ctx, tx, cfg, logger); err != nil {
 		return err
@@ -180,7 +179,6 @@ func SpawnStageSnapshots(
 		}
 	}
 	if !useExternalTx {
-		log.Info("[dbg] FillDBFromSnapshots commit!")
 		if err := tx.Commit(); err != nil {
 			return err
 		}
@@ -375,7 +373,6 @@ func FillDBFromSnapshots(logPrefix string, ctx context.Context, tx kv.RwTx, dirs
 
 		case stages.Bodies:
 			firstTxNum := blockReader.FirstTxnNumNotInSnapshots()
-			log.Info("[dbg] FillDBFromSnapshots", "blockReader.FirstTxnNumNotInSnapshots()", firstTxNum)
 			// ResetSequence - allow set arbitrary value to sequence (for example to decrement it to exact value)
 			if err := rawdb.ResetSequence(tx, kv.EthTx, firstTxNum); err != nil {
 				return err
