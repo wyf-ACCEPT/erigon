@@ -110,7 +110,6 @@ func (txNums) Min(tx kv.Tx, blockNum uint64) (maxTxNum uint64, err error) {
 }
 
 func (txNums) Append(tx kv.RwTx, blockNum, maxTxNum uint64) (err error) {
-	log.Warn("[dbg] txNums.Append", "blockNum", blockNum, "maxTxNum", maxTxNum)
 	lastK, err := LastKey(tx, kv.MaxTxNum)
 	if err != nil {
 		return err
