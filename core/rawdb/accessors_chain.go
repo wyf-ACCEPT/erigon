@@ -377,7 +377,7 @@ func ReadBodyRLP(db kv.Tx, hash common.Hash, number uint64) rlp.RawValue {
 	return bodyRlp
 }
 
-// deprecated. use readBodyForStorage
+// Deprecated: use readBodyForStorage
 func ReadStorageBodyRLP(db kv.Getter, hash common.Hash, number uint64) rlp.RawValue {
 	bodyRlp, err := db.GetOne(kv.BlockBody, dbutils.BlockBodyKey(number, hash))
 	if err != nil {
@@ -1021,20 +1021,21 @@ func WriteBlock(db kv.RwTx, block *types.Block) error {
 // keeps genesis in db: [1, to)
 // doesn't change sequences of kv.EthTx and kv.NonCanonicalTxs
 // doesn't delete Receipts, Senders, Canonical markers, TotalDifficulty
-func PruneBlocks(tx kv.RwTx, blockTo uint64, blocksDeleteLimit int) error {
+// Returns false if there is nothing to prune
+func PruneBlocks(tx kv.RwTx, blockTo uint64, blocksDeleteLimit int) (deleted int, err error) {
 	c, err := tx.Cursor(kv.Headers)
 	if err != nil {
-		return err
+		return deleted, err
 	}
 	defer c.Close()
 
 	// find first non-genesis block
 	firstK, _, err := c.Seek(hexutility.EncodeTs(1))
 	if err != nil {
-		return err
+		return deleted, err
 	}
 	if firstK == nil { //nothing to delete
-		return err
+		return deleted, err
 	}
 	blockFrom := binary.BigEndian.Uint64(firstK)
 	stopAtBlock := min(blockTo, blockFrom+uint64(blocksDeleteLimit))
@@ -1043,7 +1044,7 @@ func PruneBlocks(tx kv.RwTx, blockTo uint64, blocksDeleteLimit int) error {
 
 	for k, _, err := c.Current(); k != nil; k, _, err = c.Next() {
 		if err != nil {
-			return err
+			return deleted, err
 		}
 
 		n := binary.BigEndian.Uint64(k)
@@ -1053,7 +1054,7 @@ func PruneBlocks(tx kv.RwTx, blockTo uint64, blocksDeleteLimit int) error {
 
 		b, err = ReadBodyForStorageByKey(tx, k)
 		if err != nil {
-			return err
+			return deleted, err
 		}
 		if b == nil {
 			log.Debug("PruneBlocks: block body not found", "height", n)
@@ -1062,7 +1063,7 @@ func PruneBlocks(tx kv.RwTx, blockTo uint64, blocksDeleteLimit int) error {
 			for txID := b.BaseTxId; txID < b.BaseTxId+uint64(b.TxAmount); txID++ {
 				binary.BigEndian.PutUint64(txIDBytes, txID)
 				if err = tx.Delete(kv.EthTx, txIDBytes); err != nil {
-					return err
+					return deleted, err
 				}
 			}
 		}
@@ -1070,17 +1071,19 @@ func PruneBlocks(tx kv.RwTx, blockTo uint64, blocksDeleteLimit int) error {
 		// for the next key and Delete below will end up deleting 1 more record than required
 		kCopy := common.Copy(k)
 		if err = tx.Delete(kv.Senders, kCopy); err != nil {
-			return err
+			return deleted, err
 		}
 		if err = tx.Delete(kv.BlockBody, kCopy); err != nil {
-			return err
+			return deleted, err
 		}
 		if err = tx.Delete(kv.Headers, kCopy); err != nil {
-			return err
+			return deleted, err
 		}
+
+		deleted++
 	}
 
-	return nil
+	return deleted, nil
 }
 
 func TruncateCanonicalChain(ctx context.Context, db kv.RwTx, from uint64) error {
