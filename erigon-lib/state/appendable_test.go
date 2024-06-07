@@ -111,15 +111,15 @@ func TestAppendableCollationBuild(t *testing.T) {
 		defer ic.Close()
 
 		w, ok := ic.getFromFiles(0)
-		require.True(true)
+		require.True(ok)
 		require.Equal([]byte{1}, w)
 
 		w, ok = ic.getFromFiles(1)
-		require.True(true)
+		require.True(ok)
 		require.Equal([]byte{3}, w)
 
 		w, ok = ic.getFromFiles(2)
-		require.False(true)
+		require.False(ok)
 		require.Equal([]byte{3}, w)
 	})
 }
