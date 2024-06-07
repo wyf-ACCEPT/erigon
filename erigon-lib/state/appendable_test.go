@@ -19,6 +19,8 @@ package state
 import (
 	"context"
 	"fmt"
+	"github.com/ledgerwatch/erigon-lib/kv/iter"
+	"go.uber.org/mock/gomock"
 	"math"
 	"os"
 	"testing"
@@ -48,7 +50,7 @@ func testDbAndAppendable(tb testing.TB, aggStep uint64, logger log.Logger) (kv.R
 	}).MustOpen()
 	tb.Cleanup(db.Close)
 	salt := uint32(1)
-	cfg := AppendableCfg{Salt: &salt, Dirs: dirs, DB: db, CanonicalMarkersTable: kv.HeaderCanonical, iters: newmock}
+	cfg := AppendableCfg{Salt: &salt, Dirs: dirs, DB: db, CanonicalMarkersTable: kv.HeaderCanonical}
 	ii, err := NewAppendable(cfg, aggStep, "receipt", table, nil, logger)
 	require.NoError(tb, err)
 	ii.DisableFsync()
@@ -63,72 +65,89 @@ func TestAppendableCollationBuild(t *testing.T) {
 	db, ii := testDbAndAppendable(t, aggStep, log.New())
 	ctx := context.Background()
 
-	//nonbuf api can see own writes
-	require := require.New(t)
+	t.Run("can see own writes", func(t *testing.T) {
 
-	tx, err := db.BeginRw(ctx)
-	require.NoError(err)
-	defer tx.Rollback()
-	ic := ii.BeginFilesRo()
-	defer ic.Close()
+		//nonbuf api can see own writes
+		require := require.New(t)
 
-	//step 0
-	err = ic.Put(1, []byte{1}, tx)
-	require.NoError(err)
-	err = ic.Put(2, []byte{2}, tx)
-	require.NoError(err)
+		tx, err := db.BeginRw(ctx)
+		require.NoError(err)
+		defer tx.Rollback()
+		ic := ii.BeginFilesRo()
+		defer ic.Close()
 
-	//step 1
-	err = ic.Put(aggStep+1, []byte{3}, tx)
-	require.NoError(err)
-	err = ic.Put(aggStep+2, []byte{4}, tx)
-	require.NoError(err)
+		//step 0
+		err = ic.Put(1, []byte{1}, tx)
+		require.NoError(err)
+		err = ic.Put(2, []byte{2}, tx)
+		require.NoError(err)
 
-	//can see own writes
-	v, ok, err := ic.Get(1, tx)
-	require.NoError(err)
-	require.True(ok)
-	require.Equal([]byte{1}, v)
-	//don't see non-existing forks
-	v, ok, err = ic.Get(2, tx)
-	require.NoError(err)
-	require.False(ok)
-	//can see existing forks
-	v, ok, err = ic.Get(3, tx)
-	require.NoError(err)
-	require.False(ok)
+		//step 1
+		err = ic.Put(aggStep+1, []byte{3}, tx)
+		require.NoError(err)
+		err = ic.Put(aggStep+2, []byte{4}, tx)
+		require.NoError(err)
 
-	err = tx.Commit()
-	require.NoError(err)
+		//can see own writes
+		v, ok, err := ic.Get(1, tx)
+		require.NoError(err)
+		require.True(ok)
+		require.Equal([]byte{1}, v)
 
-	//see only canonical records in files
-	roTx, err := db.BeginRo(ctx)
-	require.NoError(err)
-	defer roTx.Rollback()
+		v, ok, err = ic.Get(2, tx)
+		require.NoError(err)
+		require.True(ok)
+		require.Equal([]byte{2}, v)
 
-	bs, err := ii.collate(ctx, 0, roTx)
-	require.NoError(err)
+		//can see existing forks
+		v, ok, err = ic.Get(3, tx)
+		require.NoError(err)
+		require.False(ok)
 
-	sf, err := ii.buildFiles(ctx, 0, bs, background.NewProgressSet())
-	require.NoError(err)
-	defer sf.CleanupOnError()
-	g := sf.decomp.MakeGetter()
-	g.Reset(0)
-	require.Equal(1, sf.decomp.Count())
-	var words []string
-	for g.HasNext() {
-		w, _ := g.Next(nil)
-		words = append(words, string(w))
-	}
-	require.Equal([]string{"1"}, words)
-	r := recsplit.NewIndexReader(sf.index)
-	for i := 0; i < len(words); i++ {
-		offset, _ := r.TwoLayerLookup([]byte(words[i]))
-		g.Reset(offset)
-		w, _ := g.Next(nil)
-		require.Equal(t, words[i], string(w))
-	}
+		err = tx.Commit()
+		require.NoError(err)
 
+	})
+
+	t.Run("collate", func(t *testing.T) {
+		require := require.New(t)
+
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		iters := NewMockIterFactory(ctrl)
+		//see only canonical records in files
+		iters.EXPECT().TxnIdsOfCanonicalBlocks(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(iter.Array[uint64]([]uint64{1, aggStep + 1}), nil)
+
+		ii.cfg.iters = iters
+
+		roTx, err := db.BeginRo(ctx)
+		require.NoError(err)
+		defer roTx.Rollback()
+		bs, err := ii.collate(ctx, 0, roTx)
+		require.NoError(err)
+
+		sf, err := ii.buildFiles(ctx, 0, bs, background.NewProgressSet())
+		require.NoError(err)
+		defer sf.CleanupOnError()
+		g := sf.decomp.MakeGetter()
+		g.Reset(0)
+		require.Equal(2, sf.decomp.Count())
+		var words []string
+		for g.HasNext() {
+			w, _ := g.Next(nil)
+			words = append(words, string(w))
+		}
+		require.Equal([]string{string([]byte{1}), string([]byte{3})}, words)
+		r := recsplit.NewIndexReader(sf.index)
+		for i := 0; i < len(words); i++ {
+			offset := r.OrdinalLookup(0)
+			g.Reset(offset)
+			w, _ := g.Next(nil)
+			require.Equal(words[i], string(w))
+		}
+	})
 }
 
 func TestAppendableAfterPrune(t *testing.T) {
@@ -523,7 +542,7 @@ func TestAppendableKeysIterator(t *testing.T) {
 func emptyTestAppendable(aggStep uint64) *Appendable {
 	salt := uint32(1)
 	logger := log.New()
-	return &Appendable{appendableCfg: appendableCfg{salt: &salt, db: nil, canonicalMarkersTable: kv.HeaderCanonical},
+	return &Appendable{cfg: AppendableCfg{Salt: &salt, DB: nil, CanonicalMarkersTable: kv.HeaderCanonical},
 		logger:       logger,
 		filenameBase: "test", aggregationStep: aggStep, dirtyFiles: btree2.NewBTreeG[*filesItem](filesItemLess)}
 }

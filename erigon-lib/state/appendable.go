@@ -126,7 +126,7 @@ func (fk *Appendable) fkAccessorFilePath(fromStep, toStep uint64) string {
 	return filepath.Join(fk.cfg.Dirs.SnapAccessors, fmt.Sprintf("v1-%s.%d-%d.api", fk.filenameBase, fromStep, toStep))
 }
 func (fk *Appendable) fkFilePath(fromStep, toStep uint64) string {
-	return filepath.Join(fk.cfg.Dirs.SnapForkable, fmt.Sprintf("v1-%s.%d-%d.ap", fk.filenameBase, fromStep, toStep))
+	return filepath.Join(fk.cfg.Dirs.SnapHistory, fmt.Sprintf("v1-%s.%d-%d.ap", fk.filenameBase, fromStep, toStep))
 }
 
 func (fk *Appendable) fileNamesOnDisk() (idx, hist, domain []string, err error) {
@@ -227,7 +227,7 @@ func (fk *Appendable) buildIdx(ctx context.Context, fromStep, toStep uint64, d *
 	}
 	idxPath := fk.fkAccessorFilePath(fromStep, toStep)
 	cfg := recsplit.RecSplitArgs{
-		Enums: true,
+		Enums: false,
 
 		BucketSize: 2000,
 		LeafSize:   8,
@@ -810,14 +810,14 @@ func (tx *AppendableRoTx) DebugEFAllValuesAreInRange(ctx context.Context) error 
 	return nil
 }
 
-func (fk *Appendable) collate(ctx context.Context, step uint64, roTx kv.Tx) (ForkableCollation, error) {
+func (fk *Appendable) collate(ctx context.Context, step uint64, roTx kv.Tx) (AppendableCollation, error) {
 	stepTo := step + 1
 	txFrom, txTo := step*fk.aggregationStep, stepTo*fk.aggregationStep
 	start := time.Now()
 	defer mxCollateTookIndex.ObserveDuration(start)
 
 	var (
-		coll = ForkableCollation{
+		coll = AppendableCollation{
 			iiPath: fk.fkFilePath(step, stepTo),
 		}
 		closeComp bool
@@ -829,41 +829,36 @@ func (fk *Appendable) collate(ctx context.Context, step uint64, roTx kv.Tx) (For
 	}()
 	comp, err := seg.NewCompressor(ctx, "collate "+fk.filenameBase, coll.iiPath, fk.cfg.Dirs.Tmp, seg.MinPatternScore, fk.compressWorkers, log.LvlTrace, fk.logger)
 	if err != nil {
-		return ForkableCollation{}, fmt.Errorf("create %s compressor: %w", fk.filenameBase, err)
+		return AppendableCollation{}, fmt.Errorf("create %s compressor: %w", fk.filenameBase, err)
 	}
 	coll.writer = NewArchiveWriter(comp, fk.compression)
 
 	tx, err := fk.cfg.DB.BeginRo(ctx)
 	if err != nil {
-		return ForkableCollation{}, err
+		return AppendableCollation{}, err
 	}
 	defer tx.Rollback()
 
 	it, err := fk.cfg.iters.TxnIdsOfCanonicalBlocks(tx, int(txFrom), int(txTo), order.Asc, -1)
-	//from, to := hexutility.EncodeTs(txFrom), hexutility.EncodeTs(txTo)
-	//it, err := roTx.Range(fk.canonicalMarkersTable, from, to)
 	if err != nil {
-		return ForkableCollation{}, fmt.Errorf("collate %s: %w", fk.filenameBase, err)
+		return AppendableCollation{}, fmt.Errorf("collate %s: %w", fk.filenameBase, err)
 	}
 	defer it.Close()
 
-	key := make([]byte, 8+32)
 	for it.HasNext() {
-		k, v, err := it.Next()
+		k, err := it.Next()
 		if err != nil {
-			return ForkableCollation{}, fmt.Errorf("collate %s: %w", fk.filenameBase, err)
+			return AppendableCollation{}, fmt.Errorf("collate %s: %w", fk.filenameBase, err)
 		}
-		copy(key, k)
-		copy(key[8:], v)
-		v, ok, err := fk.getFromDB(k, roTx)
+		v, ok, err := fk.getFromDBByTs(k, roTx)
 		if err != nil {
-			return ForkableCollation{}, fmt.Errorf("collate %s: %w", fk.filenameBase, err)
+			return AppendableCollation{}, fmt.Errorf("collate %s: %w", fk.filenameBase, err)
 		}
 		if !ok {
 			continue
 		}
 		if err = coll.writer.AddWord(v); err != nil {
-			return ForkableCollation{}, fmt.Errorf("collate %s: %w", fk.filenameBase, err)
+			return AppendableCollation{}, fmt.Errorf("collate %s: %w", fk.filenameBase, err)
 		}
 	}
 
@@ -916,7 +911,7 @@ func (ic AppendableCollation) Close() {
 }
 
 // buildFiles - `step=N` means build file `[N:N+1)` which is equal to [N:N+1)
-func (fk *Appendable) buildFiles(ctx context.Context, step uint64, coll ForkableCollation, ps *background.ProgressSet) (ForkableFiles, error) {
+func (fk *Appendable) buildFiles(ctx context.Context, step uint64, coll AppendableCollation, ps *background.ProgressSet) (AppendableFiles, error) {
 	var (
 		decomp *seg.Decompressor
 		index  *recsplit.Index
@@ -947,28 +942,28 @@ func (fk *Appendable) buildFiles(ctx context.Context, step uint64, coll Forkable
 		p := ps.AddNew(path.Base(coll.iiPath), 1)
 		if err = coll.writer.Compress(); err != nil {
 			ps.Delete(p)
-			return ForkableFiles{}, fmt.Errorf("compress %s: %w", fk.filenameBase, err)
+			return AppendableFiles{}, fmt.Errorf("compress %s: %w", fk.filenameBase, err)
 		}
 		coll.Close()
 		ps.Delete(p)
 	}
 
 	if decomp, err = seg.NewDecompressor(coll.iiPath); err != nil {
-		return ForkableFiles{}, fmt.Errorf("open %s decompressor: %w", fk.filenameBase, err)
+		return AppendableFiles{}, fmt.Errorf("open %s decompressor: %w", fk.filenameBase, err)
 	}
 
 	if err := fk.buildIdx(ctx, step, step+1, decomp, ps); err != nil {
-		return ForkableFiles{}, fmt.Errorf("build %s efi: %w", fk.filenameBase, err)
+		return AppendableFiles{}, fmt.Errorf("build %s api: %w", fk.filenameBase, err)
 	}
 	if index, err = recsplit.OpenIndex(fk.fkAccessorFilePath(step, step+1)); err != nil {
-		return ForkableFiles{}, err
+		return AppendableFiles{}, err
 	}
 
 	closeComp = false
-	return ForkableFiles{decomp: decomp, index: index}, nil
+	return AppendableFiles{decomp: decomp, index: index}, nil
 }
 
-func (fk *Appendable) integrateDirtyFiles(sf ForkableFiles, txNumFrom, txNumTo uint64) {
+func (fk *Appendable) integrateDirtyFiles(sf AppendableFiles, txNumFrom, txNumTo uint64) {
 	fi := newFilesItem(txNumFrom, txNumTo, fk.aggregationStep)
 	fi.decompressor = sf.decomp
 	fi.index = sf.index
