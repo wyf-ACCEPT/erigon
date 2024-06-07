@@ -100,6 +100,7 @@ func TestAppendableCollationBuild(t *testing.T) {
 	//see only canonical records in files
 	iters.EXPECT().TxnIdsOfCanonicalBlocks(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(iter.Array[uint64]([]uint64{1, aggStep + 1}), nil)
+	ii.cfg.iters = iters
 
 	mergeAppendable(t, db, ii, txs)
 
