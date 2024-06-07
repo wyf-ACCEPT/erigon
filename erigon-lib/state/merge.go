@@ -534,6 +534,29 @@ func (tx *ForkableRoTx) staticFilesInRange(startTxNum, endTxNum uint64) ([]*file
 	return files, startJ
 }
 
+func (tx *AppendableRoTx) staticFilesInRange(startTxNum, endTxNum uint64) ([]*filesItem, int) {
+	files := make([]*filesItem, 0, len(tx.files))
+	var startJ int
+
+	for _, item := range tx.files {
+		if item.startTxNum < startTxNum {
+			startJ++
+			continue
+		}
+		if item.endTxNum > endTxNum {
+			break
+		}
+		files = append(files, item.src)
+	}
+	for _, f := range files {
+		if f == nil {
+			panic("must not happen")
+		}
+	}
+
+	return files, startJ
+}
+
 func (ht *HistoryRoTx) staticFilesInRange(r HistoryRanges) (indexFiles, historyFiles []*filesItem, err error) {
 	if !r.history && r.index {
 		indexFiles = ht.iit.staticFilesInRange(r.indexStartTxNum, r.indexEndTxNum)
