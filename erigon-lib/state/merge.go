@@ -339,6 +339,32 @@ func (tx *ForkableRoTx) findMergeRange(maxEndTxNum, maxSpan uint64) (bool, uint6
 	}
 	return minFound, startTxNum, endTxNum
 }
+func (tx *AppendableRoTx) findMergeRange(maxEndTxNum, maxSpan uint64) (bool, uint64, uint64) {
+	var minFound bool
+	var startTxNum, endTxNum uint64
+	for _, item := range tx.files {
+		if item.endTxNum > maxEndTxNum {
+			continue
+		}
+		endStep := item.endTxNum / tx.fk.aggregationStep
+		spanStep := endStep & -endStep // Extract rightmost bit in the binary representation of endStep, this corresponds to size of maximally possible merge ending at endStep
+		span := min(spanStep*tx.fk.aggregationStep, maxSpan)
+		start := item.endTxNum - span
+		foundSuperSet := startTxNum == item.startTxNum && item.endTxNum >= endTxNum
+		if foundSuperSet {
+			minFound = false
+			startTxNum = start
+			endTxNum = item.endTxNum
+		} else if start < item.startTxNum {
+			if !minFound || start < startTxNum {
+				minFound = true
+				startTxNum = start
+				endTxNum = item.endTxNum
+			}
+		}
+	}
+	return minFound, startTxNum, endTxNum
+}
 
 type HistoryRanges struct {
 	historyStartTxNum uint64
