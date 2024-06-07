@@ -1092,6 +1092,7 @@ func (tx *MdbxTx) Commit() error {
 		return fmt.Errorf("label: %s, %w", tx.db.opts.label, err)
 	}
 
+	_ = latency
 	if tx.db.opts.label == kv.ChainDB {
 		kv.DbCommitPreparation.Observe(latency.Preparation.Seconds())
 		//kv.DbCommitAudit.Update(latency.Audit.Seconds())

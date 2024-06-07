@@ -98,9 +98,9 @@ func (s *Sync) NextStage() {
 		return
 	}
 	s.currentStage++
-	isDiagEnabled := diagnostics.TypeOf(diagnostics.CurrentSyncStage{}).Enabled()
-	if isDiagEnabled {
-		diagnostics.Send(diagnostics.CurrentSyncStage{Stage: s.currentStage})
+
+	if s.currentStage < uint(len(s.stages)) {
+		diagnostics.Send(diagnostics.CurrentSyncStage{Stage: string(s.stages[s.currentStage].ID)})
 	}
 }
 
@@ -192,10 +192,8 @@ func (s *Sync) SetCurrentStage(id stages.SyncStage) error {
 	for i, stage := range s.stages {
 		if stage.ID == id {
 			s.currentStage = uint(i)
-			isDiagEnabled := diagnostics.TypeOf(diagnostics.CurrentSyncStage{}).Enabled()
-			if isDiagEnabled {
-				diagnostics.Send(diagnostics.CurrentSyncStage{Stage: s.currentStage})
-			}
+
+			diagnostics.Send(diagnostics.CurrentSyncStage{Stage: string(id)})
 
 			return nil
 		}
@@ -607,8 +605,10 @@ func (s *Sync) pruneStage(initialCycle bool, stage *Stage, db kv.RwDB, tx kv.RwT
 	}
 
 	took := time.Since(start)
-	if took > 10*time.Second {
+	if took > 30*time.Second {
 		s.logger.Info(fmt.Sprintf("[%s] Prune done", s.LogPrefix()), "in", took)
+	} else {
+		s.logger.Debug(fmt.Sprintf("[%s] Prune done", s.LogPrefix()), "in", took)
 	}
 	s.timings = append(s.timings, Timing{isPrune: true, stage: stage.ID, took: took})
 	return nil
