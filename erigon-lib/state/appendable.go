@@ -833,13 +833,7 @@ func (fk *Appendable) collate(ctx context.Context, step uint64, roTx kv.Tx) (App
 	}
 	coll.writer = NewArchiveWriter(comp, fk.compression)
 
-	tx, err := fk.cfg.DB.BeginRo(ctx)
-	if err != nil {
-		return AppendableCollation{}, err
-	}
-	defer tx.Rollback()
-
-	it, err := fk.cfg.iters.TxnIdsOfCanonicalBlocks(tx, int(txFrom), int(txTo), order.Asc, -1)
+	it, err := fk.cfg.iters.TxnIdsOfCanonicalBlocks(roTx, int(txFrom), int(txTo), order.Asc, -1)
 	if err != nil {
 		return AppendableCollation{}, fmt.Errorf("collate %s: %w", fk.filenameBase, err)
 	}
