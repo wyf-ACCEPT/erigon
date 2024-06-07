@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"github.com/ledgerwatch/erigon-lib/common/hexutility"
 	"github.com/ledgerwatch/erigon-lib/kv/iter"
+	"github.com/ledgerwatch/erigon-lib/kv/order"
 	"go.uber.org/mock/gomock"
 	"math"
 	"os"
@@ -101,8 +102,17 @@ func TestAppendableCollationBuild(t *testing.T) {
 	iters := NewMockIterFactory(ctrl)
 	//see only canonical records in files
 	iters.EXPECT().TxnIdsOfCanonicalBlocks(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-		AnyTimes().
-		Return(iter.Array[uint64]([]uint64{1, aggStep + 1}), nil)
+		DoAndReturn(func(tx kv.Tx, txFrom, txTo int, by order.By, i3 int) (iter.U64, error) {
+			var it iter.U64 = iter.EmptyU64
+			if txFrom == 0 {
+				it = iter.Array[uint64]([]uint64{1})
+			}
+			if txFrom == 16 {
+				it = iter.Array[uint64]([]uint64{aggStep + 1})
+			}
+			return it, nil
+		}).
+		AnyTimes()
 	ii.cfg.iters = iters
 
 	mergeAppendable(t, db, ii, txs)
@@ -335,6 +345,8 @@ func mergeAppendable(tb testing.TB, db kv.RwDB, ii *Appendable, txs uint64) {
 			require.NoError(tb, err)
 			sf, err := ii.buildFiles(ctx, step, bs, background.NewProgressSet())
 			require.NoError(tb, err)
+			fmt.Printf("build: %s, %d\n", sf.index.FileName(), sf.index.KeyCount())
+
 			ii.integrateDirtyFiles(sf, step*ii.aggregationStep, (step+1)*ii.aggregationStep)
 			ii.reCalcVisibleFiles()
 			ic := ii.BeginFilesRo()
@@ -357,6 +369,7 @@ func mergeAppendable(tb testing.TB, db kv.RwDB, ii *Appendable, txs uint64) {
 					outs, _ := ic.staticFilesInRange(startTxNum, endTxNum)
 					in, err := ic.mergeFiles(ctx, outs, startTxNum, endTxNum, background.NewProgressSet())
 					require.NoError(tb, err)
+					fmt.Printf("merge: %s, %d\n", in.index.FileName(), in.index.KeyCount())
 					ii.integrateMergedDirtyFiles(outs, in)
 					ii.reCalcVisibleFiles()
 					return false

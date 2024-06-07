@@ -853,8 +853,10 @@ func (fk *Appendable) collate(ctx context.Context, step uint64, roTx kv.Tx) (App
 			return AppendableCollation{}, fmt.Errorf("collate %s: %w", fk.filenameBase, err)
 		}
 		if !ok {
+			fmt.Printf("collate: %d, not found\n", k)
 			continue
 		}
+		fmt.Printf("collate: %d, %x\n", k, v)
 		if err = coll.writer.AddWord(v); err != nil {
 			return AppendableCollation{}, fmt.Errorf("collate %s: %w", fk.filenameBase, err)
 		}
