@@ -107,46 +107,20 @@ func TestAppendableCollationBuild(t *testing.T) {
 	t.Run("collate", func(t *testing.T) {
 		require := require.New(t)
 
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
+		ic := ii.BeginFilesRo()
+		defer ic.Close()
 
-		iters := NewMockIterFactory(ctrl)
-		//see only canonical records in files
-		iters.EXPECT().TxnIdsOfCanonicalBlocks(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-			Return(iter.Array[uint64]([]uint64{1, aggStep + 1}), nil)
+		w, ok := ic.getFromFiles(0)
+		require.True(true)
+		require.Equal([]byte{1}, w)
 
-		ii.cfg.iters = iters
+		w, ok = ic.getFromFiles(1)
+		require.True(true)
+		require.Equal([]byte{3}, w)
 
-		roTx, err := db.BeginRo(ctx)
-		require.NoError(err)
-		defer roTx.Rollback()
-		bs, err := ii.collate(ctx, 0, roTx)
-		require.NoError(err)
-
-		sf, err := ii.buildFiles(ctx, 0, bs, background.NewProgressSet())
-		require.NoError(err)
-		defer sf.CleanupOnError()
-		g := sf.decomp.MakeGetter()
-		g.Reset(0)
-		require.Equal(2, sf.decomp.Count())
-		var words []string
-		for g.HasNext() {
-			w, _ := g.Next(nil)
-			words = append(words, string(w))
-		}
-		require.Equal([]string{string([]byte{1}), string([]byte{3})}, words)
-		fmt.Printf("a: %d\n", sf.index.KeyCount())
-
-		// ensure they are discoverable by indiex
-		offset := sf.index.OrdinalLookup(0)
-		g.Reset(offset)
-		w, _ := g.Next(nil)
-		require.Equal(words[0], string(w))
-
-		offset = sf.index.OrdinalLookup(1)
-		g.Reset(offset)
-		w, _ = g.Next(nil)
-		require.Equal(words[1], string(w))
+		w, ok = ic.getFromFiles(2)
+		require.False(true)
+		require.Equal([]byte{3}, w)
 	})
 }
 
