@@ -18,7 +18,9 @@ package state
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
+	"github.com/ledgerwatch/erigon-lib/common/hexutility"
 	"github.com/ledgerwatch/erigon-lib/kv/iter"
 	"go.uber.org/mock/gomock"
 	"math"
@@ -78,15 +80,15 @@ func TestAppendableCollationBuild(t *testing.T) {
 		v, ok, err := ic.Get(1, tx)
 		require.NoError(err)
 		require.True(ok)
-		require.Equal([]byte{1}, v)
+		require.Equal(1, int(binary.BigEndian.Uint64(v)))
 
 		v, ok, err = ic.Get(2, tx)
 		require.NoError(err)
 		require.True(ok)
-		require.Equal([]byte{2}, v)
+		require.Equal(2, int(binary.BigEndian.Uint64(v)))
 
 		//can see existing forks
-		v, ok, err = ic.Get(3, tx)
+		v, ok, err = ic.Get(txs+1, tx)
 		require.NoError(err)
 		require.False(ok)
 
@@ -99,6 +101,7 @@ func TestAppendableCollationBuild(t *testing.T) {
 	iters := NewMockIterFactory(ctrl)
 	//see only canonical records in files
 	iters.EXPECT().TxnIdsOfCanonicalBlocks(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		AnyTimes().
 		Return(iter.Array[uint64]([]uint64{1, aggStep + 1}), nil)
 	ii.cfg.iters = iters
 
@@ -112,15 +115,14 @@ func TestAppendableCollationBuild(t *testing.T) {
 
 		w, ok := ic.getFromFiles(0)
 		require.True(ok)
-		require.Equal([]byte{1}, w)
+		require.Equal(1, int(binary.BigEndian.Uint64(w)))
 
 		w, ok = ic.getFromFiles(1)
 		require.True(ok)
-		require.Equal([]byte{3}, w)
+		require.Equal(3, int(binary.BigEndian.Uint64(w)))
 
 		w, ok = ic.getFromFiles(2)
 		require.False(ok)
-		require.Equal([]byte{3}, w)
 	})
 }
 
@@ -225,21 +227,10 @@ func filledAppendableOfSize(tb testing.TB, txs, aggStep uint64, logger log.Logge
 	ic := ii.BeginFilesRo()
 	defer ic.Close()
 
-	//step 0
-	err = ic.Put(1, []byte{1}, tx)
-	require.NoError(err)
-	err = ic.Put(2, []byte{2}, tx)
-	require.NoError(err)
-
-	//step 1
-	err = ic.Put(aggStep+1, []byte{3}, tx)
-	require.NoError(err)
-	err = ic.Put(aggStep+2, []byte{4}, tx)
-	require.NoError(err)
-
-	writer := ic.NewWriter()
-	defer writer.close()
-
+	for i := uint64(0); i < txs; i++ {
+		err = ic.Put(i, hexutility.EncodeTs(i), tx)
+		require.NoError(err)
+	}
 	err = tx.Commit()
 	require.NoError(err)
 	return db, ii, txs
