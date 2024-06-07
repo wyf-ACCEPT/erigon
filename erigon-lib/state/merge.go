@@ -1267,6 +1267,80 @@ func (tx *ForkableRoTx) mergeFiles(ctx context.Context, files []*filesItem, star
 	closeItem = false
 	return outItem, nil
 }
+func (tx *AppendableRoTx) mergeFiles(ctx context.Context, files []*filesItem, startTxNum, endTxNum uint64, ps *background.ProgressSet) (*filesItem, error) {
+	for _, h := range files {
+		defer h.decompressor.EnableReadAhead().DisableReadAhead()
+	}
+
+	var outItem *filesItem
+	var comp *seg.Compressor
+	var decomp *seg.Decompressor
+	var err error
+	var closeItem = true
+	defer func() {
+		if closeItem {
+			if comp != nil {
+				comp.Close()
+			}
+			if decomp != nil {
+				decomp.Close()
+			}
+			if outItem != nil {
+				outItem.closeFilesAndRemove()
+			}
+		}
+	}()
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+	fromStep, toStep := startTxNum/tx.fk.aggregationStep, endTxNum/tx.fk.aggregationStep
+
+	datPath := tx.fk.fkFilePath(fromStep, toStep)
+	if comp, err = seg.NewCompressor(ctx, "merge fk "+tx.fk.filenameBase, datPath, tx.fk.cfg.Dirs.Tmp, seg.MinPatternScore, tx.fk.compressWorkers, log.LvlTrace, tx.fk.logger); err != nil {
+		return nil, fmt.Errorf("merge %s inverted index compressor: %w", tx.fk.filenameBase, err)
+	}
+	defer comp.Close()
+	if tx.fk.noFsync {
+		comp.DisableFsync()
+	}
+	write := NewArchiveWriter(comp, tx.fk.compression)
+	defer write.Close()
+	p := ps.AddNew(path.Base(datPath), 1)
+	defer ps.Delete(p)
+
+	var word = make([]byte, 0, 4096)
+
+	for _, item := range files {
+		g := NewArchiveGetter(item.decompressor.MakeGetter(), tx.fk.compression)
+		g.Reset(0)
+		if g.HasNext() {
+			word, _ = g.Next(word[:0])
+			if err := write.AddWord(word); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	if err = write.Compress(); err != nil {
+		return nil, err
+	}
+
+	outItem = newFilesItem(startTxNum, endTxNum, tx.fk.aggregationStep)
+	if outItem.decompressor, err = seg.NewDecompressor(datPath); err != nil {
+		return nil, fmt.Errorf("merge %s decompressor [%d-%d]: %w", tx.fk.filenameBase, startTxNum, endTxNum, err)
+	}
+	ps.Delete(p)
+
+	if err := tx.fk.buildIdx(ctx, fromStep, toStep, outItem.decompressor, ps); err != nil {
+		return nil, fmt.Errorf("merge %s buildIndex [%d-%d]: %w", tx.fk.filenameBase, startTxNum, endTxNum, err)
+	}
+	if outItem.index, err = recsplit.OpenIndex(tx.fk.fkAccessorFilePath(fromStep, toStep)); err != nil {
+		return nil, err
+	}
+
+	closeItem = false
+	return outItem, nil
+}
 
 func (ii *InvertedIndex) integrateMergedDirtyFiles(outs []*filesItem, in *filesItem) {
 	if in != nil {
