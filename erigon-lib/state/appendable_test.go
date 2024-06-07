@@ -60,32 +60,19 @@ func testDbAndAppendable(tb testing.TB, aggStep uint64, logger log.Logger) (kv.R
 func TestAppendableCollationBuild(t *testing.T) {
 	logEvery := time.NewTicker(30 * time.Second)
 	defer logEvery.Stop()
-	aggStep := uint64(16)
-	db, ii := testDbAndAppendable(t, aggStep, log.New())
+	db, ii, txs := filledAppendable(t, log.New())
 	ctx := context.Background()
+	aggStep := uint64(16)
 
 	t.Run("can see own writes", func(t *testing.T) {
-
 		//nonbuf api can see own writes
 		require := require.New(t)
 
-		tx, err := db.BeginRw(ctx)
+		tx, err := db.BeginRo(ctx)
 		require.NoError(err)
 		defer tx.Rollback()
 		ic := ii.BeginFilesRo()
 		defer ic.Close()
-
-		//step 0
-		err = ic.Put(1, []byte{1}, tx)
-		require.NoError(err)
-		err = ic.Put(2, []byte{2}, tx)
-		require.NoError(err)
-
-		//step 1
-		err = ic.Put(aggStep+1, []byte{3}, tx)
-		require.NoError(err)
-		err = ic.Put(aggStep+2, []byte{4}, tx)
-		require.NoError(err)
 
 		//can see own writes
 		v, ok, err := ic.Get(1, tx)
@@ -105,8 +92,9 @@ func TestAppendableCollationBuild(t *testing.T) {
 
 		err = tx.Commit()
 		require.NoError(err)
-
 	})
+
+	mergeAppendable(t, db, ii, txs)
 
 	t.Run("collate", func(t *testing.T) {
 		require := require.New(t)
@@ -141,15 +129,16 @@ func TestAppendableCollationBuild(t *testing.T) {
 		require.Equal([]string{string([]byte{1}), string([]byte{3})}, words)
 		fmt.Printf("a: %d\n", sf.index.KeyCount())
 
-		offset := sf.index.OrdinalLookup(0 - 0)
+		// ensure they are discoverable by indiex
+		offset := sf.index.OrdinalLookup(0)
 		g.Reset(offset)
 		w, _ := g.Next(nil)
 		require.Equal(words[0], string(w))
 
-		offset = sf.index.OrdinalLookup(1 - 0)
+		offset = sf.index.OrdinalLookup(1)
 		g.Reset(offset)
 		w, _ = g.Next(nil)
-		require.Equal(words[0], string(w))
+		require.Equal(words[1], string(w))
 	})
 }
 
@@ -239,58 +228,42 @@ func TestAppendableAfterPrune(t *testing.T) {
 	require.Equal(t, float64(0), to)
 }
 
-func filledAppendable(tb testing.TB, logger log.Logger) (kv.RwDB, *Forkable, uint64) {
+func filledAppendable(tb testing.TB, logger log.Logger) (kv.RwDB, *Appendable, uint64) {
 	tb.Helper()
-	return filledForkableOfSize(tb, uint64(1000), 16, 31, logger)
+	return filledAppendableOfSize(tb, uint64(1000), 16, logger)
 }
 
-func filledAppendableOfSize(tb testing.TB, txs, aggStep, module uint64, logger log.Logger) (kv.RwDB, *Forkable, uint64) {
-	panic("implement me")
-	//tb.Helper()
-	//db, ii := testDbAndForkable(tb, aggStep, logger)
-	//ctx, require := context.Background(), require.New(tb)
-	//tx, err := db.BeginRw(ctx)
-	//require.NoError(err)
-	//defer tx.Rollback()
-	//ic := ii.BeginFilesRo()
-	//defer ic.Close()
-	//
-	//writer := ic.NewWriter()
-	//defer writer.close()
-	//
-	//var flusher flusher
-	//
-	//// keys are encodings of numbers 1..31
-	//// each key changes value on every txNum which is multiple of the key
-	//for txNum := uint64(1); txNum <= txs; txNum++ {
-	//	writer.SetTimeStamp(txNum)
-	//	for keyNum := uint64(1); keyNum <= module; keyNum++ {
-	//		if txNum%keyNum == 0 {
-	//			var k [8]byte
-	//			binary.BigEndian.PutUint64(k[:], keyNum)
-	//			err = writer.Add(k[:])
-	//			require.NoError(err)
-	//		}
-	//	}
-	//	if flusher != nil {
-	//		require.NoError(flusher.Flush(ctx, tx))
-	//	}
-	//	if txNum%10 == 0 {
-	//		flusher = writer
-	//		writer = ic.NewWriter()
-	//	}
-	//}
-	//if flusher != nil {
-	//	require.NoError(flusher.Flush(ctx, tx))
-	//}
-	//err = writer.Flush(ctx, tx)
-	//require.NoError(err)
-	//err = tx.Commit()
-	//require.NoError(err)
-	//return db, ii, txs
+func filledAppendableOfSize(tb testing.TB, txs, aggStep uint64, logger log.Logger) (kv.RwDB, *Appendable, uint64) {
+	tb.Helper()
+	db, ii := testDbAndAppendable(tb, aggStep, logger)
+	ctx, require := context.Background(), require.New(tb)
+	tx, err := db.BeginRw(ctx)
+	require.NoError(err)
+	defer tx.Rollback()
+	ic := ii.BeginFilesRo()
+	defer ic.Close()
+
+	//step 0
+	err = ic.Put(1, []byte{1}, tx)
+	require.NoError(err)
+	err = ic.Put(2, []byte{2}, tx)
+	require.NoError(err)
+
+	//step 1
+	err = ic.Put(aggStep+1, []byte{3}, tx)
+	require.NoError(err)
+	err = ic.Put(aggStep+2, []byte{4}, tx)
+	require.NoError(err)
+
+	writer := ic.NewWriter()
+	defer writer.close()
+
+	err = tx.Commit()
+	require.NoError(err)
+	return db, ii, txs
 }
 
-func checkRangesAppendable(t *testing.T, db kv.RwDB, ii *Forkable, txs uint64) {
+func checkRangesAppendable(t *testing.T, db kv.RwDB, ii *Appendable, txs uint64) {
 	//t.Helper()
 	//ctx := context.Background()
 	//ic := ii.BeginFilesRo()
@@ -371,7 +344,7 @@ func checkRangesAppendable(t *testing.T, db kv.RwDB, ii *Forkable, txs uint64) {
 	//}
 }
 
-func mergeAppendable(tb testing.TB, db kv.RwDB, ii *Forkable, txs uint64) {
+func mergeAppendable(tb testing.TB, db kv.RwDB, ii *Appendable, txs uint64) {
 	tb.Helper()
 	logEvery := time.NewTicker(30 * time.Second)
 	defer logEvery.Stop()
@@ -428,7 +401,7 @@ func TestAppendableRanges(t *testing.T) {
 	logger := log.New()
 	logEvery := time.NewTicker(30 * time.Second)
 	defer logEvery.Stop()
-	db, ii, txs := filledForkable(t, logger)
+	db, ii, txs := filledAppendable(t, logger)
 	ctx := context.Background()
 	tx, err := db.BeginRw(ctx)
 	require.NoError(t, err)
@@ -452,7 +425,7 @@ func TestAppendableRanges(t *testing.T) {
 	err = tx.Commit()
 	require.NoError(t, err)
 
-	checkRangesForkable(t, db, ii, txs)
+	checkRangesAppendable(t, db, ii, txs)
 }
 
 func TestAppendableMerge(t *testing.T) {
