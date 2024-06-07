@@ -30,7 +30,6 @@ import (
 	"github.com/ledgerwatch/erigon-lib/common/datadir"
 	"github.com/ledgerwatch/erigon-lib/kv"
 	"github.com/ledgerwatch/erigon-lib/kv/mdbx"
-	"github.com/ledgerwatch/erigon-lib/recsplit"
 	"github.com/ledgerwatch/erigon-lib/seg"
 	"github.com/ledgerwatch/log/v3"
 	"github.com/stretchr/testify/require"
@@ -140,13 +139,17 @@ func TestAppendableCollationBuild(t *testing.T) {
 			words = append(words, string(w))
 		}
 		require.Equal([]string{string([]byte{1}), string([]byte{3})}, words)
-		r := recsplit.NewIndexReader(sf.index)
-		for i := 0; i < len(words); i++ {
-			offset := r.OrdinalLookup(0)
-			g.Reset(offset)
-			w, _ := g.Next(nil)
-			require.Equal(words[i], string(w))
-		}
+		fmt.Printf("a: %d\n", sf.index.KeyCount())
+
+		offset := sf.index.OrdinalLookup(0 - 0)
+		g.Reset(offset)
+		w, _ := g.Next(nil)
+		require.Equal(words[0], string(w))
+
+		offset = sf.index.OrdinalLookup(1 - 0)
+		g.Reset(offset)
+		w, _ = g.Next(nil)
+		require.Equal(words[0], string(w))
 	})
 }
 

@@ -227,7 +227,7 @@ func (fk *Appendable) buildIdx(ctx context.Context, fromStep, toStep uint64, d *
 	}
 	idxPath := fk.fkAccessorFilePath(fromStep, toStep)
 	cfg := recsplit.RecSplitArgs{
-		Enums: false,
+		Enums: true,
 
 		BucketSize: 2000,
 		LeafSize:   8,
@@ -373,7 +373,7 @@ func (tx *AppendableRoTx) getFromFiles(ts uint64) (v []byte, ok bool) {
 		return nil, false
 	}
 
-	offset := tx.statelessIdxReader(i).OrdinalLookup(ts)
+	offset := tx.statelessIdxReader(i).OrdinalLookup(ts - tx.files[i].startTxNum)
 
 	g := tx.statelessGetter(i)
 	g.Reset(offset)
