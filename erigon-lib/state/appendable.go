@@ -34,7 +34,6 @@ import (
 	"github.com/ledgerwatch/erigon-lib/common/assert"
 	"github.com/ledgerwatch/erigon-lib/common/hexutility"
 	"github.com/ledgerwatch/erigon-lib/common/length"
-	"github.com/ledgerwatch/erigon-lib/kv/iter"
 	"github.com/ledgerwatch/erigon-lib/kv/order"
 	"github.com/ledgerwatch/erigon-lib/seg"
 	"github.com/ledgerwatch/log/v3"
@@ -50,15 +49,6 @@ import (
 	"github.com/ledgerwatch/erigon-lib/recsplit"
 	"github.com/ledgerwatch/erigon-lib/recsplit/eliasfano32"
 )
-
-//go:generate mockgen -typed=true -destination=./iter_factory_mock.go -package=direct . IterFactory
-type IterFactory interface {
-	// TxnIdsOfCanonicalBlocks - returns non-canonical txnIds of canonical block range
-	// [fromTxNum, toTxNum)
-	// To get all canonical blocks, use fromTxNum=0, toTxNum=-1
-	// For reverse iteration use order.Desc and fromTxNum=-1, toTxNum=-1
-	TxnIdsOfCanonicalBlocks(tx kv.Tx, fromTxNum, toTxNum int, asc order.By, limit int) (iter.U64, error)
-}
 
 // Appendable - data type allows store data for different blockchain forks.
 // - It assign new AutoIncrementID to each entity. Example: receipts, logs.
@@ -849,7 +839,7 @@ func (fk *Appendable) collate(ctx context.Context, step uint64, roTx kv.Tx) (For
 	}
 	defer tx.Rollback()
 
-	it, err := fk.cfg.iters.TxnIdsOfCanonicalBlocks(tx, txFrom, txTo, order.Asc, -1)
+	it, err := fk.cfg.iters.TxnIdsOfCanonicalBlocks(tx, int(txFrom), int(txTo), order.Asc, -1)
 	//from, to := hexutility.EncodeTs(txFrom), hexutility.EncodeTs(txTo)
 	//it, err := roTx.Range(fk.canonicalMarkersTable, from, to)
 	if err != nil {
