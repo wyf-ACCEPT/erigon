@@ -12,6 +12,13 @@ import (
 	"github.com/ledgerwatch/erigon-lib/kv/rawdbv3"
 )
 
+type IterFactory struct {
+}
+
+func (*IterFactory) TxnIdsOfCanonicalBlocks(tx kv.Tx, fromTxNum, toTxNum int, asc order.By, limit int) (iter.U64, error) {
+	return TxnIdsOfCanonicalBlocks(tx, fromTxNum, toTxNum, asc, limit)
+}
+
 type CanonicalTxnIds struct {
 	canonicalMarkers iter.KV
 	tx               kv.Tx

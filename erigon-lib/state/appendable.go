@@ -21,7 +21,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/ledgerwatch/erigon-lib/kv/iter"
 	"math"
 	"path"
 	"path/filepath"
@@ -35,6 +34,8 @@ import (
 	"github.com/ledgerwatch/erigon-lib/common/assert"
 	"github.com/ledgerwatch/erigon-lib/common/hexutility"
 	"github.com/ledgerwatch/erigon-lib/common/length"
+	"github.com/ledgerwatch/erigon-lib/kv/iter"
+	"github.com/ledgerwatch/erigon-lib/kv/order"
 	"github.com/ledgerwatch/erigon-lib/seg"
 	"github.com/ledgerwatch/log/v3"
 	"github.com/spaolacci/murmur3"
@@ -50,6 +51,15 @@ import (
 	"github.com/ledgerwatch/erigon-lib/recsplit/eliasfano32"
 )
 
+//go:generate mockgen -typed=true -destination=./iter_factory_mock.go -package=direct . IterFactory
+type IterFactory interface {
+	// TxnIdsOfCanonicalBlocks - returns non-canonical txnIds of canonical block range
+	// [fromTxNum, toTxNum)
+	// To get all canonical blocks, use fromTxNum=0, toTxNum=-1
+	// For reverse iteration use order.Desc and fromTxNum=-1, toTxNum=-1
+	TxnIdsOfCanonicalBlocks(tx kv.Tx, fromTxNum, toTxNum int, asc order.By, limit int) (iter.U64, error)
+}
+
 // Appendable - data type allows store data for different blockchain forks.
 // - It assign new AutoIncrementID to each entity. Example: receipts, logs.
 // - Each record key has `AutoIncrementID` format.
@@ -57,7 +67,7 @@ import (
 // - Only data which belongs to `canonical` block moving from DB to files.
 // - It doesn't need Unwind
 type Appendable struct {
-	appendableCfg
+	cfg AppendableCfg
 
 	// dirtyFiles - list of ALL files - including: un-indexed-yet, garbage, merged-into-bigger-one, ...
 	// thread-safe, but maybe need 1 RWLock for all trees in Aggregator
@@ -91,24 +101,22 @@ type Appendable struct {
 	indexList       idxList
 }
 
-type appendableCfg struct {
-	salt *uint32
-	dirs datadir.Dirs
-	db   kv.RoDB // global db pointer. mostly for background warmup.
+type AppendableCfg struct {
+	Salt *uint32
+	Dirs datadir.Dirs
+	DB   kv.RoDB // global db pointer. mostly for background warmup.
 
-	canonicalMarkersTable string
+	CanonicalMarkersTable string
 
-	// convert range of canonical ids to non-canonical ids.
-	// DB has and non-canonical and canonical records, this func allow read only canonical records by their non-canonical ID.
-	nonCanonicalTxs func(canonicalTxnFrom, canonicalTxnTo uint64) iter.U64
+	iters IterFactory
 }
 
-func NewAppendable(cfg appendableCfg, aggregationStep uint64, filenameBase, table string, integrityCheck func(fromStep uint64, toStep uint64) bool, logger log.Logger) (*Appendable, error) {
-	if cfg.dirs.SnapDomain == "" {
+func NewAppendable(cfg AppendableCfg, aggregationStep uint64, filenameBase, table string, integrityCheck func(fromStep uint64, toStep uint64) bool, logger log.Logger) (*Appendable, error) {
+	if cfg.Dirs.SnapDomain == "" {
 		panic("empty `dirs` varialbe")
 	}
 	fk := Appendable{
-		appendableCfg:   cfg,
+		cfg:             cfg,
 		dirtyFiles:      btree2.NewBTreeGOptions[*filesItem](filesItemLess, btree2.Options{Degree: 128, NoLocks: false}),
 		aggregationStep: aggregationStep,
 		filenameBase:    filenameBase,
@@ -125,22 +133,22 @@ func NewAppendable(cfg appendableCfg, aggregationStep uint64, filenameBase, tabl
 }
 
 func (fk *Appendable) fkAccessorFilePath(fromStep, toStep uint64) string {
-	return filepath.Join(fk.dirs.SnapAccessors, fmt.Sprintf("v1-%s.%d-%d.api", fk.filenameBase, fromStep, toStep))
+	return filepath.Join(fk.cfg.Dirs.SnapAccessors, fmt.Sprintf("v1-%s.%d-%d.api", fk.filenameBase, fromStep, toStep))
 }
 func (fk *Appendable) fkFilePath(fromStep, toStep uint64) string {
-	return filepath.Join(fk.dirs.SnapForkable, fmt.Sprintf("v1-%s.%d-%d.ap", fk.filenameBase, fromStep, toStep))
+	return filepath.Join(fk.cfg.Dirs.SnapForkable, fmt.Sprintf("v1-%s.%d-%d.ap", fk.filenameBase, fromStep, toStep))
 }
 
 func (fk *Appendable) fileNamesOnDisk() (idx, hist, domain []string, err error) {
-	idx, err = filesFromDir(fk.dirs.SnapIdx)
+	idx, err = filesFromDir(fk.cfg.Dirs.SnapIdx)
 	if err != nil {
 		return
 	}
-	hist, err = filesFromDir(fk.dirs.SnapHistory)
+	hist, err = filesFromDir(fk.cfg.Dirs.SnapHistory)
 	if err != nil {
 		return
 	}
-	domain, err = filesFromDir(fk.dirs.SnapDomain)
+	domain, err = filesFromDir(fk.cfg.Dirs.SnapDomain)
 	if err != nil {
 		return
 	}
@@ -233,9 +241,9 @@ func (fk *Appendable) buildIdx(ctx context.Context, fromStep, toStep uint64, d *
 
 		BucketSize: 2000,
 		LeafSize:   8,
-		TmpDir:     fk.dirs.Tmp,
+		TmpDir:     fk.cfg.Dirs.Tmp,
 		IndexFile:  idxPath,
-		Salt:       fk.salt,
+		Salt:       fk.cfg.Salt,
 		NoFsync:    fk.noFsync,
 
 		KeyCount: d.Count(),
@@ -422,7 +430,7 @@ func (w *appendableBufferedWriter) Add(blockNum uint64, blockHash common.Hash, v
 }
 
 func (tx *AppendableRoTx) NewWriter() *appendableBufferedWriter {
-	return tx.newWriter(tx.fk.dirs.Tmp, false)
+	return tx.newWriter(tx.fk.cfg.Dirs.Tmp, false)
 }
 
 type appendableBufferedWriter struct {
@@ -530,7 +538,7 @@ type AppendableRoTx struct {
 
 func (tx *AppendableRoTx) statelessHasher() murmur3.Hash128 {
 	if tx._hasher == nil {
-		tx._hasher = murmur3.New128WithSeed(*tx.fk.salt)
+		tx._hasher = murmur3.New128WithSeed(*tx.fk.cfg.Salt)
 	}
 	return tx._hasher
 }
@@ -676,7 +684,7 @@ func (tx *AppendableRoTx) Prune(ctx context.Context, rwTx kv.RwTx, txFrom, txTo,
 	}
 	indexWithValues := idxValuesCount != 0 || fn != nil
 
-	collector := etl.NewCollector("snapshots", ii.dirs.Tmp, etl.NewSortableBuffer(etl.BufferOptimalSize/8), ii.logger)
+	collector := etl.NewCollector("snapshots", ii.cfg.Dirs.Tmp, etl.NewSortableBuffer(etl.BufferOptimalSize/8), ii.logger)
 	defer collector.Close()
 	collector.LogLvl(log.LvlDebug)
 	collector.SortAndFlushInBackground(true)
@@ -829,13 +837,19 @@ func (fk *Appendable) collate(ctx context.Context, step uint64, roTx kv.Tx) (For
 			coll.Close()
 		}
 	}()
-	comp, err := seg.NewCompressor(ctx, "collate "+fk.filenameBase, coll.iiPath, fk.dirs.Tmp, seg.MinPatternScore, fk.compressWorkers, log.LvlTrace, fk.logger)
+	comp, err := seg.NewCompressor(ctx, "collate "+fk.filenameBase, coll.iiPath, fk.cfg.Dirs.Tmp, seg.MinPatternScore, fk.compressWorkers, log.LvlTrace, fk.logger)
 	if err != nil {
 		return ForkableCollation{}, fmt.Errorf("create %s compressor: %w", fk.filenameBase, err)
 	}
 	coll.writer = NewArchiveWriter(comp, fk.compression)
 
-	it, err := fk.appendableCfg.nonCanonicalTxs(txFrom, txTo)
+	tx, err := fk.cfg.DB.BeginRo(ctx)
+	if err != nil {
+		return ForkableCollation{}, err
+	}
+	defer tx.Rollback()
+
+	it, err := fk.cfg.iters.TxnIdsOfCanonicalBlocks(tx, txFrom, txTo, order.Asc, -1)
 	//from, to := hexutility.EncodeTs(txFrom), hexutility.EncodeTs(txTo)
 	//it, err := roTx.Range(fk.canonicalMarkersTable, from, to)
 	if err != nil {
