@@ -191,6 +191,9 @@ func StageLoopIteration(ctx context.Context, db kv.RwDB, txc wrap.TxContainer, s
 	if firstCycle {
 		canRunCycleInOneTransaction = false
 	}
+	if dbg.CommitEachStage {
+		canRunCycleInOneTransaction = false
+	}
 
 	// Main steps:
 	// - process new blocks
