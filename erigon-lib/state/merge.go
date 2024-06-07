@@ -1403,6 +1403,36 @@ func (fk *Forkable) integrateMergedDirtyFiles(outs []*filesItem, in *filesItem) 
 		out.canDelete.Store(true)
 	}
 }
+func (fk *Appendable) integrateMergedDirtyFiles(outs []*filesItem, in *filesItem) {
+	if in != nil {
+		fk.dirtyFiles.Set(in)
+
+		// `kill -9` may leave some garbage
+		// but it still may be useful for merges, until we finish merge frozen file
+		if in.frozen {
+			fk.dirtyFiles.Walk(func(items []*filesItem) bool {
+				for _, item := range items {
+					if item.frozen || item.endTxNum > in.endTxNum {
+						continue
+					}
+					outs = append(outs, item)
+				}
+				return true
+			})
+		}
+	}
+	for _, out := range outs {
+		if out == nil {
+			panic("must not happen: " + fk.filenameBase)
+		}
+		fk.dirtyFiles.Delete(out)
+
+		if fk.filenameBase == traceFileLife {
+			fk.logger.Warn(fmt.Sprintf("[agg] mark can delete: %s, triggered by merge of: %s", out.decompressor.FileName(), in.decompressor.FileName()))
+		}
+		out.canDelete.Store(true)
+	}
+}
 
 func (h *History) integrateMergedFiles(indexOuts, historyOuts []*filesItem, indexIn, historyIn *filesItem) {
 	h.InvertedIndex.integrateMergedDirtyFiles(indexOuts, indexIn)
