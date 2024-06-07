@@ -166,7 +166,6 @@ var DefaultFlags = []cli.Flag{
 	&utils.CaplinDiscoveryPortFlag,
 	&utils.CaplinDiscoveryTCPPortFlag,
 	&utils.CaplinCheckpointSyncUrlFlag,
-	&utils.CaplinMevRelayUrl,
 	&utils.SentinelAddrFlag,
 	&utils.SentinelPortFlag,
 
@@ -199,6 +198,7 @@ var DefaultFlags = []cli.Flag{
 	&utils.CaplinBlobBackfillingFlag,
 	&utils.CaplinDisableBlobPruningFlag,
 	&utils.CaplinArchiveFlag,
+	&utils.CaplinMevRelayUrl,
 
 	&utils.TrustedSetupFile,
 	&utils.RPCSlowFlag,
