@@ -93,6 +93,13 @@ func TestAppendableCollationBuild(t *testing.T) {
 		err = tx.Commit()
 		require.NoError(err)
 	})
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	iters := NewMockIterFactory(ctrl)
+	//see only canonical records in files
+	iters.EXPECT().TxnIdsOfCanonicalBlocks(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(iter.Array[uint64]([]uint64{1, aggStep + 1}), nil)
 
 	mergeAppendable(t, db, ii, txs)
 
