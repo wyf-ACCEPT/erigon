@@ -218,6 +218,43 @@ func (rs *StateV3) ApplyLogsAndTraces4(txTask *TxTask, domains *libstate.SharedD
 			}
 		}
 	}
+
+	if txTask.TxNum == 0 {
+		var empty [16]byte
+		if err := domains.DomainPut(kv.ReceiptFillerDomain, kv.ReceiptFillerKey, nil, empty[:], nil, 0); err != nil {
+			return err
+		}
+	} else {
+		cumGasUsed := uint64(0)
+		logIdx := uint64(0)
+
+		// -1 == system tx; also reset accumulators at the beginning of the block
+		if txTask.TxIndex >= 0 {
+			v, _, err := domains.DomainGet(kv.ReceiptFillerDomain, kv.ReceiptFillerKey, nil)
+			if err != nil {
+				return err
+			}
+			if v != nil {
+				cumGasUsed = binary.BigEndian.Uint64(v[:8])
+				cumGasUsed += txTask.UsedGas
+				logIdx = binary.BigEndian.Uint64(v[8:16])
+				logIdx += uint64(len(txTask.Logs))
+			}
+		}
+
+		var v [16]byte
+		binary.BigEndian.PutUint64(v[0:], cumGasUsed)
+		binary.BigEndian.PutUint64(v[8:], logIdx)
+		if err := domains.DomainPut(kv.ReceiptFillerDomain, kv.ReceiptFillerKey, nil, v[:], nil, 0); err != nil {
+			return err
+		}
+
+		// if len(txTask.Logs) == 0 {
+		// 	log.Info("****** APPLY", "blockNum", txTask.BlockNum, "txNum", txTask.TxNum, "txIdx", txTask.TxIndex, "usedGas", txTask.UsedGas, "newCumGasUsed", cumGasUsed, "newLogIdx", logIdx)
+		// } else {
+		// 	log.Info("****** APPLY", "blockNum", txTask.BlockNum, "txNum", txTask.TxNum, "txIdx", txTask.TxIndex, "usedGas", txTask.UsedGas, "lastLogIdx", txTask.Logs[len(txTask.Logs)-1].Index, "newCumGasUsed", cumGasUsed, "newLogIdx", logIdx)
+		// }
+	}
 	return nil
 }
 

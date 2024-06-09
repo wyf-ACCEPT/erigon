@@ -2,6 +2,7 @@ package jsonrpc
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
 
 	"github.com/RoaringBitmap/roaring"
@@ -27,6 +28,82 @@ import (
 	"github.com/ledgerwatch/erigon/turbo/rpchelper"
 	"github.com/ledgerwatch/erigon/turbo/transactions"
 )
+
+// Calculate the receipt for 1 tx. It takes advantage of e3 per tx granularity to not replay the
+// entire block; if you need receipts for multiple txs, this function may not be the best approach.
+func (api *BaseAPI) getReceipt(ctx context.Context, tx kv.Tx, block *types.Block, txnIndex uint64) (*types.Receipt, error) {
+	// if receipts, ok := api.receiptsCache.Get(block.Hash()); ok {
+	// 	return receipts, nil
+	// }
+
+	// if receipts := rawdb.ReadReceipts(tx, block, senders); receipts != nil {
+	// 	api.receiptsCache.Add(block.Hash(), receipts)
+	// 	return receipts, nil
+	// }
+
+	engine := api.engine()
+	chainConfig, err := api.chainConfig(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
+
+	_, _, _, ibs, _, err := transactions.ComputeTxEnv(ctx, engine, block, chainConfig, api._blockReader, tx, int(txnIndex))
+	if err != nil {
+		return nil, err
+	}
+
+	// usedGas := new(uint64)
+	usedBlobGas := new(uint64)
+	gp := new(core.GasPool).AddGas(block.GasLimit()).AddBlobGas(chainConfig.GetMaxBlobGasPerBlock())
+
+	noopWriter := state.NewNoopWriter()
+
+	// receipts := make(types.Receipts, len(block.Transactions()))
+
+	getHeader := func(hash common.Hash, number uint64) *types.Header {
+		h, e := api._blockReader.Header(ctx, tx, hash, number)
+		if e != nil {
+			log.Error("getHeader error", "number", number, "hash", hash, "err", e)
+		}
+		return h
+	}
+	header := block.Header()
+	txn := block.Transactions()[txnIndex]
+	// for i, txn := range block.Transactions() {
+	ibs.SetTxContext(txn.Hash(), block.Hash(), int(txnIndex))
+
+	ttx := tx.(kv.TemporalTx)
+	txNum, err := rawdbv3.TxNums.Min(tx, block.NumberU64())
+	if err != nil {
+		return nil, err
+	}
+	txNum += 1 + txnIndex
+	v, ok, err := ttx.DomainGetAsOf(kv.ReceiptFillerDomain, kv.ReceiptFillerKey, nil, txNum)
+	if err != nil {
+		return nil, err
+	}
+	cumGasUsed := uint64(0)
+	cumLogIndex := uint64(0)
+	if ok {
+		cumGasUsed = binary.BigEndian.Uint64(v[:8])
+		cumLogIndex = binary.BigEndian.Uint64(v[8:16])
+	}
+
+	receipt, _, err := core.ApplyTransaction(chainConfig, core.GetHashFn(header, getHeader), engine, nil, gp, ibs, noopWriter, header, txn, &cumGasUsed, usedBlobGas, vm.Config{})
+	if err != nil {
+		return nil, err
+	}
+	receipt.BlockHash = block.Hash()
+	for _, l := range receipt.Logs {
+		l.Index = uint(cumLogIndex)
+		cumLogIndex++
+	}
+	// receipts[i] = receipt
+	// }
+
+	// api.receiptsCache.Add(block.Hash(), receipts)
+	return receipt, nil
+}
 
 // getReceipts - checking in-mem cache, or else fallback to db, or else fallback to re-exec of block to re-gen receipts
 func (api *BaseAPI) getReceipts(ctx context.Context, tx kv.Tx, block *types.Block, senders []common.Address) (types.Receipts, error) {
@@ -492,27 +569,29 @@ func (api *APIImpl) GetTransactionReceipt(ctx context.Context, txnHash common.Ha
 			borTx = bortypes.NewBorTransaction()
 		}
 	}
-	receipts, err := api.getReceipts(ctx, tx, block, block.Body().SendersFromTxs())
+	receipt, err := api.getReceipt(ctx, tx, block, txnIndex)
+	// receipts, err := api.getReceipts(ctx, tx, block, block.Body().SendersFromTxs())
 	if err != nil {
 		return nil, fmt.Errorf("getReceipts error: %w", err)
 	}
 
-	if txn == nil && cc.Bor != nil {
-		borReceipt, err := rawdb.ReadBorReceipt(tx, block.Hash(), blockNum, receipts)
-		if err != nil {
-			return nil, err
-		}
-		if borReceipt == nil {
-			return nil, nil
-		}
-		return ethutils.MarshalReceipt(borReceipt, borTx, cc, block.HeaderNoCopy(), txnHash, false), nil
-	}
+	// TODO: restore bor receipt functionality
+	// if txn == nil && cc.Bor != nil {
+	// 	borReceipt, err := rawdb.ReadBorReceipt(tx, block.Hash(), blockNum, receipts)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// 	if borReceipt == nil {
+	// 		return nil, nil
+	// 	}
+	// 	return ethutils.MarshalReceipt(borReceipt, borTx, cc, block.HeaderNoCopy(), txnHash, false), nil
+	// }
 
-	if len(receipts) <= int(txnIndex) {
-		return nil, fmt.Errorf("block has less receipts than expected: %d <= %d, block: %d", len(receipts), int(txnIndex), blockNum)
-	}
+	// if len(receipts) <= int(txnIndex) {
+	// 	return nil, fmt.Errorf("block has less receipts than expected: %d <= %d, block: %d", len(receipts), int(txnIndex), blockNum)
+	// }
 
-	return ethutils.MarshalReceipt(receipts[txnIndex], block.Transactions()[txnIndex], cc, block.HeaderNoCopy(), txnHash, true), nil
+	return ethutils.MarshalReceipt(receipt, block.Transactions()[txnIndex], cc, block.HeaderNoCopy(), txnHash, true), nil
 }
 
 // GetBlockReceipts - receipts for individual block

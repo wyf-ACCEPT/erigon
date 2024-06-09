@@ -10,10 +10,11 @@ const (
 	// Tbl<identifier>Vals
 	// Tbl<identifier>HistoryKeys
 	// Tbl<identifier>HistoryVals
-	FileAccountDomain    = "accounts"
-	FileStorageDomain    = "storage"
-	FileCodeDomain       = "code"
-	FileCommitmentDomain = "commitment"
+	FileAccountDomain       = "accounts"
+	FileStorageDomain       = "storage"
+	FileCodeDomain          = "code"
+	FileCommitmentDomain    = "commitment"
+	FileReceiptFillerDomain = "receiptfiller"
 
 	// Inverted indexes: File<identifier>Idx constant used
 	// as part of the filenames in the /snapshots/idx dir.

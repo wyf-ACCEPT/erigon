@@ -21,6 +21,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/ledgerwatch/erigon-lib/common/hexutility"
 	types "github.com/ledgerwatch/erigon-lib/gointerfaces/typesproto"
 )
 
@@ -400,11 +401,11 @@ const (
 	TblCommitmentHistoryVals = "CommitmentHistoryVals"
 	TblCommitmentIdx         = "CommitmentIdx"
 
-	//TblGasUsedKeys        = "GasUsedKeys"
-	//TblGasUsedVals        = "GasUsedVals"
-	//TblGasUsedHistoryKeys = "GasUsedHistoryKeys"
-	//TblGasUsedHistoryVals = "GasUsedHistoryVals"
-	//TblGasUsedIdx         = "GasUsedIdx"
+	TblReceiptFillerKeys        = "ReceiptFillerKeys"
+	TblReceiptFillerVals        = "ReceiptFillerVals"
+	TblReceiptFillerHistoryKeys = "ReceiptFillerHistoryKeys"
+	TblReceiptFillerHistoryVals = "ReceiptFillerHistoryVals"
+	TblReceiptFillerIdx         = "ReceiptFillerIdx"
 
 	TblLogAddressKeys = "LogAddressKeys"
 	TblLogAddressIdx  = "LogAddressIdx"
@@ -647,11 +648,11 @@ var ChaindataTables = []string{
 	TblCommitmentHistoryVals,
 	TblCommitmentIdx,
 
-	//TblGasUsedKeys,
-	//TblGasUsedVals,
-	//TblGasUsedHistoryKeys,
-	//TblGasUsedHistoryVals,
-	//TblGasUsedIdx,
+	TblReceiptFillerKeys,
+	TblReceiptFillerVals,
+	TblReceiptFillerHistoryKeys,
+	TblReceiptFillerHistoryVals,
+	TblReceiptFillerIdx,
 
 	TblLogAddressKeys,
 	TblLogAddressIdx,
@@ -813,34 +814,34 @@ var ChaindataTablesCfg = TableCfg{
 	},
 	CallTraceSet: {Flags: DupSort},
 
-	TblAccountKeys:           {Flags: DupSort},
-	TblAccountHistoryKeys:    {Flags: DupSort},
-	TblAccountHistoryVals:    {Flags: DupSort},
-	TblAccountIdx:            {Flags: DupSort},
-	TblStorageKeys:           {Flags: DupSort},
-	TblStorageHistoryKeys:    {Flags: DupSort},
-	TblStorageHistoryVals:    {Flags: DupSort},
-	TblStorageIdx:            {Flags: DupSort},
-	TblCodeKeys:              {Flags: DupSort},
-	TblCodeHistoryKeys:       {Flags: DupSort},
-	TblCodeIdx:               {Flags: DupSort},
-	TblCommitmentKeys:        {Flags: DupSort},
-	TblCommitmentHistoryKeys: {Flags: DupSort},
-	TblCommitmentHistoryVals: {Flags: DupSort},
-	TblCommitmentIdx:         {Flags: DupSort},
-	//TblGasUsedKeys:           {Flags: DupSort},
-	//TblGasUsedHistoryKeys:    {Flags: DupSort},
-	//TblGasUsedHistoryVals:    {Flags: DupSort},
-	//TblGasUsedIdx:            {Flags: DupSort},
-	TblLogAddressKeys:  {Flags: DupSort},
-	TblLogAddressIdx:   {Flags: DupSort},
-	TblLogTopicsKeys:   {Flags: DupSort},
-	TblLogTopicsIdx:    {Flags: DupSort},
-	TblTracesFromKeys:  {Flags: DupSort},
-	TblTracesFromIdx:   {Flags: DupSort},
-	TblTracesToKeys:    {Flags: DupSort},
-	TblTracesToIdx:     {Flags: DupSort},
-	TblPruningProgress: {Flags: DupSort},
+	TblAccountKeys:              {Flags: DupSort},
+	TblAccountHistoryKeys:       {Flags: DupSort},
+	TblAccountHistoryVals:       {Flags: DupSort},
+	TblAccountIdx:               {Flags: DupSort},
+	TblStorageKeys:              {Flags: DupSort},
+	TblStorageHistoryKeys:       {Flags: DupSort},
+	TblStorageHistoryVals:       {Flags: DupSort},
+	TblStorageIdx:               {Flags: DupSort},
+	TblCodeKeys:                 {Flags: DupSort},
+	TblCodeHistoryKeys:          {Flags: DupSort},
+	TblCodeIdx:                  {Flags: DupSort},
+	TblCommitmentKeys:           {Flags: DupSort},
+	TblCommitmentHistoryKeys:    {Flags: DupSort},
+	TblCommitmentHistoryVals:    {Flags: DupSort},
+	TblCommitmentIdx:            {Flags: DupSort},
+	TblReceiptFillerKeys:        {Flags: DupSort},
+	TblReceiptFillerHistoryKeys: {Flags: DupSort},
+	TblReceiptFillerHistoryVals: {Flags: DupSort},
+	TblReceiptFillerIdx:         {Flags: DupSort},
+	TblLogAddressKeys:           {Flags: DupSort},
+	TblLogAddressIdx:            {Flags: DupSort},
+	TblLogTopicsKeys:            {Flags: DupSort},
+	TblLogTopicsIdx:             {Flags: DupSort},
+	TblTracesFromKeys:           {Flags: DupSort},
+	TblTracesFromIdx:            {Flags: DupSort},
+	TblTracesToKeys:             {Flags: DupSort},
+	TblTracesToIdx:              {Flags: DupSort},
+	TblPruningProgress:          {Flags: DupSort},
 
 	RAccountKeys: {Flags: DupSort},
 	RAccountIdx:  {Flags: DupSort},
@@ -958,21 +959,25 @@ func reinit() {
 // Temporal
 
 const (
-	AccountsDomain   Domain = 0
-	StorageDomain    Domain = 1
-	CodeDomain       Domain = 2
-	CommitmentDomain Domain = 3
-	//GasUsedDomain    Domain = 4
+	AccountsDomain      Domain = 0
+	StorageDomain       Domain = 1
+	CodeDomain          Domain = 2
+	CommitmentDomain    Domain = 3
+	ReceiptFillerDomain Domain = 4
 
-	DomainLen Domain = 4
+	DomainLen Domain = 5
 )
 
+// Singleton key for receipt filler domain; it is 1 byte on purpose to
+// avoid taking much space on history
+var ReceiptFillerKey = hexutility.MustDecodeHex("a")
+
 const (
-	AccountsHistory   History = "AccountsHistory"
-	StorageHistory    History = "StorageHistory"
-	CodeHistory       History = "CodeHistory"
-	CommitmentHistory History = "CommitmentHistory"
-	//GasUsedHistory    History = "GasUsedHistory"
+	AccountsHistory      History = "AccountsHistory"
+	StorageHistory       History = "StorageHistory"
+	CodeHistory          History = "CodeHistory"
+	CommitmentHistory    History = "CommitmentHistory"
+	ReceiptFillerHistory History = "ReceiptFillerHistory"
 )
 
 const (
@@ -1019,8 +1024,8 @@ func (d Domain) String() string {
 		return "code"
 	case CommitmentDomain:
 		return "commitment"
-	//case GasUsedDomain:
-	//	return "gasused"
+	case ReceiptFillerDomain:
+		return "receiptfiller"
 	default:
 		return "unknown domain"
 	}
@@ -1036,8 +1041,8 @@ func String2Domain(in string) (Domain, error) {
 		return CodeDomain, nil
 	case "commitment":
 		return CommitmentDomain, nil
-	//case "gasused":
-	//	return GasUsedDomain, nil
+	case "receiptfiller":
+		return ReceiptFillerDomain, nil
 	default:
 		return 0, fmt.Errorf("unknown history name: %s", in)
 	}
