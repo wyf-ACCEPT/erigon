@@ -525,6 +525,9 @@ func (w *historyBufferedWriter) close() {
 }
 
 func (ht *HistoryRoTx) newWriter(tmpdir string, discard bool) *historyBufferedWriter {
+	if ht.h.filenameBase == kv.CommitmentDomain.String() && !discard {
+		panic(1)
+	}
 	w := &historyBufferedWriter{
 		discard: discard,
 
