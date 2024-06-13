@@ -22,6 +22,7 @@ type PlainStateReader struct {
 }
 
 func NewPlainStateReader(db kv.Getter) *PlainStateReader {
+	panic("Outdated reader. This panic used to refactor e3 code and remove it from it.")
 	return &PlainStateReader{
 		db: db,
 	}
