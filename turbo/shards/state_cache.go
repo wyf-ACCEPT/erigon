@@ -155,17 +155,11 @@ func (r *StorageSeek) Less(than btree.Item) bool {
 		if c != 0 {
 			return c < 0
 		}
-		if r.incarnation < i.incarnation {
-			return true
-		}
 		return bytes.Compare(r.seek, i.locHash.Bytes()) < 0
 	case *StorageWriteItem:
 		c := bytes.Compare(r.addrHash.Bytes(), i.si.addrHash.Bytes())
 		if c != 0 {
 			return c < 0
-		}
-		if r.incarnation < i.si.incarnation {
-			return true
 		}
 		return bytes.Compare(r.seek, i.si.locHash.Bytes()) < 0
 	default:
@@ -225,26 +219,17 @@ func (si *StorageItem) Less(than btree.Item) bool {
 		if c != 0 {
 			return c < 0
 		}
-		if si.incarnation < i.incarnation {
-			return true
-		}
 		return bytes.Compare(si.locHash.Bytes(), i.locHash.Bytes()) < 0
 	case *StorageWriteItem:
 		c := bytes.Compare(si.addrHash.Bytes(), i.si.addrHash.Bytes())
 		if c != 0 {
 			return c < 0
 		}
-		if si.incarnation < i.si.incarnation {
-			return true
-		}
 		return bytes.Compare(si.locHash.Bytes(), i.si.locHash.Bytes()) < 0
 	case *StorageSeek:
 		c := bytes.Compare(si.addrHash.Bytes(), i.addrHash.Bytes())
 		if c != 0 {
 			return c < 0
-		}
-		if si.incarnation < i.incarnation {
-			return true
 		}
 		return bytes.Compare(si.locHash.Bytes(), i.seek) < 0
 	default:
