@@ -349,11 +349,6 @@ func (idx *Index) Lookup(bucketHash, fingerprint uint64) (uint64, bool) {
 
 	found := binary.BigEndian.Uint64(idx.data[pos:]) & idx.recMask
 	if idx.lessFalsePositives {
-		if idx.existence[found] == byte(bucketHash) {
-			fmt.Printf("not filtered. gr: %d, ex: %d, %s\n", len(idx.golombRice), len(idx.existence), idx.fileName)
-		} else {
-			fmt.Printf("filtered. gr: %d, ex: %d, %s\n", len(idx.golombRice), len(idx.existence), idx.fileName)
-		}
 		return found, idx.existence[found] == byte(bucketHash)
 	}
 	return found, true
