@@ -62,22 +62,29 @@ func TestCacheBtreeOrderAccountStorage(t *testing.T) {
 	sc.SetCodeWrite(a1.Bytes(), 1, []byte{1})
 	sc.SetCodeWrite(a2.Bytes(), 1, []byte{2})
 	lastK = lastK[:0]
-	//if err := WalkWrites(sc.PrepareWrites(), nil, nil, nil, nil, func(address []byte, incarnation uint64, code []byte) error {
-	//	i++
-	//	if i == 1 {
-	//		assert.Equal(t, a1.Bytes(), address)
-	//		assert.Equal(t, 1, incarnation)
-	//		assert.Equal(t, []byte{1}, code)
-	//	}
-	//	if i == 2 {
-	//		assert.Equal(t, a2.Bytes(), address)
-	//		assert.Equal(t, 1, incarnation)
-	//		assert.Equal(t, []byte{2}, code)
-	//	}
-	//	return nil
-	//}, nil); err != nil {
-	//	t.Fatal(err)
-	//}
+	i := 0
+	if err := WalkWrites(sc.PrepareWrites(), func(address []byte, account *accounts.Account) error {
+		return nil
+	}, func(address []byte, original *accounts.Account) error {
+		return nil
+	}, func(address []byte, incarnation uint64, location []byte, value []byte) error {
+		return nil
+	}, func(address []byte, incarnation uint64, location []byte) error {
+		return nil
+	}, func(address []byte, code []byte) error {
+		i++
+		if i == 1 {
+			assert.Equal(t, a1.Bytes(), address)
+			assert.Equal(t, []byte{1}, code)
+		}
+		if i == 2 {
+			assert.Equal(t, a2.Bytes(), address)
+			assert.Equal(t, []byte{2}, code)
+		}
+		return nil
+	}, nil); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestAccountReads(t *testing.T) {

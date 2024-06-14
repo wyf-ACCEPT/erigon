@@ -96,12 +96,11 @@ type StorageWriteItem struct {
 }
 
 type CodeItem struct {
-	sequence    int
-	queuePos    int
-	flags       uint16
-	addrHash    libcommon.Hash
-	incarnation uint64
-	code        []byte
+	sequence int
+	queuePos int
+	flags    uint16
+	addrHash libcommon.Hash
+	code     []byte
 }
 
 type CodeWriteItem struct {
@@ -134,12 +133,6 @@ func compare_code_code(i1 *CodeItem, i2 *CodeItem) int {
 	c := bytes.Compare(i1.addrHash.Bytes(), i2.addrHash.Bytes())
 	if c != 0 {
 		return c
-	}
-	if i1.incarnation == i2.incarnation {
-		return 0
-	}
-	if i1.incarnation < i2.incarnation {
-		return -1
 	}
 	return 1
 }
@@ -285,9 +278,6 @@ func (ci *CodeItem) Less(than btree.Item) bool {
 func (cwi *CodeWriteItem) Less(than btree.Item) bool {
 	i := than.(*CodeWriteItem)
 	c := bytes.Compare(cwi.address.Bytes(), i.address.Bytes())
-	if c == 0 {
-		return cwi.ci.incarnation < i.ci.incarnation
-	}
 	return c < 0
 }
 
@@ -303,7 +293,7 @@ func (ci *CodeItem) HasFlag(flag uint16) bool          { return ci.flags&flag !=
 func (ci *CodeItem) SetFlags(flags uint16)             { ci.flags |= flags }
 func (ci *CodeItem) ClearFlags(flags uint16)           { ci.flags &^= flags }
 func (ci *CodeItem) String() string {
-	return fmt.Sprintf("CodeItem(addrHash=%x,incarnation=%d)", ci.addrHash, ci.incarnation)
+	return fmt.Sprintf("CodeItem(addrHash=%x)", ci.addrHash)
 }
 
 func (ci *CodeItem) CopyValueFrom(item CacheItem) {
@@ -504,7 +494,6 @@ func (sc *StateCache) GetCode(address []byte, incarnation uint64) ([]byte, bool)
 	h.Sha.Write(address)
 	//nolint:errcheck
 	h.Sha.Read(key.addrHash[:])
-	key.incarnation = incarnation
 	if item, ok := sc.get(&key); ok {
 		if item != nil {
 			return item.(*CodeItem).code, true
@@ -849,7 +838,6 @@ func (sc *StateCache) SetCodeRead(address []byte, incarnation uint64, code []byt
 	h.Sha.Write(address)
 	//nolint:errcheck
 	h.Sha.Read(ci.addrHash[:])
-	ci.incarnation = incarnation
 	ci.code = make([]byte, len(code))
 	copy(ci.code, code)
 	sc.setRead(&ci, false /* absent */)
@@ -863,7 +851,6 @@ func (sc *StateCache) SetCodeAbsent(address []byte, incarnation uint64) {
 	h.Sha.Write(address)
 	//nolint:errcheck
 	h.Sha.Read(ci.addrHash[:])
-	ci.incarnation = incarnation
 	sc.setRead(&ci, true /* absent */)
 }
 
@@ -876,7 +863,6 @@ func (sc *StateCache) SetCodeWrite(address []byte, incarnation uint64, code []by
 	h.Sha.Write(address)
 	//nolint:errcheck
 	h.Sha.Read(ci.addrHash[:])
-	ci.incarnation = incarnation
 	ci.code = make([]byte, len(code))
 	copy(ci.code, code)
 	var cwi CodeWriteItem
@@ -894,7 +880,6 @@ func (sc *StateCache) SetCodeDelete(address []byte, incarnation uint64) {
 	h.Sha.Write(address)
 	//nolint:errcheck
 	h.Sha.Read(ci.addrHash[:])
-	ci.incarnation = incarnation
 	ci.code = nil
 	var cwi CodeWriteItem
 	copy(cwi.address[:], address)
@@ -928,8 +913,8 @@ func WalkWrites(
 	accountDelete func(address []byte, original *accounts.Account) error,
 	storageWrite func(address []byte, incarnation uint64, location []byte, value []byte) error,
 	storageDelete func(address []byte, incarnation uint64, location []byte) error,
-	codeWrite func(address []byte, incarnation uint64, code []byte) error,
-	codeDelete func(address []byte, incarnation uint64) error,
+	codeWrite func(address []byte, code []byte) error,
+	codeDelete func(address []byte) error,
 ) error {
 	var err error
 	for i := 0; i < len(writes); i++ {
@@ -957,11 +942,11 @@ func WalkWrites(
 				}
 			case *CodeWriteItem:
 				if it.ci.flags&AbsentFlag != 0 {
-					if err = codeDelete(it.address.Bytes(), it.ci.incarnation); err != nil {
+					if err = codeDelete(it.address.Bytes()); err != nil {
 						return false
 					}
 				} else {
-					if err = codeWrite(it.address.Bytes(), it.ci.incarnation, it.ci.code); err != nil {
+					if err = codeWrite(it.address.Bytes(), it.ci.code); err != nil {
 						return false
 					}
 				}

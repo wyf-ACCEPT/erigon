@@ -179,7 +179,7 @@ func (si *StorageItem) HasPrefix(prefix CacheItem) bool {
 func (ci *CodeItem) HasPrefix(prefix CacheItem) bool {
 	switch i := prefix.(type) {
 	case *CodeItem:
-		return ci.addrHash == i.addrHash && ci.incarnation == i.incarnation
+		return ci.addrHash == i.addrHash
 	default:
 		panic(fmt.Sprintf("unrecognised type of cache item: %T", prefix))
 	}
