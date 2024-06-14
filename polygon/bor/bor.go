@@ -259,7 +259,64 @@ func ValidateHeaderTime(
 		return err
 	}
 
-	if header.Time < MinNextBlockTime(parent, succession, config) {
+	fmt.Printf("headerNumber=%d\n", header.Number.Uint64())
+	fmt.Printf("headerHash=%s\n", header.Hash())
+	fmt.Printf("signer=%s\n", signer)
+	validatorsLen := len(validatorSet.(*valset.ValidatorSet).Validators)
+	fmt.Printf("validatorsLen=%d\n", validatorsLen)
+	proposer := validatorSet.(*valset.ValidatorSet).GetProposer()
+	fmt.Printf("proposer=%s\n", proposer)
+	proposerIdx, _ := validatorSet.(*valset.ValidatorSet).GetByAddress(proposer.Address)
+	fmt.Printf("proposerIdx=%d\n", proposerIdx)
+	counter, idx := validatorsLen, proposerIdx
+	for counter > 0 {
+		_, val := validatorSet.(*valset.ValidatorSet).GetByIndex(idx % validatorsLen)
+		suc, err := validatorSet.(*valset.ValidatorSet).GetSignerSuccessionNumber(val.Address, header.Number.Uint64())
+		if err != nil {
+			return err
+		}
+		dif, err := validatorSet.(*valset.ValidatorSet).Difficulty(val.Address)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("validatorSuccession=%d,validatorDifficulty=%d,validatorInfo=%v\n", suc, dif, val)
+		idx++
+		counter--
+	}
+	minNextBlockTime := MinNextBlockTime(parent, succession, config)
+	if header.Time < minNextBlockTime {
+		//fmt.Printf("headerNumber=%d\n", header.Number.Uint64())
+		//fmt.Printf("headerHash=%s\n", header.Hash())
+		//fmt.Printf("signer=%s\n", signer)
+		//validatorsLen := len(validatorSet.(*valset.ValidatorSet).Validators)
+		//fmt.Printf("validatorsLen=%d\n", validatorsLen)
+		//proposer := validatorSet.(*valset.ValidatorSet).GetProposer()
+		//fmt.Printf("proposer=%s\n", proposer)
+		//proposerIdx, _ := validatorSet.(*valset.ValidatorSet).GetByAddress(proposer.Address)
+		//fmt.Printf("proposerIdx=%d\n", proposerIdx)
+		//counter, idx := validatorsLen, proposerIdx
+		//for counter > 0 {
+		//	_, val := validatorSet.(*valset.ValidatorSet).GetByIndex(idx % validatorsLen)
+		//	suc, err := validatorSet.(*valset.ValidatorSet).GetSignerSuccessionNumber(val.Address, header.Number.Uint64())
+		//	if err != nil {
+		//		return err
+		//	}
+		//	dif, err := validatorSet.(*valset.ValidatorSet).Difficulty(val.Address)
+		//	if err != nil {
+		//		return err
+		//	}
+		//	fmt.Printf("validatorSuccession=%d,validatorDifficulty=%d,validatorInfo=%v\n", suc, dif, val)
+		//	idx++
+		//	counter--
+		//}
+
+		fmt.Printf("header.Time=%d\n", header.Time)
+		fmt.Printf("minNextBlockTime=%d\n", minNextBlockTime)
+		fmt.Printf("parent.Time=%d\n", parent.Time)
+
+		fmt.Printf("FORMATTED header.Time=%s\n", time.Unix(int64(header.Time), 0))
+		fmt.Printf("FORMATTED minNextBlockTime=%s\n", time.Unix(int64(minNextBlockTime), 0))
+		fmt.Printf("FORMATTED parent.Time=%s\n", time.Unix(int64(parent.Time), 0))
 		return &BlockTooSoonError{header.Number.Uint64(), succession}
 	}
 
@@ -1575,7 +1632,7 @@ func validatorContains(a []*valset.Validator, x *valset.Validator) (*valset.Vali
 	return nil, false
 }
 
-func getUpdatedValidatorSet(oldValidatorSet *valset.ValidatorSet, newVals []*valset.Validator, logger log.Logger) *valset.ValidatorSet {
+func GetUpdatedValidatorSet(oldValidatorSet *valset.ValidatorSet, newVals []*valset.Validator, logger log.Logger) *valset.ValidatorSet {
 	v := oldValidatorSet
 	oldVals := v.Validators
 

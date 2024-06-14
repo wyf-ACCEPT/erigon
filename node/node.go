@@ -33,7 +33,6 @@ import (
 
 	"github.com/ledgerwatch/erigon/cmd/utils"
 	"github.com/ledgerwatch/erigon/node/nodecfg"
-	"github.com/ledgerwatch/erigon/params"
 	"github.com/ledgerwatch/erigon/turbo/debug"
 
 	"github.com/gofrs/flock"
@@ -396,11 +395,11 @@ func OpenDatabase(ctx context.Context, config *nodecfg.Config, label kv.Label, n
 		}
 	}
 
-	if err := db.Update(context.Background(), func(tx kv.RwTx) (err error) {
-		return params.SetErigonVersion(tx, params.VersionKeyCreated)
-	}); err != nil {
-		return nil, err
-	}
+	//if err := db.Update(context.Background(), func(tx kv.RwTx) (err error) {
+	//	return params.SetErigonVersion(tx, params.VersionKeyCreated)
+	//}); err != nil {
+	//	return nil, err
+	//}
 
 	return db, nil
 }

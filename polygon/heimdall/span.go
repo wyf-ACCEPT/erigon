@@ -3,6 +3,7 @@ package heimdall
 import (
 	"github.com/google/btree"
 
+	"github.com/ledgerwatch/erigon-lib/common"
 	"github.com/ledgerwatch/erigon/polygon/bor/valset"
 )
 
@@ -30,6 +31,29 @@ func (s *Span) BlockNumRange() ClosedRange {
 		Start: s.StartBlock,
 		End:   s.EndBlock,
 	}
+}
+
+func (s *Span) Producers() []*valset.Validator {
+	res := make([]*valset.Validator, len(s.SelectedProducers))
+	for i := range s.SelectedProducers {
+		res[i] = s.SelectedProducers[i].Copy()
+	}
+
+	return res
+}
+
+func (s *Span) ProducersV2() []*valset.Validator {
+	producerSet := map[common.Address]struct{}{}
+	for _, producer := range s.SelectedProducers {
+		producerSet[producer.Address] = struct{}{}
+	}
+
+	res := make([]*valset.Validator, 0, len(s.SelectedProducers))
+	for _, validator := range s.ValidatorSet.Validators {
+		res = append(res, validator)
+	}
+
+	return res
 }
 
 func (s *Span) Less(other btree.Item) bool {
