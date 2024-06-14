@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/ledgerwatch/erigon/turbo/shards"
 	"math"
 	"strings"
 
@@ -1122,12 +1121,12 @@ func (api *TraceAPIImpl) doCallMany(ctx context.Context, dbtx kv.Tx, msgs []type
 		return nil, nil, err
 	}
 	typedStateReader := stateReader.(*state.HistoryReaderV3)
-	stateCache := shards.NewStateCache(32, 0 /* no limit */) // this cache living only during current RPC call, but required to store state writes
-	//cachedReader := stateReader
-	cachedReader := state.NewCachedReader(stateReader, stateCache)
+	//stateCache := shards.NewStateCache(32, 0 /* no limit */) // this cache living only during current RPC call, but required to store state writes
+	cachedReader := stateReader
+	//cachedReader := state.NewCachedReader(stateReader, stateCache)
 	noop := state.NewNoopWriter()
-	//cachedWriter := noop
-	cachedWriter := state.NewCachedWriter(noop, stateCache)
+	cachedWriter := noop
+	//cachedWriter := state.NewCachedWriter(noop, stateCache)
 	ibs := state.New(cachedReader)
 
 	parentHeader, err := api.headerByRPCNumber(ctx, rpc.BlockNumber(blockNumber), dbtx)
@@ -1160,7 +1159,7 @@ func (api *TraceAPIImpl) doCallMany(ctx context.Context, dbtx kv.Tx, msgs []type
 
 	baseTxNum := typedStateReader.GetTxNum()
 	for txIndex, msg := range msgs {
-		typedStateReader.SetTxNum(baseTxNum + uint64(txIndex))
+		//typedStateReader.SetTxNum(baseTxNum + uint64(txIndex))
 		if err := libcommon.Stopped(ctx.Done()); err != nil {
 			return nil, nil, err
 		}
