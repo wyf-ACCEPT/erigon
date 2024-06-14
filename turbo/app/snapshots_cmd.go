@@ -398,10 +398,10 @@ func doIntegrity(cliCtx *cli.Context) error {
 	//blockReader, _ := blockRetire.IO()
 	//if err := integrity.SnapBlocksRead(chainDB, blockReader, ctx, false); err != nil {
 	//	return err
-	//}
+	//}s
 
 	//if err := blockReader.IntegrityTxnID(false); err != nil {
-	//	return err
+	//	return err¬
 	//}
 
 	//if err := integrity.E3EfFiles(ctx, chainDB, agg); err != nil {
