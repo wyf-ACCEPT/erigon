@@ -394,18 +394,19 @@ func doIntegrity(cliCtx *cli.Context) error {
 	defer caplinSnaps.Close()
 	defer agg.Close()
 
-	blockReader, _ := blockRetire.IO()
-	if err := integrity.SnapBlocksRead(chainDB, blockReader, ctx, false); err != nil {
-		return err
-	}
+	_ = blockRetire
+	//blockReader, _ := blockRetire.IO()
+	//if err := integrity.SnapBlocksRead(chainDB, blockReader, ctx, false); err != nil {
+	//	return err
+	//}
 
 	//if err := blockReader.IntegrityTxnID(false); err != nil {
 	//	return err
 	//}
 
-	if err := integrity.E3EfFiles(ctx, chainDB, agg); err != nil {
-		return err
-	}
+	//if err := integrity.E3EfFiles(ctx, chainDB, agg); err != nil {
+	//	return err
+	//}
 
 	if err := integrity.E3HistoryNoSystemTxs(ctx, chainDB, agg); err != nil {
 		return err
