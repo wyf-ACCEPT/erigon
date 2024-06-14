@@ -42,6 +42,7 @@ func (s *Span) Producers() []*valset.Validator {
 	return res
 }
 
+// TODO give this a try!
 func (s *Span) ProducersV2() []*valset.Validator {
 	producerSet := map[common.Address]struct{}{}
 	for _, producer := range s.SelectedProducers {
@@ -50,7 +51,9 @@ func (s *Span) ProducersV2() []*valset.Validator {
 
 	res := make([]*valset.Validator, 0, len(s.SelectedProducers))
 	for _, validator := range s.ValidatorSet.Validators {
-		res = append(res, validator)
+		if _, ok := producerSet[validator.Address]; ok {
+			res = append(res, validator)
+		}
 	}
 
 	return res
