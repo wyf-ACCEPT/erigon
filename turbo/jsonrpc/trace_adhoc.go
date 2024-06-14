@@ -1161,7 +1161,7 @@ func (api *TraceAPIImpl) doCallMany(ctx context.Context, dbtx kv.Tx, msgs []type
 
 	baseTxNum := typedStateReader.GetTxNum()
 	for txIndex, msg := range msgs {
-		//typedStateReader.SetTxNum(baseTxNum + uint64(txIndex))
+		typedStateReader.SetTxNum(baseTxNum + uint64(txIndex))
 		if err := libcommon.Stopped(ctx.Done()); err != nil {
 			return nil, nil, err
 		}
