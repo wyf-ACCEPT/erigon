@@ -18,9 +18,11 @@ package recsplit
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"io"
 	"math"
 	"math/bits"
 	"os"
@@ -189,6 +191,7 @@ func OpenIndex(indexFilePath string) (*Index, error) {
 				return nil, fmt.Errorf("%w. size of existence filter %d != keys count %d", IncompatibleErr, arrSz, idx.keyCount)
 			}
 			idx.existence = idx.data[offset : offset+int(arrSz)]
+			go func() { _, _ = io.Copy(io.Discard, bytes.NewReader(idx.existence)) }()
 			offset += int(arrSz)
 		}
 	}
