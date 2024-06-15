@@ -157,7 +157,6 @@ func (l *ListSSZ[T]) Len() int {
 
 func (l *ListSSZ[T]) Append(obj T) {
 	l.list = append(l.list, obj)
-	l.limit++
 	l.root = libcommon.Hash{}
 }
 
