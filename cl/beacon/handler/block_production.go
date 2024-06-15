@@ -211,6 +211,25 @@ func (a *ApiHandler) GetEthV3ValidatorBlock(
 		if err := machine.ProcessBlock(transition.DefaultMachine, baseState, signedBeaconBlock); err != nil {
 			return nil, err
 		}
+
+		c := builder.NewMockBlockBuilderClient(block.BeaconBody)
+		h, err := c.GetExecutionPayloadHeader(ctx, 0, libcommon.Hash{}, libcommon.Bytes48{})
+		if err != nil {
+			return nil, err
+		}
+		if h == nil {
+			return nil, fmt.Errorf("nil header")
+		}
+		h.Data.Message.Header.SetVersion(baseState.Version())
+		hash, err := h.Data.Message.Header.HashSSZ()
+		if err != nil {
+			return nil, err
+		}
+		execHash, err := block.BeaconBody.ExecutionPayload.HashSSZ()
+		if err != nil {
+			return nil, err
+		}
+		log.Info("[mev] block hash", "blind hash", hash, "exec hash", execHash)
 	}
 	block.StateRoot, err = baseState.HashSSZ()
 	if err != nil {
