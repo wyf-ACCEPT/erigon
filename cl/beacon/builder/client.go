@@ -202,20 +202,12 @@ func (m *mockClient) GetExecutionPayloadHeader(ctx context.Context, slot int64, 
 	if err != nil {
 		return nil, err
 	}
-	bytes, err := json.Marshal(header)
-	if err != nil {
-		return nil, err
-	}
-	blobsBytes, err := json.Marshal(m.block.BlobKzgCommitments)
-	if err != nil {
-		return nil, err
-	}
 	data := map[string]interface{}{
 		"version": "deneb",
 		"data": map[string]interface{}{
 			"message": map[string]interface{}{
-				"header":               bytes,
-				"blob_kzg_commitments": blobsBytes,
+				"header":               header,
+				"blob_kzg_commitments": m.block.BlobKzgCommitments,
 				"value":                "100",
 			},
 		},
