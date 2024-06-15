@@ -73,6 +73,7 @@ func (b *builderClient) GetExecutionPayloadHeader(ctx context.Context, slot int6
 	} else {
 		log.Info("[mev builder] builderHeaderBytes", "builderHeaderBytes", string(builderHeaderBytes))
 	}
+
 	return header, nil
 }
 

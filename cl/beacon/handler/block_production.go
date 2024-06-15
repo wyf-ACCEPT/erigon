@@ -334,9 +334,33 @@ func (a *ApiHandler) produceBlock(
 		if err != nil {
 			return nil, err
 		}
+		header := builderHeader.Data.Message.Header
+		h := cltypes.NewEth1Header(beaconBody.Version)
+		h.ParentHash = header.ParentHash
+		h.StateRoot = header.StateRoot
+		h.ReceiptsRoot = header.ReceiptsRoot
+		h.LogsBloom = header.LogsBloom
+		h.BlockNumber = header.BlockNumber
+		h.GasLimit = header.GasLimit
+		h.GasUsed = header.GasUsed
+		h.Time = header.Time
+		h.Extra = header.Extra
+		h.BlobGasUsed = header.BlobGasUsed
+		h.ExcessBlobGas = header.ExcessBlobGas
+		h.BaseFeePerGas = header.BaseFeePerGas
+		h.BlockHash = header.BlockHash
+		h.FeeRecipient = header.FeeRecipient
+		h.PrevRandao = header.PrevRandao
+		h.WithdrawalsRoot = header.WithdrawalsRoot
+		h.TransactionsRoot = header.TransactionsRoot
+
+		commitments := solid.NewDynamicListSSZ[*cltypes.KZGCommitment](int(a.beaconChainCfg.MaxBlobsPerBlock))
+		for i := 0; i < builderHeader.Data.Message.BlobKzgCommitments.Len(); i++ {
+			commitments.Append(builderHeader.Data.Message.BlobKzgCommitments.Get(i))
+		}
 		block.BlindedBeaconBody = blindedBody.
-			SetHeader(builderHeader.Data.Message.Header).
-			SetBlobKzgCommitments(builderHeader.Data.Message.BlobKzgCommitments)
+			SetHeader(h).
+			SetBlobKzgCommitments(commitments)
 		block.ExecutionValue = builderValue
 	}
 	return block, nil
