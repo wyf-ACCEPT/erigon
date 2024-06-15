@@ -93,7 +93,7 @@ func ProcessBlindedBlock(impl BlockProcessor, s abstract.BeaconState, signedBloc
 		return fmt.Errorf("processBlindedBlock: failed to process block header: %v", err)
 	}
 	// Process execution payload if enabled.
-	if version >= clparams.BellatrixVersion && executionEnabled(s, block.Body.ExecutionPayload.BlockHash) {
+	if version >= clparams.BellatrixVersion {
 		if s.Version() >= clparams.CapellaVersion {
 			// Process withdrawals in the execution payload.
 			expect := state.ExpectedWithdrawals(s, state.Epoch(s))

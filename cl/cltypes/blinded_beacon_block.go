@@ -6,6 +6,7 @@ import (
 	libcommon "github.com/ledgerwatch/erigon-lib/common"
 	"github.com/ledgerwatch/erigon-lib/types/clonable"
 	"github.com/ledgerwatch/erigon-lib/types/ssz"
+	"github.com/ledgerwatch/log/v3"
 
 	"github.com/ledgerwatch/erigon/cl/clparams"
 	"github.com/ledgerwatch/erigon/cl/cltypes/solid"
@@ -205,6 +206,8 @@ func (b *BlindedBeaconBody) getSchema(storage bool) []interface{} {
 	}
 	if b.Version >= clparams.DenebVersion {
 		s = append(s, b.BlobKzgCommitments)
+	} else {
+		log.Warn("[mev] BlindedBeaconBody: Deneb fields are not set")
 	}
 	return s
 }

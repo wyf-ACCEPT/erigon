@@ -12,6 +12,7 @@ import (
 	"github.com/ledgerwatch/erigon/cl/merkle_tree"
 	ssz2 "github.com/ledgerwatch/erigon/cl/ssz"
 	"github.com/ledgerwatch/erigon/core/types"
+	"github.com/ledgerwatch/log/v3"
 )
 
 // ETH1Header represents the ethereum 1 header structure CL-side.
@@ -130,6 +131,8 @@ func (h *Eth1Header) getSchema() []interface{} {
 	}
 	if h.version >= clparams.DenebVersion {
 		s = append(s, &h.BlobGasUsed, &h.ExcessBlobGas)
+	} else {
+		log.Warn("Eth1Header: Deneb fields are not set")
 	}
 	return s
 }
