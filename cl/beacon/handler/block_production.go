@@ -344,7 +344,8 @@ func (a *ApiHandler) produceBlock(
 		h.GasLimit = header.GasLimit
 		h.GasUsed = header.GasUsed
 		h.Time = header.Time
-		h.Extra = header.Extra
+		h.Extra = solid.NewExtraData()
+		h.Extra.SetBytes(header.Extra.Bytes())
 		h.BlobGasUsed = header.BlobGasUsed
 		h.ExcessBlobGas = header.ExcessBlobGas
 		h.BaseFeePerGas = header.BaseFeePerGas
