@@ -867,7 +867,7 @@ func (I *impl) ProcessBlockHeader(s abstract.BeaconState, slot, proposerIndex ui
 		)
 	}
 	blockHeader := s.LatestBlockHeader()
-	latestRoot, err := (&blockHeader).HashSSZ()
+	latestRoot, err := blockHeader.HashSSZ()
 	if err != nil {
 		return fmt.Errorf("unable to hash tree root of latest block header: %v", err)
 	}
