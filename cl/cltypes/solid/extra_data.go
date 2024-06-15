@@ -64,7 +64,7 @@ func (e *ExtraData) EncodingSizeSSZ() int {
 func (e *ExtraData) HashSSZ() ([32]byte, error) {
 	leaves := make([]byte, length.Hash*2)
 	copy(leaves, e.data[:e.l])
-	binary.LittleEndian.PutUint64(leaves[e.l:], uint64(e.l))
+	binary.LittleEndian.PutUint64(leaves[length.Hash:], uint64(e.l))
 	if err := merkle_tree.MerkleRootFromFlatLeaves(leaves, leaves); err != nil {
 		return [32]byte{}, err
 	}
