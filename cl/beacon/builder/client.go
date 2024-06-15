@@ -181,3 +181,62 @@ func httpCall[T any](ctx context.Context, client *http.Client, method, url strin
 	}
 	return &body, nil
 }
+
+type mockClient struct {
+	block *cltypes.BeaconBody
+}
+
+func NewMockBlockBuilderClient(block *cltypes.BeaconBody) *mockClient {
+	return &mockClient{
+		block: block,
+	}
+}
+
+func (m *mockClient) RegisterValidator(ctx context.Context, registers []*cltypes.ValidatorRegistration) error {
+	return nil
+}
+
+func (m *mockClient) GetExecutionPayloadHeader(ctx context.Context, slot int64, parentHash common.Hash, pubKey common.Bytes48) (*ExecutionPayloadHeader, error) {
+	execPayload := m.block.ExecutionPayload
+	header, err := execPayload.PayloadHeader()
+	if err != nil {
+		return nil, err
+	}
+	bytes, err := json.Marshal(header)
+	if err != nil {
+		return nil, err
+	}
+	blobsBytes, err := json.Marshal(m.block.BlobKzgCommitments)
+	if err != nil {
+		return nil, err
+	}
+	data := map[string]interface{}{
+		"version": "deneb",
+		"data": map[string]interface{}{
+			"message": map[string]interface{}{
+				"header":               bytes,
+				"blob_kzg_commitments": blobsBytes,
+				"value":                "100",
+			},
+		},
+	}
+	headerBytes, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Printf("headerBytes: %s\n", string(headerBytes))
+
+	var headerResp ExecutionPayloadHeader
+	if err := json.Unmarshal(headerBytes, &headerResp); err != nil {
+		return nil, err
+	}
+	return &headerResp, nil
+}
+
+func (m *mockClient) SubmitBlindedBlocks(ctx context.Context, block *cltypes.SignedBlindedBeaconBlock) (*cltypes.Eth1Block, *engine_types.BlobsBundleV1, error) {
+	return nil, nil, nil
+}
+
+func (m *mockClient) GetStatus(ctx context.Context) error {
+	return nil
+}
