@@ -354,6 +354,8 @@ func (a *ApiHandler) produceBlock(
 		h.WithdrawalsRoot = header.WithdrawalsRoot
 		h.TransactionsRoot = header.TransactionsRoot
 
+		log.Info("[mev] blinded block header", "extraLen", h.Extra.Length())
+
 		commitments := solid.NewDynamicListSSZ[*cltypes.KZGCommitment](int(a.beaconChainCfg.MaxBlobsPerBlock))
 		for i := 0; i < builderHeader.Data.Message.BlobKzgCommitments.Len(); i++ {
 			commitments.Append(builderHeader.Data.Message.BlobKzgCommitments.Get(i))

@@ -24,6 +24,10 @@ func NewExtraData() *ExtraData {
 	}
 }
 
+func (e *ExtraData) Length() int {
+	return e.l
+}
+
 func (e *ExtraData) UnmarshalJSON(buf []byte) error {
 	if err := json.Unmarshal(buf, (*hexutility.Bytes)(&e.data)); err != nil {
 		return err
@@ -60,7 +64,7 @@ func (e *ExtraData) EncodingSizeSSZ() int {
 func (e *ExtraData) HashSSZ() ([32]byte, error) {
 	leaves := make([]byte, length.Hash*2)
 	copy(leaves, e.data[:e.l])
-	binary.LittleEndian.PutUint64(leaves[length.Hash:], uint64(e.l))
+	binary.LittleEndian.PutUint64(leaves[e.l:], uint64(e.l))
 	if err := merkle_tree.MerkleRootFromFlatLeaves(leaves, leaves); err != nil {
 		return [32]byte{}, err
 	}
