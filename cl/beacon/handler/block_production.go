@@ -200,7 +200,7 @@ func (a *ApiHandler) GetEthV3ValidatorBlock(
 			return nil, err
 		}
 	} else {
-		signedBeaconBlock := &cltypes.SignedBeaconBlock{
+		/*signedBeaconBlock := &cltypes.SignedBeaconBlock{
 			Block: &cltypes.BeaconBlock{
 				Slot:          block.Slot,
 				ProposerIndex: block.ProposerIndex,
@@ -210,7 +210,20 @@ func (a *ApiHandler) GetEthV3ValidatorBlock(
 		}
 		if err := machine.ProcessBlock(transition.DefaultMachine, baseState, signedBeaconBlock); err != nil {
 			return nil, err
+		} */
+		blind, _ := block.BeaconBody.Blinded()
+		signedBlock := &cltypes.SignedBlindedBeaconBlock{
+			Block: &cltypes.BlindedBeaconBlock{
+				Slot:          block.Slot,
+				ProposerIndex: block.ProposerIndex,
+				ParentRoot:    block.ParentRoot,
+				Body:          blind,
+			},
 		}
+		if err := machine.ProcessBlindedBlock(transition.DefaultMachine, baseState, signedBlock); err != nil {
+			return nil, err
+		}
+
 	}
 	block.StateRoot, err = baseState.HashSSZ()
 	if err != nil {
