@@ -101,8 +101,8 @@ func ProcessBlindedBlock(impl BlockProcessor, s abstract.BeaconState, signedBloc
 			// Process withdrawals in the execution payload.
 			expect := state.ExpectedWithdrawals(s, state.Epoch(s))
 			expectWithdrawals := solid.NewStaticListSSZ[*cltypes.Withdrawal](int(s.BeaconConfig().MaxWithdrawalsPerPayload), 44)
-			for _, w := range expect {
-				expectWithdrawals.Append(w)
+			for i := range expect {
+				expectWithdrawals.Append(expect[i])
 			}
 			hash, err := expectWithdrawals.HashSSZ()
 			if err != nil {
@@ -112,10 +112,9 @@ func ProcessBlindedBlock(impl BlockProcessor, s abstract.BeaconState, signedBloc
 				log.Info("[mev] withdrawals do not match")
 			}
 			log.Info("[mev] withdrawals match", "expecthash", common.Hash(hash), "root", block.Body.ExecutionPayload.WithdrawalsRoot)
-			/*
-				if err := impl.ProcessWithdrawals(s, expectWithdrawals); err != nil {
-					return fmt.Errorf("processBlock: failed to process withdrawals: %v", err)
-				}*/
+			if err := impl.ProcessWithdrawals(s, expectWithdrawals); err != nil {
+				return fmt.Errorf("processBlock: failed to process withdrawals: %v", err)
+			}
 		}
 		parentHash := block.Body.ExecutionPayload.ParentHash
 		prevRandao := block.Body.ExecutionPayload.PrevRandao
