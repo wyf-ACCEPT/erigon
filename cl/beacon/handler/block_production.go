@@ -256,7 +256,6 @@ func (a *ApiHandler) GetEthV3ValidatorBlock(
 	var resp *beaconhttp.BeaconResponse
 	if block.IsBlinded() {
 		blindedBlock := block.ToBlinded()
-		blindedBlock.Slot = 0
 		resp = newBeaconResponse(blindedBlock).With("version", block.Version().String())
 		bytes, _ := json.Marshal(blindedBlock)
 		log.Info("[mev] blinded block", "block", string(bytes))
@@ -377,8 +376,8 @@ func (a *ApiHandler) produceBlock(
 			commitments.Append(builderHeader.Data.Message.BlobKzgCommitments.Get(i))
 		}
 		block.BlindedBeaconBody = blindedBody.
-			SetHeader(h).
-			SetBlobKzgCommitments(commitments)
+			SetHeader(h)
+			//SetBlobKzgCommitments(commitments)
 		block.ExecutionValue = builderValue
 	}
 	return block, nil
