@@ -1,12 +1,15 @@
 package machine
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 
+	"github.com/ledgerwatch/erigon-lib/common"
 	"github.com/ledgerwatch/erigon-lib/metrics"
 	"github.com/ledgerwatch/erigon/cl/abstract"
 	"github.com/ledgerwatch/erigon/cl/phase1/core/state"
+	"github.com/ledgerwatch/log/v3"
 
 	"github.com/ledgerwatch/erigon/cl/clparams"
 	"github.com/ledgerwatch/erigon/cl/cltypes"
@@ -101,9 +104,18 @@ func ProcessBlindedBlock(impl BlockProcessor, s abstract.BeaconState, signedBloc
 			for _, w := range expect {
 				expectWithdrawals.Append(w)
 			}
-			if err := impl.ProcessWithdrawals(s, expectWithdrawals); err != nil {
-				return fmt.Errorf("processBlock: failed to process withdrawals: %v", err)
+			hash, err := expectWithdrawals.HashSSZ()
+			if err != nil {
+				return fmt.Errorf("processBlindedBlock: failed to hash withdrawals: %v", err)
 			}
+			if !bytes.Equal(hash[:], block.Body.ExecutionPayload.WithdrawalsRoot[:]) {
+				log.Info("[mev] withdrawals do not match")
+			}
+			log.Info("[mev] withdrawals match", "expecthash", common.Hash(hash), "root", block.Body.ExecutionPayload.WithdrawalsRoot)
+			/*
+				if err := impl.ProcessWithdrawals(s, expectWithdrawals); err != nil {
+					return fmt.Errorf("processBlock: failed to process withdrawals: %v", err)
+				}*/
 		}
 		parentHash := block.Body.ExecutionPayload.ParentHash
 		prevRandao := block.Body.ExecutionPayload.PrevRandao
