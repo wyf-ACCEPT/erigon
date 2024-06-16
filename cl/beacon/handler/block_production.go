@@ -348,6 +348,7 @@ func (a *ApiHandler) produceBlock(
 		if err != nil {
 			return nil, err
 		}
+		blindedBody.Version = clparams.DenebVersion
 		header := builderHeader.Data.Message.Header
 		h := cltypes.NewEth1Header(clparams.DenebVersion)
 		h.ParentHash = header.ParentHash

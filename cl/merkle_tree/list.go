@@ -8,6 +8,7 @@ import (
 	"github.com/ledgerwatch/erigon-lib/common"
 	"github.com/ledgerwatch/erigon-lib/common/length"
 	"github.com/ledgerwatch/erigon-lib/types/ssz"
+	"github.com/ledgerwatch/log/v3"
 
 	"github.com/ledgerwatch/erigon/cl/utils"
 )
@@ -109,6 +110,10 @@ func TransactionsListRoot(transactions [][]byte) ([32]byte, error) {
 func ListObjectSSZRoot[T ssz.HashableSSZ](list []T, limit uint64) ([32]byte, error) {
 	globalHasher.mu2.Lock()
 	defer globalHasher.mu2.Unlock()
+	if int(limit) < len(list) {
+		log.Warn("mev ListObjectSSZRoot: limit is less than the length of the list", "limit", limit, "list length", len(list))
+	}
+
 	// due to go generics we cannot make a method for global hasher.
 	subLeaves := globalHasher.getBufferForSSZList(len(list))
 	for i, element := range list {
