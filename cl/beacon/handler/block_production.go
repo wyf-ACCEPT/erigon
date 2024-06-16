@@ -349,7 +349,7 @@ func (a *ApiHandler) produceBlock(
 			return nil, err
 		}
 		header := builderHeader.Data.Message.Header
-		h := cltypes.NewEth1Header(beaconBody.Version)
+		h := cltypes.NewEth1Header(clparams.DenebVersion)
 		h.ParentHash = header.ParentHash
 		h.StateRoot = header.StateRoot
 		h.ReceiptsRoot = header.ReceiptsRoot
@@ -376,8 +376,8 @@ func (a *ApiHandler) produceBlock(
 			commitments.Append(builderHeader.Data.Message.BlobKzgCommitments.Get(i))
 		}
 		block.BlindedBeaconBody = blindedBody.
-			SetHeader(h)
-			//SetBlobKzgCommitments(commitments)
+			SetHeader(h).
+			SetBlobKzgCommitments(commitments)
 		block.ExecutionValue = builderValue
 	}
 	return block, nil
