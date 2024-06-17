@@ -3,8 +3,8 @@ package cltypes
 import (
 	"encoding/json"
 	"fmt"
+	"math/big"
 
-	"github.com/holiman/uint256"
 	libcommon "github.com/ledgerwatch/erigon-lib/common"
 	"github.com/ledgerwatch/erigon-lib/types/ssz"
 	"github.com/ledgerwatch/erigon/cl/clparams"
@@ -172,7 +172,7 @@ func (h *Eth1Header) MarshalJSON() ([]byte, error) {
 		GasUsed:          h.GasUsed,
 		Time:             h.Time,
 		Extra:            h.Extra,
-		BaseFeePerGas:    uint256.NewInt(0).SetBytes32(h.BaseFeePerGas[:]).Dec(),
+		BaseFeePerGas:    littleEndianUint256BytesToString(h.BaseFeePerGas),
 		BlockHash:        h.BlockHash,
 		TransactionsRoot: h.TransactionsRoot,
 		WithdrawalsRoot:  h.WithdrawalsRoot,
@@ -215,15 +215,58 @@ func (h *Eth1Header) UnmarshalJSON(data []byte) error {
 	h.GasUsed = aux.GasUsed
 	h.Time = aux.Time
 	h.Extra = aux.Extra
-	tmp := uint256.NewInt(0)
-	if err := tmp.SetFromDecimal(aux.BaseFeePerGas); err != nil {
+
+	//tmp := uint256.NewInt(0)
+	//tmp.SetFromDecimal(aux.BaseFeePerGas)
+
+	baseFeePerGase, err := stringToLittleEndianUint256Bytes(aux.BaseFeePerGas)
+	if err != nil {
 		return err
 	}
-	h.BaseFeePerGas = tmp.Bytes32()
+	h.BaseFeePerGas = baseFeePerGase
 	h.BlockHash = aux.BlockHash
 	h.TransactionsRoot = aux.TransactionsRoot
 	h.WithdrawalsRoot = aux.WithdrawalsRoot
 	h.BlobGasUsed = aux.BlobGasUsed
 	h.ExcessBlobGas = aux.ExcessBlobGas
 	return nil
+}
+
+func stringToLittleEndianUint256Bytes(s string) (libcommon.Hash, error) {
+	// to big int
+	bigInt, ok := big.NewInt(0).SetString(s, 10)
+	if !ok {
+		return libcommon.Hash{}, fmt.Errorf("cannot parse string to big int: %s", s)
+	}
+	// to little endian bytes
+	revbytes := reverseBytes(bigInt.Bytes())
+
+	// zero padding
+	result := make([]byte, 32)
+	if len(revbytes) < 32 {
+		copy(result[:], revbytes)
+	} else {
+		copy(result[:], revbytes[:32])
+	}
+	return libcommon.Hash(result), nil
+}
+
+func littleEndianUint256BytesToString(b libcommon.Hash) string {
+	// reverse bytes
+	revbytes := reverseBytes(b[:])
+
+	// to big int
+	bigInt := big.NewInt(0).SetBytes(revbytes)
+
+	// to string
+	return bigInt.String()
+}
+
+func reverseBytes(b []byte) []byte {
+	cpy := make([]byte, len(b))
+	copy(cpy, b)
+	for i := 0; i < len(cpy)/2; i++ {
+		cpy[i], cpy[len(cpy)-1-i] = cpy[len(cpy)-1-i], cpy[i]
+	}
+	return cpy
 }

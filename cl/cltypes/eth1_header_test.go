@@ -1,6 +1,7 @@
 package cltypes
 
 import (
+	"fmt"
 	"testing"
 
 	libcommon "github.com/ledgerwatch/erigon-lib/common"
@@ -76,4 +77,13 @@ func TestEth1Header(t *testing.T) {
 	root, err := header.HashSSZ()
 	assert.NoError(t, err)
 	assert.Equal(t, libcommon.HexToHash("0x9170a25a0980f07bcb9af2a52ff915262763e0e6a2df26aa205b967bd462a6d3"), libcommon.Hash(root))
+}
+
+func TestLittleEndianEncode(t *testing.T) {
+	num := "38724628173469382146721324312"
+	encoded, err := stringToLittleEndianUint256Bytes(num)
+	assert.NoError(t, err)
+	fmt.Printf("encoded: %v\n", encoded.String())
+	decoded := littleEndianUint256BytesToString(encoded)
+	assert.Equal(t, num, decoded)
 }
