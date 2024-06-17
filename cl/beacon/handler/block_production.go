@@ -262,7 +262,6 @@ func (a *ApiHandler) GetEthV3ValidatorBlock(
 		log.Info("[mev] blinded block", "block", string(bytes))
 	} else {
 		resp = newBeaconResponse(block.ToExecution())
-		bytes, _ := json.Marshal(block.ToExecution())
 		log.Info("[mev] exec block", "block base fee per gas", block.BeaconBody.ExecutionPayload.BaseFeePerGas)
 	}
 	return resp.With("execution_payload_blinded", block.IsBlinded()).
