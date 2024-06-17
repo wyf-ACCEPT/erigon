@@ -220,7 +220,7 @@ func (a *ApiHandler) GetEthV3ValidatorBlock(
 				Body:          blind,
 			},
 		}
-		log.Info("[mev] blinded block", "block", signedBlock.Block)
+		log.Info("[mev] blinded block", "block", *(signedBlock.Block.Body))
 		if err := machine.ProcessBlindedBlock(transition.DefaultMachine, baseState, signedBlock); err != nil {
 			return nil, err
 		}
