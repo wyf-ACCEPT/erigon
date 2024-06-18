@@ -60,7 +60,10 @@ type BlindedBeaconBody struct {
 // Getters
 
 func NewSignedBlindedBeaconBlock(beaconCfg *clparams.BeaconChainConfig) *SignedBlindedBeaconBlock {
-	return &SignedBlindedBeaconBlock{Block: NewBlindedBeaconBlock(beaconCfg)}
+	return &SignedBlindedBeaconBlock{
+		Signature: libcommon.Bytes96{},
+		Block:     NewBlindedBeaconBlock(beaconCfg),
+	}
 }
 
 func (s *SignedBlindedBeaconBlock) SignedBeaconBlockHeader() *SignedBeaconBlockHeader {
@@ -81,12 +84,27 @@ func (s *SignedBlindedBeaconBlock) SignedBeaconBlockHeader() *SignedBeaconBlockH
 }
 
 func NewBlindedBeaconBlock(beaconCfg *clparams.BeaconChainConfig) *BlindedBeaconBlock {
-	return &BlindedBeaconBlock{Body: NewBlindedBeaconBody(beaconCfg)}
+	return &BlindedBeaconBlock{
+		Body: NewBlindedBeaconBody(beaconCfg),
+	}
 }
 
 func NewBlindedBeaconBody(beaconCfg *clparams.BeaconChainConfig) *BlindedBeaconBody {
 	return &BlindedBeaconBody{
-		beaconCfg: beaconCfg,
+		RandaoReveal:       libcommon.Bytes96{},
+		Eth1Data:           NewEth1Data(),
+		Graffiti:           libcommon.Hash{},
+		ProposerSlashings:  solid.NewStaticListSSZ[*ProposerSlashing](MaxProposerSlashings, 416),
+		AttesterSlashings:  solid.NewDynamicListSSZ[*AttesterSlashing](MaxAttesterSlashings),
+		Attestations:       solid.NewDynamicListSSZ[*solid.Attestation](MaxAttestations),
+		Deposits:           solid.NewStaticListSSZ[*Deposit](MaxDeposits, 1240),
+		VoluntaryExits:     solid.NewStaticListSSZ[*SignedVoluntaryExit](MaxVoluntaryExits, 112),
+		SyncAggregate:      NewSyncAggregate(),
+		ExecutionPayload:   nil,
+		ExecutionChanges:   solid.NewStaticListSSZ[*SignedBLSToExecutionChange](MaxExecutionChanges, 172),
+		BlobKzgCommitments: solid.NewStaticListSSZ[*KZGCommitment](MaxBlobsCommittmentsPerBlock, 48),
+		Version:            0,
+		beaconCfg:          beaconCfg,
 	}
 }
 
