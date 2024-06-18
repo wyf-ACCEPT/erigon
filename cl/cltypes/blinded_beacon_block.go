@@ -135,6 +135,17 @@ func (b *BlindedBeaconBlock) Full(txs *solid.TransactionsSSZ, withdrawals *solid
 	}
 }
 
+func (b *BlindedBeaconBlock) SetVersion(version clparams.StateVersion) *BlindedBeaconBlock {
+	b.Body.SetVersion(version)
+	return b
+}
+
+func (b *BlindedBeaconBody) SetVersion(version clparams.StateVersion) *BlindedBeaconBody {
+	b.Version = version
+	b.ExecutionPayload.SetVersion(version)
+	return b
+}
+
 func (b *BlindedBeaconBody) EncodeSSZ(dst []byte) ([]byte, error) {
 	return ssz2.MarshalSSZ(dst, b.getSchema(false)...)
 }

@@ -777,7 +777,7 @@ func (a *ApiHandler) publishBlindedBlocks(w http.ResponseWriter, r *http.Request
 	// todo: broadcast_validation
 
 	signedBlindedBlock := cltypes.NewSignedBlindedBeaconBlock(a.beaconChainCfg)
-	signedBlindedBlock.Block.Body.Version = version
+	signedBlindedBlock.Block.SetVersion(version)
 	b, err := io.ReadAll(r.Body)
 	defer r.Body.Close()
 	if err != nil {

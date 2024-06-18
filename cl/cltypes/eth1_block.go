@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/golang/gddo/log"
 	"github.com/holiman/uint256"
 	libcommon "github.com/ledgerwatch/erigon-lib/common"
 
@@ -305,6 +306,7 @@ func (b *Eth1Block) RlpHeader(parentRoot *libcommon.Hash) (*types.Header, error)
 		*withdrawalsHash = types.DeriveSha(types.Withdrawals(withdrawals))
 	}
 	if b.version < clparams.DenebVersion {
+		log.Warn("ParentRoot is nil", "parentRoot", parentRoot, "version", b.version)
 		parentRoot = nil
 	}
 
