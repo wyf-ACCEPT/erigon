@@ -142,7 +142,11 @@ func (b *BlindedBeaconBlock) SetVersion(version clparams.StateVersion) *BlindedB
 
 func (b *BlindedBeaconBody) SetVersion(version clparams.StateVersion) *BlindedBeaconBody {
 	b.Version = version
-	b.ExecutionPayload.SetVersion(version)
+	if b.ExecutionPayload == nil {
+		b.ExecutionPayload = NewEth1Header(version)
+	} else {
+		b.ExecutionPayload.SetVersion(version)
+	}
 	return b
 }
 
