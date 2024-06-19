@@ -1464,6 +1464,7 @@ func (c *Bor) CommitStates(
 
 	//if len(events) == 50 || len(events) == 0 { // we still sometime could get 0 events from borevent file
 	if blockNum <= chain.Chain.FrozenBorBlocks() && len(events) == 50 { // we still sometime could get 0 events from borevent file
+		originalLevEvents := len(events)
 		var to time.Time
 		if c.config.IsIndore(blockNum) {
 			stateSyncDelay := c.config.CalculateStateSyncDelay(blockNum)
@@ -1503,6 +1504,10 @@ func (c *Bor) CommitStates(
 				events = append(events, data)
 			}
 		}
+		if originalLevEvents != len(events) {
+			panic(fmt.Sprintf("blockNum: %d, %d, %d\n", blockNum, originalLevEvents, len(events)))
+		}
+
 	}
 
 	for _, event := range events {
