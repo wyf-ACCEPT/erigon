@@ -1507,7 +1507,6 @@ func (c *Bor) CommitStates(
 		if originalLevEvents != len(events) {
 			panic(fmt.Sprintf("blockNum=%d, originalLevEvents=%d, len(events)=%d\n", blockNum, originalLevEvents, len(events)))
 		}
-
 	}
 
 	for _, event := range events {
