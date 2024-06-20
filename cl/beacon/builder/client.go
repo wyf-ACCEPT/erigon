@@ -145,8 +145,10 @@ func httpCall[T any](ctx context.Context, client *http.Client, method, url strin
 		bytes, err := io.ReadAll(response.Body)
 		if err != nil {
 			log.Warn("[mev builder] io.ReadAll failed", "err", err, "url", url, "method", method)
+		} else {
+			log.Debug("[mev builder] httpCall failed", "status", response.Status, "content", string(bytes))
 		}
-		return nil, fmt.Errorf("status code: %d. Response content %v", response.StatusCode, string(bytes))
+		return nil, fmt.Errorf("status code: %d", response.StatusCode)
 	}
 	if response.StatusCode == http.StatusNoContent {
 		return nil, ErrNoContent
