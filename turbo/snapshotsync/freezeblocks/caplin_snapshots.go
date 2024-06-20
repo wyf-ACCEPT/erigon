@@ -533,8 +533,10 @@ func (s *CaplinSnapshots) BuildMissingIndices(ctx context.Context, logger log.Lo
 			continue
 		}
 		if segment.Type.HasIndexFiles(segment, logger) {
+			fmt.Printf("dbg: caplin has index %s\n", segment.Name())
 			continue
 		}
+		fmt.Printf("dbg: caplin no index %s\n", segment.Name())
 		p := &background.Progress{}
 
 		if err := BeaconSimpleIdx(ctx, segment, s.Salt, s.tmpdir, p, log.LvlDebug, logger); err != nil {
