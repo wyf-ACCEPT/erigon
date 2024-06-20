@@ -533,9 +533,9 @@ func (s *CaplinSnapshots) BuildMissingIndices(ctx context.Context, logger log.Lo
 			fmt.Printf("dbg: chk0000 %#v, %#v, %t\n", segment.Type.Enum(), snaptype.CaplinEnums.BlobSidecars, segment.Type.Enum() != snaptype.CaplinEnums.BlobSidecars)
 			continue
 		}
-		fmt.Printf("dbg: chk %v, %#v\n", segment.Name(), segment.Type)
+		fmt.Printf("dbg1: chk %v, %#v\n", segment.Name(), segment.Type)
 		if segment.Type.HasIndexFiles(segment, logger) {
-			fmt.Printf("dbg: caplin has index %v, %#v\n", segment.Name(), segment.Type)
+			fmt.Printf("dbg1: caplin has index %v, %#v\n", segment.Name(), segment.Type)
 			continue
 		}
 		fmt.Printf("dbg: caplin no index %s\n", segment.Name())
