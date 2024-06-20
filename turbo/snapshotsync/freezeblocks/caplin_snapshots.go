@@ -527,8 +527,10 @@ func (s *CaplinSnapshots) BuildMissingIndices(ctx context.Context, logger log.Lo
 	}
 	for index := range segments {
 		segment := segments[index]
+
 		// The same slot=>offset mapping is used for both beacon blocks and blob sidecars.
 		if segment.Type.Enum() != snaptype.CaplinEnums.BeaconBlocks && segment.Type.Enum() != snaptype.CaplinEnums.BlobSidecars {
+			fmt.Printf("dbg: chk0000 %#v, %#v, %t\n", segment.Type.Enum(), snaptype.CaplinEnums.BlobSidecars, segment.Type.Enum() != snaptype.CaplinEnums.BlobSidecars)
 			continue
 		}
 		fmt.Printf("dbg: chk %v, %#v\n", segment.Name(), segment.Type)
