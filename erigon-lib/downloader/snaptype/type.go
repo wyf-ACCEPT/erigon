@@ -147,6 +147,7 @@ func (i Index) HasFile(info FileInfo, logger log.Logger) bool {
 	}
 
 	defer idx.Close()
+	fmt.Printf("dbg: caplin has index2 %s\n", filepath.Join(dir, fName))
 
 	return true // idx.ModTime().After(segment.ModTime())
 }
