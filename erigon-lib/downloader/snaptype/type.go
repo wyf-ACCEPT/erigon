@@ -129,8 +129,10 @@ func (i Index) HasFile(info FileInfo, logger log.Logger) bool {
 	dir := info.Dir()
 
 	fName := IdxFileName(info.Version, info.From, info.To, i.Name)
+	fmt.Printf("dbg: chk1 %s\n", filepath.Join(dir, fName))
 
 	segment, err := seg.NewDecompressor(info.Path)
+	fmt.Printf("dbg: chk2 %s\n", filepath.Join(dir, fName))
 
 	if err != nil {
 		fmt.Printf("dbg: failed to open file %s: %v\n", info.name, err)
@@ -140,6 +142,7 @@ func (i Index) HasFile(info FileInfo, logger log.Logger) bool {
 	defer segment.Close()
 
 	idx, err := recsplit.OpenIndex(filepath.Join(dir, fName))
+	fmt.Printf("dbg: chk3 %s\n", filepath.Join(dir, fName))
 
 	if err != nil {
 		fmt.Printf("dbg: failed to open index %s: %v\n", fName, err)
