@@ -133,6 +133,7 @@ func (i Index) HasFile(info FileInfo, logger log.Logger) bool {
 	segment, err := seg.NewDecompressor(info.Path)
 
 	if err != nil {
+		fmt.Printf("dbg: failed to open file %s: %v\n", info.name, err)
 		return false
 	}
 
