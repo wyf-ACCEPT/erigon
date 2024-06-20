@@ -532,7 +532,7 @@ func (s *CaplinSnapshots) BuildMissingIndices(ctx context.Context, logger log.Lo
 			continue
 		}
 		if segment.Type.HasIndexFiles(segment, logger) {
-			fmt.Printf("dbg: caplin has index %s\n", segment.Name())
+			fmt.Printf("dbg: caplin has index %v, %#v\n", segment.Name(), segment.Type)
 			continue
 		}
 		fmt.Printf("dbg: caplin no index %s\n", segment.Name())
