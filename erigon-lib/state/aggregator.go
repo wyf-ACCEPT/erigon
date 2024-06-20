@@ -1599,15 +1599,18 @@ func (a *Aggregator) BuildFilesInBackground(txNum uint64) chan struct{} {
 
 	if !a.produce {
 		close(fin)
+		fmt.Println("no-produce")
 		return fin
 	}
 
 	if (txNum + 1) <= a.visibleFilesMinimaxTxNum.Load()+a.aggregationStep {
+		fmt.Println("txNum", txNum, "visibleFilesMinimaxTxNum", a.visibleFilesMinimaxTxNum.Load(), "aggregationStep", a.aggregationStep)
 		close(fin)
 		return fin
 	}
 
 	if ok := a.buildingFiles.CompareAndSwap(false, true); !ok {
+		fmt.Println("BUSY")
 		close(fin)
 		return fin
 	}
