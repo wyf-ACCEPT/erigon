@@ -52,6 +52,7 @@ const (
 	AccessListTxType
 	DynamicFeeTxType
 	BlobTxType
+	SetCodeTxType
 )
 
 // Transaction is an Ethereum transaction.
@@ -68,6 +69,7 @@ type Transaction interface {
 	GetBlobGas() uint64
 	GetValue() *uint256.Int
 	GetTo() *libcommon.Address
+	GetAuthorizations() []Authorization
 	AsMessage(s Signer, baseFee *big.Int, rules *chain.Rules) (Message, error)
 	WithSignature(signer Signer, sig []byte) (Transaction, error)
 	FakeSign(address libcommon.Address) (Transaction, error)
@@ -89,7 +91,7 @@ type Transaction interface {
 	// signing method. The cache is invalidated if the cached signer does
 	// not match the signer used in the current call.
 	Sender(Signer) (libcommon.Address, error)
-	cashedSender() (libcommon.Address, bool)
+	cachedSender() (libcommon.Address, bool)
 	GetSender() (libcommon.Address, bool)
 	SetSender(libcommon.Address)
 	IsContractDeploy() bool
@@ -408,6 +410,7 @@ type Message struct {
 	checkNonce       bool
 	isFree           bool
 	blobHashes       []libcommon.Hash
+	authorizations   []Authorization
 }
 
 func NewMessage(from libcommon.Address, to *libcommon.Address, nonce uint64, amount *uint256.Int, gasLimit uint64,
@@ -482,6 +485,8 @@ func (m Message) MaxFeePerBlobGas() *uint256.Int {
 }
 
 func (m Message) BlobHashes() []libcommon.Hash { return m.blobHashes }
+
+func (m Message) Authorizations() []Authorization { return m.authorizations }
 
 func DecodeSSZ(data []byte, dest codec.Deserializable) error {
 	err := dest.Deserialize(codec.NewDecodingReader(bytes.NewReader(data), uint64(len(data))))
