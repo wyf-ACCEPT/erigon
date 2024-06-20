@@ -127,6 +127,7 @@ var CaplinIndexes = struct {
 
 func (i Index) HasFile(info FileInfo, logger log.Logger) bool {
 	dir := info.Dir()
+
 	fName := IdxFileName(info.Version, info.From, info.To, i.Name)
 
 	segment, err := seg.NewDecompressor(info.Path)
@@ -140,6 +141,7 @@ func (i Index) HasFile(info FileInfo, logger log.Logger) bool {
 	idx, err := recsplit.OpenIndex(filepath.Join(dir, fName))
 
 	if err != nil {
+		fmt.Printf("dbg: failed to open index %s: %v\n", fName, err)
 		return false
 	}
 
