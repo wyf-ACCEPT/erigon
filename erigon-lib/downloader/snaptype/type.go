@@ -126,6 +126,7 @@ var CaplinIndexes = struct {
 }
 
 func (i Index) HasFile(info FileInfo, logger log.Logger) bool {
+	fmt.Printf("dbg: chk0\n")
 	dir := info.Dir()
 
 	fName := IdxFileName(info.Version, info.From, info.To, i.Name)
