@@ -246,6 +246,7 @@ func (s snapType) BuildIndexes(ctx context.Context, info FileInfo, chainConfig *
 func (s snapType) HasIndexFiles(info FileInfo, logger log.Logger) bool {
 	fmt.Printf("alex: %s, %#v\n", s.name, s.indexes)
 	for _, index := range s.indexes {
+		fmt.Printf("alex2: %s, %#v\n", s.name, index.HasFile(info, logger))
 		if !index.HasFile(info, logger) {
 			return false
 		}
