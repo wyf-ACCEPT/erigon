@@ -525,6 +525,7 @@ func (s *CaplinSnapshots) BuildMissingIndices(ctx context.Context, logger log.Lo
 	if err != nil {
 		return err
 	}
+	fmt.Printf("dbg: caplin files %s\n", segments)
 	for index := range segments {
 		segment := segments[index]
 		// The same slot=>offset mapping is used for both beacon blocks and blob sidecars.
