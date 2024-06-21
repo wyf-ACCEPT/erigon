@@ -51,18 +51,18 @@ func StageCustomTraceCfg(db kv.RwDB, prune prune.Mode, dirs datadir.Dirs, br ser
 	}
 }
 
-func SpawnCustomTrace(s *StageState, txc wrap.TxContainer, cfg CustomTraceCfg, ctx context.Context, initialCycle bool, prematureEndBlock uint64, logger log.Logger) error {
+func SpawnCustomTrace(s *StageState, txc wrap.TxContainer, cfg CustomTraceCfg, ctx context.Context, prematureEndBlock uint64, logger log.Logger) error {
 	useExternalTx := txc.Ttx != nil
-	var tx kv.TemporalTx
+	var tx kv.TemporalRwTx
 	if !useExternalTx {
 		_tx, err := cfg.db.BeginRw(ctx)
 		if err != nil {
 			return err
 		}
 		defer _tx.Rollback()
-		tx = _tx.(kv.TemporalTx)
+		tx = _tx.(kv.TemporalRwTx)
 	} else {
-		tx = txc.Ttx
+		tx = txc.Ttx.(kv.TemporalRwTx)
 	}
 
 	endBlock, err := s.ExecutionAt(tx)
@@ -94,57 +94,44 @@ func SpawnCustomTrace(s *StageState, txc wrap.TxContainer, cfg CustomTraceCfg, c
 	var m runtime.MemStats
 	var prevBlockNumLog uint64 = startBlock
 
-	doms, err := state2.NewSharedDomains(txc.Tx, logger)
+	keyTotal := []byte("total")
+	total, err := lastGasUsed(tx, keyTotal)
+	if err != nil {
+		return err
+	}
+
+	doms, err := state2.NewSharedDomains(tx, logger)
 	if err != nil {
 		return err
 	}
 	defer doms.Close()
 
-	key := []byte{0}
-	total := uint256.NewInt(0)
-
-	//it, err := tx.IndexRange(kv.GasUsedHistoryIdx, key, -1, -1, order.Desc, 1)
-	//if err != nil {
-	//	return err
-	//}
-	//if it.HasNext() {
-	//	lastTxNum, err := it.Next()
-	//	if err != nil {
-	//		return err
-	//	}
-	//	lastTotal, ok, err := tx.HistorySeek(kv.GasUsedHistory, key, lastTxNum)
-	//	if err != nil {
-	//		return err
-	//	}
-	//	if ok {
-	//		total.SetBytes(lastTotal)
-	//	}
-	//}
-
+	fmt.Printf("dbg1: %s\n", tx.ViewID())
 	//TODO: new tracer may get tracer from pool, maybe add it to TxTask field
 	/// maybe need startTxNum/endTxNum
 	if err = exec3.CustomTraceMapReduce(startBlock, endBlock, exec3.TraceConsumer{
 		NewTracer: func() exec3.GenericTracer { return nil },
-		Collect: func(txTask *state.TxTask) error {
+		Reduce: func(txTask *state.TxTask, tx kv.Tx) error {
 			if txTask.Error != nil {
 				return err
 			}
 
 			total.AddUint64(total, txTask.UsedGas)
-			doms.SetTxNum(txTask.TxNum)
 			v := total.Bytes()
-			_, _ = key, v
-			//err = doms.DomainPut(kv.GasUsedDomain, key, nil, v, nil, 0)
-			//if err != nil {
-			//	return err
-			//}
+
+			doms.SetTx(tx)
+			doms.SetTxNum(txTask.TxNum)
+			err = doms.DomainPut(kv.GasUsedDomain, keyTotal, nil, v, nil, 0)
+			if err != nil {
+				return err
+			}
 
 			select {
-			default:
 			case <-logEvery.C:
 				dbg.ReadMemStats(&m)
 				log.Info("Scanned", "block", txTask.BlockNum, "blk/sec", float64(txTask.BlockNum-prevBlockNumLog)/10, "alloc", libcommon.ByteCount(m.Alloc), "sys", libcommon.ByteCount(m.Sys))
 				prevBlockNumLog = txTask.BlockNum
+			default:
 			}
 
 			return nil
@@ -152,21 +139,55 @@ func SpawnCustomTrace(s *StageState, txc wrap.TxContainer, cfg CustomTraceCfg, c
 	}, ctx, tx, cfg.execArgs, logger); err != nil {
 		return err
 	}
-	if err = s.Update(txc.Tx, endBlock); err != nil {
+	if err = s.Update(tx.(kv.RwTx), endBlock); err != nil {
 		return err
 	}
 
-	if err := doms.Flush(ctx, txc.Tx); err != nil {
+	if err := doms.Flush(ctx, tx); err != nil {
 		return err
 	}
 
 	if !useExternalTx {
-		if err = txc.Tx.Commit(); err != nil {
+		if err = tx.Commit(); err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+func lastGasUsed(tx kv.TemporalTx, key []byte) (*uint256.Int, error) {
+	total := uint256.NewInt(0)
+	v, _, err := tx.DomainGet(kv.GasUsedDomain, key, nil)
+	if err != nil {
+		return nil, err
+	}
+	if len(v) > 0 {
+		total.SetBytes(v)
+	}
+	return total, nil
+
+	/*
+		it, err := tx.IndexRange(kv.GasUsedHistoryIdx, key, -1, -1, order.Desc, 1)
+		if err != nil {
+			return nil, err
+		}
+		defer it.Close()
+		if it.HasNext() {
+			lastTxNum, err := it.Next()
+			if err != nil {
+				return nil, err
+			}
+			lastTotal, ok, err := tx.HistoryGet(kv.GasUsedHistory, key, lastTxNum)
+			if err != nil {
+				return nil, err
+			}
+			if ok {
+				total.SetBytes(lastTotal)
+			}
+		}
+		return total, nil
+	*/
 }
 
 func UnwindCustomTrace(u *UnwindState, s *StageState, txc wrap.TxContainer, cfg CustomTraceCfg, ctx context.Context, logger log.Logger) (err error) {
@@ -194,6 +215,6 @@ func UnwindCustomTrace(u *UnwindState, s *StageState, txc wrap.TxContainer, cfg 
 	return nil
 }
 
-func PruneCustomTrace(s *PruneState, tx kv.RwTx, cfg CustomTraceCfg, ctx context.Context, initialCycle bool, logger log.Logger) (err error) {
+func PruneCustomTrace(s *PruneState, tx kv.RwTx, cfg CustomTraceCfg, ctx context.Context, logger log.Logger) (err error) {
 	return nil
 }
