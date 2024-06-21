@@ -2,6 +2,7 @@ package antiquary
 
 import (
 	"context"
+	"github.com/ledgerwatch/erigon/eth/ethconfig/estimate"
 	"math"
 	"sync/atomic"
 	"time"
@@ -244,7 +245,7 @@ func (a *Antiquary) antiquate(from, to uint64) error {
 	}
 
 	log.Info("[Antiquary] Antiquating", "from", from, "to", to)
-	if err := freezeblocks.DumpBeaconBlocks(a.ctx, a.mainDB, from, to, a.sn.Salt, a.dirs, 1, log.LvlDebug, a.logger); err != nil {
+	if err := freezeblocks.DumpBeaconBlocks(a.ctx, a.mainDB, from, to, a.sn.Salt, a.dirs, estimate.AlmostAllCPUs(), log.LvlDebug, a.logger); err != nil {
 		return err
 	}
 	tx, err := a.mainDB.BeginRw(a.ctx)
@@ -332,7 +333,7 @@ func (a *Antiquary) antiquateBlobs() error {
 	roTx.Rollback()
 	a.logger.Info("[Antiquary] Antiquating blobs", "from", currentBlobsProgress, "to", to)
 	// now, we need to retire the blobs
-	if err := freezeblocks.DumpBlobsSidecar(a.ctx, a.blobStorage, a.mainDB, currentBlobsProgress, to, a.sn.Salt, a.dirs, 1, log.LvlDebug, a.logger); err != nil {
+	if err := freezeblocks.DumpBlobsSidecar(a.ctx, a.blobStorage, a.mainDB, currentBlobsProgress, to, a.sn.Salt, a.dirs, estimate.AlmostAllCPUs(), log.LvlDebug, a.logger); err != nil {
 		return err
 	}
 	to = (to / snaptype.Erigon2MergeLimit) * snaptype.Erigon2MergeLimit
