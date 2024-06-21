@@ -3,6 +3,7 @@ package antiquary
 import (
 	"context"
 	"math"
+	"runtime"
 	"sync/atomic"
 	"time"
 
@@ -332,7 +333,7 @@ func (a *Antiquary) antiquateBlobs() error {
 	roTx.Rollback()
 	a.logger.Info("[Antiquary] Antiquating blobs", "from", currentBlobsProgress, "to", to)
 	// now, we need to retire the blobs
-	if err := freezeblocks.DumpBlobsSidecar(a.ctx, a.blobStorage, a.mainDB, currentBlobsProgress, to, a.sn.Salt, a.dirs, 1, log.LvlDebug, a.logger); err != nil {
+	if err := freezeblocks.DumpBlobsSidecar(a.ctx, a.blobStorage, a.mainDB, currentBlobsProgress, to, a.sn.Salt, a.dirs, runtime.NumCPU(), log.LvlDebug, a.logger); err != nil {
 		return err
 	}
 	to = (to / snaptype.Erigon2MergeLimit) * snaptype.Erigon2MergeLimit
