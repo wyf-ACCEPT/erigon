@@ -77,7 +77,7 @@ func (b adapterHandler) Handle(r lg.Record) {
 			log.Trace(str, "lvl", lvl.LogString())
 			break
 		}
-		log.Debug(str)
+		log.Debug("alex1dbg: " + str)
 	case lg.Info:
 		str := r.String()
 		skip := strings.Contains(str, "EOF")
@@ -102,7 +102,7 @@ func (b adapterHandler) Handle(r lg.Record) {
 			strings.Contains(str, "reservation cancelled")
 
 		if skip {
-			log.Debug(str)
+			log.Debug("alex2dbg: " + str)
 			break
 		}
 		log.Warn(str)
@@ -147,13 +147,13 @@ func NewRetryableHttpLogger(l log.Logger) *RetryableHttpLogger {
 }
 
 func (l *RetryableHttpLogger) Error(msg string, keysAndValues ...interface{}) {
-	l.l.Debug(msg, keysAndValues...)
+	l.l.Debug("alex3dbg: "+msg, keysAndValues...)
 }
 func (l *RetryableHttpLogger) Warn(msg string, keysAndValues ...interface{}) {
-	l.l.Debug(msg, keysAndValues...)
+	l.l.Debug("alex4dbg: "+msg, keysAndValues...)
 }
 func (l *RetryableHttpLogger) Info(msg string, keysAndValues ...interface{}) {
-	l.l.Debug(msg, keysAndValues...)
+	l.l.Debug("alex5dbg: "+msg, keysAndValues...)
 }
 func (l *RetryableHttpLogger) Debug(msg string, keysAndValues ...interface{}) {
 	l.l.Trace(msg, keysAndValues...)
