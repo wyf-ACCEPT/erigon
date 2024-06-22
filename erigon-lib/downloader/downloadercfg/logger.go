@@ -115,7 +115,7 @@ func (b adapterHandler) Handle(r lg.Record) {
 			log.Trace(str, "lvl", lvl.LogString())
 			break
 		}
-		log.Error(str)
+		log.Error("1" + str)
 	case lg.Critical:
 		str := r.String()
 		skip := strings.Contains(str, "EOF") ||
@@ -125,7 +125,7 @@ func (b adapterHandler) Handle(r lg.Record) {
 			log.Trace(str, "lvl", lvl.LogString())
 			break
 		}
-		log.Error(str)
+		log.Error("2" + str)
 	default:
 		str := r.String()
 		skip := strings.Contains(str, "EOF") || strings.Contains(str, "unhandled response status") ||
