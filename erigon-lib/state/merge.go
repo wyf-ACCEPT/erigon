@@ -317,7 +317,7 @@ func (iit *InvertedIndexRoTx) findMergeRange(maxEndTxNum, maxSpan uint64) *Merge
 	return &MergeRange{minFound, startTxNum, endTxNum}
 }
 
-func (tx *AppendableRoTx) findMergeRange(maxEndTxNum, maxSpan uint64) (bool, uint64, uint64) {
+func (tx *AppendableRoTx) findMergeRange(maxEndTxNum, maxSpan uint64) *MergeRange {
 	var minFound bool
 	var startTxNum, endTxNum uint64
 	for _, item := range tx.files {
@@ -341,7 +341,7 @@ func (tx *AppendableRoTx) findMergeRange(maxEndTxNum, maxSpan uint64) (bool, uin
 			}
 		}
 	}
-	return minFound, startTxNum, endTxNum
+	return &MergeRange{minFound, startTxNum, endTxNum}
 }
 
 // 0-1,1-2,2-3,3-4: allow merge 0-1
