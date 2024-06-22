@@ -2171,7 +2171,7 @@ type cursorDup2iter struct {
 	ctx                         context.Context
 }
 
-func (s *cursorDup2iter) init(table string, tx kv.Tx) (err error) {
+func (s *cursorDup2iter) init(table string, tx kv.Tx) error {
 	if s.orderAscend && s.fromPrefix != nil && s.toPrefix != nil && bytes.Compare(s.fromPrefix, s.toPrefix) >= 0 {
 		return fmt.Errorf("tx.Dual: %x must be lexicographicaly before %x", s.fromPrefix, s.toPrefix)
 	}

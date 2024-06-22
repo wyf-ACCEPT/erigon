@@ -67,7 +67,7 @@ func WriteCanonicalHash(db kv.Putter, hash common.Hash, number uint64) error {
 // Mark chain as bad feature:
 //   - BadBlock must be not available by hash
 //   - but available by hash+num - if read num from kv.BadHeaderNumber table
-//   - prune canonicalMarkers: must delete Canonical/NonCanonical/BadBlocks also
+//   - prune blocks: must delete Canonical/NonCanonical/BadBlocks also
 func TruncateCanonicalHash(tx kv.RwTx, blockFrom uint64, markChainAsBad bool) error {
 	if err := tx.ForEach(kv.HeaderCanonical, hexutility.EncodeTs(blockFrom), func(blockNumBytes, blockHash []byte) error {
 		if markChainAsBad {
