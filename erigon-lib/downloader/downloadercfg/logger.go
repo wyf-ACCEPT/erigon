@@ -138,19 +138,23 @@ func (b adapterHandler) Handle(r lg.Record) {
 	}
 }
 
-type RetryableHttpLogger struct{ l log.Logger }
+type RetryableHttpLogger struct {
+	l log.Logger
+}
 
-func NewRetryableHttpLogger(l log.Logger) *RetryableHttpLogger { return &RetryableHttpLogger{l: l} }
+func NewRetryableHttpLogger(l log.Logger) *RetryableHttpLogger {
+	return &RetryableHttpLogger{l: l}
+}
 
 func (l *RetryableHttpLogger) Error(msg string, keysAndValues ...interface{}) {
-	l.l.Debug("[downloader] "+msg, keysAndValues...)
+	l.l.Debug(msg, keysAndValues...)
 }
 func (l *RetryableHttpLogger) Warn(msg string, keysAndValues ...interface{}) {
-	l.l.Debug("[downloader] "+msg, keysAndValues...)
+	l.l.Debug(msg, keysAndValues...)
 }
 func (l *RetryableHttpLogger) Info(msg string, keysAndValues ...interface{}) {
-	l.l.Debug("[downloader] "+msg, keysAndValues...)
+	l.l.Debug(msg, keysAndValues...)
 }
 func (l *RetryableHttpLogger) Debug(msg string, keysAndValues ...interface{}) {
-	l.l.Debug("[downloader] "+msg, keysAndValues...)
+	l.l.Debug(msg, keysAndValues...)
 }
