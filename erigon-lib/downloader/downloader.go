@@ -853,6 +853,7 @@ func (d *Downloader) mainLoop(silent bool) error {
 
 	d.wg.Add(1)
 	go func() {
+		defer panic("exit main loop")
 		defer d.wg.Done()
 
 		complete := map[string]struct{}{}
