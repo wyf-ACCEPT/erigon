@@ -88,6 +88,10 @@ var (
 				var lastEventId uint64
 				if err := kv.BigChunks(db, kv.BorEventNums, from, func(tx kv.Tx, blockNumBytes, eventIdBytes []byte) (bool, error) {
 					blockNum := binary.BigEndian.Uint64(blockNumBytes)
+					if blockNum == 6319344 {
+						log.Warn("[dbg] borevents, retire", "blockNum", blockNum)
+					}
+
 					if first {
 						startEventId = binary.BigEndian.Uint64(eventIdBytes)
 						first = false
@@ -98,6 +102,9 @@ var (
 						if e != nil {
 							return false, e
 						}
+						if blockNum == 6319344 {
+							log.Warn("[dbg] borevents, retire, extractEventRange", "blockNum", blockNum, "startEventId", startEventId, "endEventId", endEventId)
+						}
 						if e := extractEventRange(startEventId, endEventId, tx, prevBlockNum, blockHash, collect); e != nil {
 							return false, e
 						}
@@ -105,6 +112,9 @@ var (
 						prevBlockNum = blockNum
 					}
 					if blockNum >= blockTo {
+						if blockNum == 6319344 {
+							log.Warn("[dbg] borevents, retire, exit1", "blockNum", blockNum, "blockTo", blockTo)
+						}
 						return false, nil
 					}
 					lastEventId = binary.BigEndian.Uint64(eventIdBytes)
@@ -535,11 +545,16 @@ func extractEventRange(startEventId, endEventId uint64, tx kv.Tx, blockNum uint6
 	var eventIdBuf [8]byte
 	txnHash := bortypes.ComputeBorTxHash(blockNum, blockHash)
 	binary.BigEndian.PutUint64(blockNumBuf[:], blockNum)
+	var i int
 	for eventId := startEventId; eventId < endEventId; eventId++ {
 		binary.BigEndian.PutUint64(eventIdBuf[:], eventId)
 		event, err := tx.GetOne(kv.BorEvents, eventIdBuf[:])
 		if err != nil {
 			return err
+		}
+		if event == nil {
+			log.Warn("[dbg] extractEventRange, event not found!", "eventId", eventId)
+			panic(1)
 		}
 		snapshotRecord := make([]byte, len(event)+length.Hash+length.BlockNum+8)
 		copy(snapshotRecord, txnHash[:])
@@ -549,6 +564,11 @@ func extractEventRange(startEventId, endEventId uint64, tx kv.Tx, blockNum uint6
 		if err := collect(snapshotRecord); err != nil {
 			return err
 		}
+		i++
 	}
+	if blockNum == 6319344 {
+		log.Warn("[dbg] extractEventRange, extracted", "extracted", i)
+	}
+
 	return nil
 }

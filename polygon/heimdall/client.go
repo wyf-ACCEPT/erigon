@@ -130,6 +130,7 @@ const (
 )
 
 func (c *Client) FetchStateSyncEvents(ctx context.Context, fromID uint64, to time.Time, limit int) ([]*EventRecordWithTime, error) {
+
 	eventRecords := make([]*EventRecordWithTime, 0)
 
 	for {
@@ -156,6 +157,9 @@ func (c *Client) FetchStateSyncEvents(ctx context.Context, fromID uint64, to tim
 		}
 
 		if response == nil || response.Result == nil {
+			if fromID >= 575 && fromID < 700 {
+				log.Warn("[dbg] FetchStateSyncEvents1 stop! status 204", "fromID", fromID, "to_ts", to.Unix())
+			}
 			// status 204
 			break
 		}
@@ -163,6 +167,9 @@ func (c *Client) FetchStateSyncEvents(ctx context.Context, fromID uint64, to tim
 		eventRecords = append(eventRecords, response.Result...)
 
 		if len(response.Result) < stateFetchLimit || (limit > 0 && len(eventRecords) >= limit) {
+			if fromID >= 575 && fromID < 700 {
+				log.Warn("[dbg] FetchStateSyncEvents2 stop!", "fromID", fromID, "to_ts", to.Unix(), "len(eventRecords)", len(eventRecords), "limit", limit, "len(response.Result)", len(response.Result))
+			}
 			break
 		}
 

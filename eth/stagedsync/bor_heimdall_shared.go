@@ -447,6 +447,9 @@ func fetchAndWriteHeimdallStateSyncEvents(
 	)
 
 	eventRecords, err := heimdallClient.FetchStateSyncEvents(ctx, from, fetchTo, fetchLimit)
+	if from == 625 {
+		log.Warn("[dbg] fetchAndWriteHeimdallStateSyncEvents", "from", from, "fetchTo", fetchTo.Unix(), "fetchLimit", fetchLimit, "len(eventRecords)", len(eventRecords))
+	}
 
 	if err != nil {
 		return lastStateSyncEventID, 0, time.Since(fetchStart), err
@@ -496,6 +499,10 @@ func fetchAndWriteHeimdallStateSyncEvents(
 			var blockNumBuf [8]byte
 			binary.BigEndian.PutUint64(blockNumBuf[:], blockNum)
 			binary.BigEndian.PutUint64(eventIdBuf[:], eventRecord.ID)
+			if from == 625 {
+				log.Warn("[dbg] fetchAndWriteHeimdallStateSyncEvents2", "from", from, "blockNum", blockNum, "eventRecord.ID", eventRecord.ID)
+			}
+
 			if err = tx.Put(kv.BorEventNums, blockNumBuf[:], eventIdBuf[:]); err != nil {
 				return lastStateSyncEventID, i, time.Since(fetchStart), err
 			}

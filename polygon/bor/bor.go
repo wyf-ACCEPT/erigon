@@ -1465,8 +1465,9 @@ func (c *Bor) CommitStates(
 	blockNum := header.Number.Uint64()
 	events := chain.Chain.BorEventsByBlock(header.Hash(), blockNum)
 
+	log.Warn("[dbg] bor events", "blockNum", blockNum, "local", len(events), "FrozenBorBlocks", chain.Chain.FrozenBorBlocks())
 	//if len(events) == 50 || len(events) == 0 { // we still sometime could get 0 events from borevent file
-	if blockNum <= chain.Chain.FrozenBorBlocks() && len(events) == 50 { // we still sometime could get 0 events from borevent file
+	if blockNum <= chain.Chain.FrozenBorBlocks() && len(events) == 50 || len(events) == 0 { // we still sometime could get 0 events from borevent file
 		var to time.Time
 		if c.config.IsIndore(blockNum) {
 			stateSyncDelay := c.config.CalculateStateSyncDelay(blockNum)
@@ -1476,12 +1477,13 @@ func (c *Bor) CommitStates(
 			to = time.Unix(int64(pHeader.Time), 0)
 		}
 
+		fmt.Printf("chain.Chain: %T \n", chain.Chain)
 		startEventID := chain.Chain.BorStartEventID(header.Hash(), blockNum)
-		log.Warn("[dbg] fallback to remote bor events", "blockNum", blockNum, "startEventID", startEventID, "events_from_db_or_snaps", len(events))
 		remote, err := c.HeimdallClient.FetchStateSyncEvents(context.Background(), startEventID, to, 0)
 		if err != nil {
 			return err
 		}
+		log.Warn("[dbg] bor events", "blockNum", blockNum, "remote", len(remote), "startEventID", startEventID, "to_ts", to.Unix(), "to", to)
 		if len(remote) > 0 {
 			chainID := c.chainConfig.ChainID.String()
 
@@ -1506,6 +1508,8 @@ func (c *Bor) CommitStates(
 				events = append(events, data)
 			}
 		}
+		log.Warn("[dbg] commit3 states", "blockNum", blockNum, "events_from_db_or_snaps", len(events))
+		panic(1)
 	}
 
 	for _, event := range events {
