@@ -447,7 +447,7 @@ func fetchAndWriteHeimdallStateSyncEvents(
 	)
 
 	eventRecords, err := heimdallClient.FetchStateSyncEvents(ctx, from, fetchTo, fetchLimit)
-	if from == 625 {
+	if from >= 625 && from < 630 {
 		log.Warn("[dbg] fetchAndWriteHeimdallStateSyncEvents", "from", from, "fetchTo", fetchTo.Unix(), "fetchLimit", fetchLimit, "len(eventRecords)", len(eventRecords))
 	}
 
@@ -511,6 +511,10 @@ func fetchAndWriteHeimdallStateSyncEvents(
 		}
 
 		lastStateSyncEventID++
+	}
+
+	if from > 620 && from < 630 {
+		log.Warn("[dbg] fetchAndWriteHeimdallStateSyncEvents33", "len(eventRecords)", len(eventRecords))
 	}
 
 	return lastStateSyncEventID, len(eventRecords), time.Since(fetchStart), nil
