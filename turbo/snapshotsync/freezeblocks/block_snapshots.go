@@ -1471,6 +1471,7 @@ func (br *BlockRetire) RetireBlocks(ctx context.Context, minBlockNum uint64, max
 			if err != nil {
 				return err
 			}
+			fmt.Printf("[dbg] okBor1: %d %t\n", minBlockNum, okBor)
 		}
 
 		ok, err = br.retireBlocks(ctx, minBlockNum, maxBlockNum, lvl, seedNewSnapshots, onDeleteSnapshots)
@@ -1484,6 +1485,7 @@ func (br *BlockRetire) RetireBlocks(ctx context.Context, minBlockNum uint64, max
 			if err != nil {
 				return err
 			}
+			fmt.Printf("[dbg] okBor2: %d %t\n", minBorBlockNum, okBor)
 		}
 		if onFinish != nil {
 			if err := onFinish(); err != nil {
