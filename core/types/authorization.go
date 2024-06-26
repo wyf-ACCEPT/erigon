@@ -42,6 +42,36 @@ func (ath *Authorization) copy() *Authorization {
 }
 
 func (ath *Authorization) RecoverSigner(data *bytes.Buffer, b []byte) (*libcommon.Address, error) {
+	hash, err := ath.GenerateHashToSign(data, b)
+	if err != nil {
+		return nil, err
+	}
+	var sig [65]byte
+	var arr [32]byte
+
+	ath.R.WriteToArray32(&arr)
+	copy(sig[:32], arr[:])
+
+	ath.S.WriteToArray32(&arr)
+	copy(sig[32:], arr[:])
+
+	if ath.V.Eq(u256.Num0) || ath.V.Eq(u256.Num1) {
+		sig[64] = byte(ath.V.Uint64())
+	} else {
+		return nil, fmt.Errorf("invalid V value: %d", ath.V.Uint64())
+	}
+
+	pubkey, err := crypto.Ecrecover(hash, sig[:])
+	if err != nil {
+		return nil, err
+	}
+
+	var authority libcommon.Address
+	copy(authority[:], crypto.Keccak256(pubkey[1:])[12:])
+	return &authority, nil
+}
+
+func (ath *Authorization) GenerateHashToSign(data *bytes.Buffer, b []byte) ([]byte, error) {
 	authLen := rlp2.U64Len(ath.ChainID)
 	authLen += (1 + length.Addr)
 	authLen += 1 // nonce
@@ -70,29 +100,7 @@ func (ath *Authorization) RecoverSigner(data *bytes.Buffer, b []byte) (*libcommo
 	hashData = append(hashData, data.Bytes()...)
 	hash := crypto.Keccak256Hash(hashData)
 
-	var sig [65]byte
-	var arr [32]byte
-
-	ath.R.WriteToArray32(&arr)
-	copy(sig[:32], arr[:])
-
-	ath.S.WriteToArray32(&arr)
-	copy(sig[32:], arr[:])
-
-	if ath.V.Eq(u256.Num0) || ath.V.Eq(u256.Num1) {
-		sig[64] = byte(ath.V.Uint64())
-	} else {
-		return nil, fmt.Errorf("invalid V value: %d", ath.V.Uint64())
-	}
-
-	pubkey, err := crypto.Ecrecover(hash.Bytes(), sig[:])
-	if err != nil {
-		return nil, err
-	}
-
-	var authority libcommon.Address
-	copy(authority[:], crypto.Keccak256(pubkey[1:])[12:])
-	return &authority, nil
+	return hash.Bytes(), nil
 }
 
 func authorizationsSize(authorizations []Authorization) int {

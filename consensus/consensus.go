@@ -139,6 +139,8 @@ type EngineReader interface {
 
 	GetPostApplyMessageFunc() evmtypes.PostApplyMessageFunc
 
+	IsStatelessExecution() bool
+
 	// Close terminates any background threads, DB's etc maintained by the consensus engine.
 	Close() error
 }

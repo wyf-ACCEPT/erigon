@@ -17,7 +17,7 @@ func StoreBlockHashesEip2935(header *types.Header, state *state.IntraBlockState,
 	if headerNum == 0 { // Activation of fork at Genesis
 		return
 	}
-	storeHash(headerNum-1, header.ParentHash, state)
+	StoreHash(headerNum-1, header.ParentHash, state)
 	// If this is the fork block, add the parent's direct `HISTORY_SERVE_WINDOW - 1` ancestors as well
 	parent := headerReader.GetHeader(header.ParentHash, headerNum-1)
 	if parent.Time < config.PragueTime.Uint64() {
@@ -28,13 +28,13 @@ func StoreBlockHashesEip2935(header *types.Header, state *state.IntraBlockState,
 		}
 		for i := window; i > 0; i-- {
 			p = p - 1
-			storeHash(p, parent.ParentHash, state)
+			StoreHash(p, parent.ParentHash, state)
 			parent = headerReader.GetHeader(parent.ParentHash, p)
 		}
 	}
 }
 
-func storeHash(num uint64, hash libcommon.Hash, state *state.IntraBlockState) {
+func StoreHash(num uint64, hash libcommon.Hash, state *state.IntraBlockState) {
 	slotNum := num % params.BlockHashHistoryServeWindow
 	storageSlot := libcommon.BytesToHash(uint256.NewInt(slotNum).Bytes())
 	parentHashInt := uint256.NewInt(0).SetBytes32(hash.Bytes())

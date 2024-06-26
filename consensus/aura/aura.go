@@ -1115,6 +1115,10 @@ func (c *AuRa) IsServiceTransaction(sender libcommon.Address, syscall consensus.
 	return false
 }
 
+func (c *AuRa) IsStatelessExecution() bool {
+	return false
+}
+
 // Close implements consensus.Engine. It's a noop for clique as there are no background threads.
 func (c *AuRa) Close() error {
 	libcommon.SafeClose(c.exitCh)

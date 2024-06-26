@@ -313,10 +313,11 @@ func Main(ctx *cli.Context) error {
 	}
 	defer sd.Close()
 
-	reader, writer := MakePreState(chainConfig.Rules(0, 0), tx, sd, prestate.Pre)
+	reader, writer := MakePreState(chainConfig.Rules(0, 0), tx, sd, prestate.Pre, prestate.Env.BlockHashes)
 	// Merge engine can be used for pre-merge blocks as well, as it
 	// redirects to the ethash engine based on the block number
 	engine := merge.New(&ethash.FakeEthash{})
+	engine.SetStatelessExecution(true)
 
 	t8logger := log.New("t8ntool")
 	chainReader := consensuschain.NewReader(chainConfig, tx, nil, t8logger)
@@ -650,6 +651,9 @@ func NewHeader(env stEnv) *types.Header {
 	header.UncleHash = env.UncleHash
 	header.WithdrawalsHash = env.WithdrawalsHash
 	header.RequestsRoot = env.RequestsRoot
+	header.ExcessBlobGas = env.ExcessBlobGas
+
+	header.ParentBeaconBlockRoot = env.ParentBeaconBlockRoot
 
 	return &header
 }

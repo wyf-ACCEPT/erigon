@@ -1298,6 +1298,10 @@ func (c *Bor) Start(chainDB kv.RwDB) {
 	}
 }
 
+func (c *Bor) IsStatelessExecution() bool {
+	return false
+}
+
 func (c *Bor) Close() error {
 	c.closeOnce.Do(func() {
 		if c.DB != nil {

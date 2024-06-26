@@ -971,6 +971,10 @@ func (e *remoteConsensusEngine) CalculateRewards(config *chain.Config, header *t
 	return e.engine.CalculateRewards(config, header, uncles, syscall)
 }
 
+func (c *remoteConsensusEngine) IsStatelessExecution() bool {
+	return false
+}
+
 func (e *remoteConsensusEngine) Close() error {
 	if err := e.validateEngineReady(); err != nil {
 		return err

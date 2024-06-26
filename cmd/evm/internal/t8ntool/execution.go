@@ -28,6 +28,7 @@ import (
 	"github.com/ledgerwatch/erigon/common"
 	"github.com/ledgerwatch/erigon/common/math"
 	"github.com/ledgerwatch/erigon/consensus/ethash"
+	"github.com/ledgerwatch/erigon/consensus/misc"
 	"github.com/ledgerwatch/erigon/core/state"
 	"github.com/ledgerwatch/erigon/core/tracing"
 	"github.com/ledgerwatch/erigon/core/types"
@@ -46,39 +47,52 @@ type ommer struct {
 
 //go:generate gencodec -type stEnv -field-override stEnvMarshaling -out gen_stenv.go
 type stEnv struct {
-	Coinbase         libcommon.Address                      `json:"currentCoinbase"   gencodec:"required"`
-	Difficulty       *big.Int                               `json:"currentDifficulty"`
-	Random           *big.Int                               `json:"currentRandom"`
-	MixDigest        libcommon.Hash                         `json:"mixHash,omitempty"`
-	ParentDifficulty *big.Int                               `json:"parentDifficulty"`
-	GasLimit         uint64                                 `json:"currentGasLimit"   gencodec:"required"`
-	Number           uint64                                 `json:"currentNumber"     gencodec:"required"`
-	Timestamp        uint64                                 `json:"currentTimestamp"  gencodec:"required"`
-	ParentTimestamp  uint64                                 `json:"parentTimestamp,omitempty"`
-	BlockHashes      map[math.HexOrDecimal64]libcommon.Hash `json:"blockHashes,omitempty"`
-	Ommers           []ommer                                `json:"ommers,omitempty"`
-	BaseFee          *big.Int                               `json:"currentBaseFee,omitempty"`
-	ParentUncleHash  libcommon.Hash                         `json:"parentUncleHash"`
-	UncleHash        libcommon.Hash                         `json:"uncleHash,omitempty"`
-	Withdrawals      []*types.Withdrawal                    `json:"withdrawals,omitempty"`
-	WithdrawalsHash  *libcommon.Hash                        `json:"withdrawalsRoot,omitempty"`
-	Requests         types.Requests                         `json:"requests,omitempty"`
-	RequestsRoot     *libcommon.Hash                        `json:"requestsRoot,omitempty"`
+	Coinbase              libcommon.Address                      `json:"currentCoinbase"   gencodec:"required"`
+	Difficulty            *big.Int                               `json:"currentDifficulty"`
+	Random                *big.Int                               `json:"currentRandom"`
+	MixDigest             libcommon.Hash                         `json:"mixHash,omitempty"`
+	ParentDifficulty      *big.Int                               `json:"parentDifficulty"`
+	ParentBaseFee         *big.Int                               `json:"parentBaseFee,omitempty"`
+	ParentGasUsed         uint64                                 `json:"parentGasUsed,omitempty"`
+	ParentGasLimit        uint64                                 `json:"parentGasLimit,omitempty"`
+	GasLimit              uint64                                 `json:"currentGasLimit"   gencodec:"required"`
+	Number                uint64                                 `json:"currentNumber"     gencodec:"required"`
+	Timestamp             uint64                                 `json:"currentTimestamp"  gencodec:"required"`
+	ParentTimestamp       uint64                                 `json:"parentTimestamp,omitempty"`
+	BlockHashes           map[math.HexOrDecimal64]libcommon.Hash `json:"blockHashes,omitempty"`
+	Ommers                []ommer                                `json:"ommers,omitempty"`
+	Withdrawals           []*types.Withdrawal                    `json:"withdrawals,omitempty"`
+	WithdrawalsHash       *libcommon.Hash                        `json:"withdrawalsRoot,omitempty"`
+	Requests              types.Requests                         `json:"requests,omitempty"`
+	RequestsRoot          *libcommon.Hash                        `json:"requestsRoot,omitempty"`
+	BaseFee               *big.Int                               `json:"currentBaseFee,omitempty"`
+	ParentUncleHash       libcommon.Hash                         `json:"parentUncleHash"`
+	UncleHash             libcommon.Hash                         `json:"uncleHash,omitempty"`
+	ExcessBlobGas         *uint64                                `json:"currentExcessBlobGas,omitempty"`
+	ParentExcessBlobGas   *uint64                                `json:"parentExcessBlobGas,omitempty"`
+	ParentBlobGasUsed     *uint64                                `json:"parentBlobGasUsed,omitempty"`
+	ParentBeaconBlockRoot *libcommon.Hash                        `json:"parentBeaconBlockRoot"`
 }
 
 type stEnvMarshaling struct {
-	Coinbase         common.UnprefixedAddress
-	Difficulty       *math.HexOrDecimal256
-	Random           *math.HexOrDecimal256
-	ParentDifficulty *math.HexOrDecimal256
-	GasLimit         math.HexOrDecimal64
-	Number           math.HexOrDecimal64
-	Timestamp        math.HexOrDecimal64
-	ParentTimestamp  math.HexOrDecimal64
-	BaseFee          *math.HexOrDecimal256
+	Coinbase            common.UnprefixedAddress
+	Difficulty          *math.HexOrDecimal256
+	Random              *math.HexOrDecimal256
+	ParentDifficulty    *math.HexOrDecimal256
+	ParentBaseFee       *math.HexOrDecimal256
+	ParentGasUsed       math.HexOrDecimal64
+	ParentGasLimit      math.HexOrDecimal64
+	GasLimit            math.HexOrDecimal64
+	Number              math.HexOrDecimal64
+	Timestamp           math.HexOrDecimal64
+	ParentTimestamp     math.HexOrDecimal64
+	BaseFee             *math.HexOrDecimal256
+	ExcessBlobGas       *math.HexOrDecimal64
+	ParentExcessBlobGas *math.HexOrDecimal64
+	ParentBlobGasUsed   *math.HexOrDecimal64
 }
 
-func MakePreState(chainRules *chain.Rules, tx kv.RwTx, sd *state3.SharedDomains, accounts types.GenesisAlloc) (state.StateReader, state.WriterWithChangeSets) {
+func MakePreState(chainRules *chain.Rules, tx kv.RwTx, sd *state3.SharedDomains, accounts types.GenesisAlloc, blockHashes map[math.HexOrDecimal64]libcommon.Hash) (state.StateReader, state.WriterWithChangeSets) {
 	var blockNr uint64 = 0
 
 	stateReader, stateWriter := rpchelper.NewLatestStateReader(tx), state.NewWriterV4(sd)
@@ -103,6 +117,13 @@ func MakePreState(chainRules *chain.Rules, tx kv.RwTx, sd *state3.SharedDomains,
 			tx.Put(kv.IncarnationMap, addr[:], b[:])
 		}
 	}
+
+	if chainRules.IsPrague {
+		for norh, hash := range blockHashes {
+			misc.StoreHash(uint64(norh), hash, statedb)
+		}
+	}
+
 	// Commit and re-open to start with a clean state.
 	sd.SetBlockNum(blockNr + 1)
 	if err := statedb.FinalizeTx(chainRules, stateWriter); err != nil {

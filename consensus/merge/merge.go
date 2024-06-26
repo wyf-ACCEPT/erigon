@@ -50,7 +50,8 @@ var (
 //
 // Note: After the Merge the work is mostly done on the Consensus Layer, so nothing much is to be added on this side.
 type Merge struct {
-	eth1Engine consensus.Engine // Original consensus engine used in eth1, e.g. ethash or clique
+	eth1Engine         consensus.Engine // Original consensus engine used in eth1, e.g. ethash or clique
+	statelessExecution bool
 }
 
 // New creates a new instance of the Merge Engine with the given embedded eth1 engine.
@@ -59,6 +60,10 @@ func New(eth1Engine consensus.Engine) *Merge {
 		panic("nested consensus engine")
 	}
 	return &Merge{eth1Engine: eth1Engine}
+}
+
+func (s *Merge) SetStatelessExecution(stateless bool) {
+	s.statelessExecution = stateless
 }
 
 // InnerEngine returns the embedded eth1 consensus engine.
@@ -335,7 +340,7 @@ func (s *Merge) Initialize(config *chain.Config, chain consensus.ChainHeaderRead
 			return syscall(addr, data, state, header, false /* constCall */)
 		})
 	}
-	if chain.Config().IsPrague(header.Time) {
+	if chain.Config().IsPrague(header.Time) && !s.statelessExecution {
 		misc.StoreBlockHashesEip2935(header, state, config, chain)
 	}
 }
@@ -350,6 +355,10 @@ func (s *Merge) GetTransferFunc() evmtypes.TransferFunc {
 
 func (s *Merge) GetPostApplyMessageFunc() evmtypes.PostApplyMessageFunc {
 	return s.eth1Engine.GetPostApplyMessageFunc()
+}
+
+func (s *Merge) IsStatelessExecution() bool {
+	return s.statelessExecution
 }
 
 func (s *Merge) Close() error {

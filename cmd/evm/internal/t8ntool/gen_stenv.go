@@ -7,8 +7,8 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/ledgerwatch/erigon-lib/common"
 	common0 "github.com/ledgerwatch/erigon/common"
+	"github.com/ledgerwatch/erigon-lib/common"
 	"github.com/ledgerwatch/erigon/common/math"
 	"github.com/ledgerwatch/erigon/core/types"
 )
@@ -18,24 +18,31 @@ var _ = (*stEnvMarshaling)(nil)
 // MarshalJSON marshals as JSON.
 func (s stEnv) MarshalJSON() ([]byte, error) {
 	type stEnv struct {
-		Coinbase         common0.UnprefixedAddress           `json:"currentCoinbase"   gencodec:"required"`
-		Difficulty       *math.HexOrDecimal256               `json:"currentDifficulty"`
-		Random           *math.HexOrDecimal256               `json:"currentRandom"`
-		MixDigest        common.Hash                         `json:"mixHash,omitempty"`
-		ParentDifficulty *math.HexOrDecimal256               `json:"parentDifficulty"`
-		GasLimit         math.HexOrDecimal64                 `json:"currentGasLimit"   gencodec:"required"`
-		Number           math.HexOrDecimal64                 `json:"currentNumber"     gencodec:"required"`
-		Timestamp        math.HexOrDecimal64                 `json:"currentTimestamp"  gencodec:"required"`
-		ParentTimestamp  math.HexOrDecimal64                 `json:"parentTimestamp,omitempty"`
-		BlockHashes      map[math.HexOrDecimal64]common.Hash `json:"blockHashes,omitempty"`
-		Ommers           []ommer                             `json:"ommers,omitempty"`
-		BaseFee          *math.HexOrDecimal256               `json:"currentBaseFee,omitempty"`
-		ParentUncleHash  common.Hash                         `json:"parentUncleHash"`
-		UncleHash        common.Hash                         `json:"uncleHash,omitempty"`
-		Withdrawals      []*types.Withdrawal                 `json:"withdrawals,omitempty"`
-		WithdrawalsHash  *common.Hash                        `json:"withdrawalsRoot,omitempty"`
-		Requests         types.Requests                      `json:"requests,omitempty"`
-		RequestsRoot     *common.Hash                        `json:"requestsRoot,omitempty"`
+		Coinbase              common0.UnprefixedAddress            `json:"currentCoinbase"   gencodec:"required"`
+		Difficulty            *math.HexOrDecimal256               `json:"currentDifficulty"`
+		Random                *math.HexOrDecimal256               `json:"currentRandom"`
+		MixDigest             common.Hash                         `json:"mixHash,omitempty"`
+		ParentDifficulty      *math.HexOrDecimal256               `json:"parentDifficulty"`
+		ParentBaseFee         *math.HexOrDecimal256               `json:"parentBaseFee,omitempty"`
+		ParentGasUsed         math.HexOrDecimal64                 `json:"parentGasUsed,omitempty"`
+		ParentGasLimit        math.HexOrDecimal64                 `json:"parentGasLimit,omitempty"`
+		GasLimit              math.HexOrDecimal64                 `json:"currentGasLimit"   gencodec:"required"`
+		Number                math.HexOrDecimal64                 `json:"currentNumber"     gencodec:"required"`
+		Timestamp             math.HexOrDecimal64                 `json:"currentTimestamp"  gencodec:"required"`
+		ParentTimestamp       math.HexOrDecimal64                 `json:"parentTimestamp,omitempty"`
+		BlockHashes           map[math.HexOrDecimal64]common.Hash `json:"blockHashes,omitempty"`
+		Ommers                []ommer                             `json:"ommers,omitempty"`
+		Withdrawals           []*types.Withdrawal                 `json:"withdrawals,omitempty"`
+		WithdrawalsHash       *common.Hash                        `json:"withdrawalsRoot,omitempty"`
+		Requests              types.Requests                      `json:"requests,omitempty"`
+		RequestsRoot          *common.Hash                        `json:"requestsRoot,omitempty"`
+		BaseFee               *math.HexOrDecimal256               `json:"currentBaseFee,omitempty"`
+		ParentUncleHash       common.Hash                         `json:"parentUncleHash"`
+		UncleHash             common.Hash                         `json:"uncleHash,omitempty"`
+		ExcessBlobGas         *math.HexOrDecimal64                `json:"currentExcessBlobGas,omitempty"`
+		ParentExcessBlobGas   *math.HexOrDecimal64                `json:"parentExcessBlobGas,omitempty"`
+		ParentBlobGasUsed     *math.HexOrDecimal64                `json:"parentBlobGasUsed,omitempty"`
+		ParentBeaconBlockRoot *common.Hash                        `json:"parentBeaconBlockRoot"`
 	}
 	var enc stEnv
 	enc.Coinbase = common0.UnprefixedAddress(s.Coinbase)
@@ -43,43 +50,57 @@ func (s stEnv) MarshalJSON() ([]byte, error) {
 	enc.Random = (*math.HexOrDecimal256)(s.Random)
 	enc.MixDigest = s.MixDigest
 	enc.ParentDifficulty = (*math.HexOrDecimal256)(s.ParentDifficulty)
+	enc.ParentBaseFee = (*math.HexOrDecimal256)(s.ParentBaseFee)
+	enc.ParentGasUsed = math.HexOrDecimal64(s.ParentGasUsed)
+	enc.ParentGasLimit = math.HexOrDecimal64(s.ParentGasLimit)
 	enc.GasLimit = math.HexOrDecimal64(s.GasLimit)
 	enc.Number = math.HexOrDecimal64(s.Number)
 	enc.Timestamp = math.HexOrDecimal64(s.Timestamp)
 	enc.ParentTimestamp = math.HexOrDecimal64(s.ParentTimestamp)
 	enc.BlockHashes = s.BlockHashes
 	enc.Ommers = s.Ommers
-	enc.BaseFee = (*math.HexOrDecimal256)(s.BaseFee)
-	enc.ParentUncleHash = s.ParentUncleHash
-	enc.UncleHash = s.UncleHash
 	enc.Withdrawals = s.Withdrawals
 	enc.WithdrawalsHash = s.WithdrawalsHash
 	enc.Requests = s.Requests
 	enc.RequestsRoot = s.RequestsRoot
+	enc.UncleHash = s.UncleHash
+	enc.BaseFee = (*math.HexOrDecimal256)(s.BaseFee)
+	enc.ParentUncleHash = s.ParentUncleHash
+	enc.ExcessBlobGas = (*math.HexOrDecimal64)(s.ExcessBlobGas)
+	enc.ParentExcessBlobGas = (*math.HexOrDecimal64)(s.ParentExcessBlobGas)
+	enc.ParentBlobGasUsed = (*math.HexOrDecimal64)(s.ParentBlobGasUsed)
+	enc.ParentBeaconBlockRoot = s.ParentBeaconBlockRoot
 	return json.Marshal(&enc)
 }
 
 // UnmarshalJSON unmarshals from JSON.
 func (s *stEnv) UnmarshalJSON(input []byte) error {
 	type stEnv struct {
-		Coinbase         *common0.UnprefixedAddress          `json:"currentCoinbase"   gencodec:"required"`
-		Difficulty       *math.HexOrDecimal256               `json:"currentDifficulty"`
-		Random           *math.HexOrDecimal256               `json:"currentRandom"`
-		MixDigest        *common.Hash                        `json:"mixHash,omitempty"`
-		ParentDifficulty *math.HexOrDecimal256               `json:"parentDifficulty"`
-		GasLimit         *math.HexOrDecimal64                `json:"currentGasLimit"   gencodec:"required"`
-		Number           *math.HexOrDecimal64                `json:"currentNumber"     gencodec:"required"`
-		Timestamp        *math.HexOrDecimal64                `json:"currentTimestamp"  gencodec:"required"`
-		ParentTimestamp  *math.HexOrDecimal64                `json:"parentTimestamp,omitempty"`
-		BlockHashes      map[math.HexOrDecimal64]common.Hash `json:"blockHashes,omitempty"`
-		Ommers           []ommer                             `json:"ommers,omitempty"`
-		BaseFee          *math.HexOrDecimal256               `json:"currentBaseFee,omitempty"`
-		ParentUncleHash  *common.Hash                        `json:"parentUncleHash"`
-		UncleHash        *common.Hash                        `json:"uncleHash,omitempty"`
-		Withdrawals      []*types.Withdrawal                 `json:"withdrawals,omitempty"`
-		WithdrawalsHash  *common.Hash                        `json:"withdrawalsRoot,omitempty"`
-		Requests         *types.Requests                     `json:"requests,omitempty"`
-		RequestsRoot     *common.Hash                        `json:"requestsRoot,omitempty"`
+		Coinbase              *common0.UnprefixedAddress           `json:"currentCoinbase"   gencodec:"required"`
+		Difficulty            *math.HexOrDecimal256               `json:"currentDifficulty"`
+		Random                *math.HexOrDecimal256               `json:"currentRandom"`
+		MixDigest             *common.Hash                        `json:"mixHash,omitempty"`
+		ParentDifficulty      *math.HexOrDecimal256               `json:"parentDifficulty"`
+		ParentBaseFee         *math.HexOrDecimal256               `json:"parentBaseFee,omitempty"`
+		ParentGasUsed         *math.HexOrDecimal64                `json:"parentGasUsed,omitempty"`
+		ParentGasLimit        *math.HexOrDecimal64                `json:"parentGasLimit,omitempty"`
+		GasLimit              *math.HexOrDecimal64                `json:"currentGasLimit"   gencodec:"required"`
+		Number                *math.HexOrDecimal64                `json:"currentNumber"     gencodec:"required"`
+		Timestamp             *math.HexOrDecimal64                `json:"currentTimestamp"  gencodec:"required"`
+		ParentTimestamp       *math.HexOrDecimal64                `json:"parentTimestamp,omitempty"`
+		BlockHashes           map[math.HexOrDecimal64]common.Hash `json:"blockHashes,omitempty"`
+		Ommers                []ommer                             `json:"ommers,omitempty"`
+		Withdrawals           []*types.Withdrawal                 `json:"withdrawals,omitempty"`
+		WithdrawalsHash       *common.Hash                        `json:"withdrawalsRoot,omitempty"`
+		Requests              *types.Requests                     `json:"requests,omitempty"`
+		RequestsRoot          *common.Hash                        `json:"requestsRoot,omitempty"`
+		BaseFee               *math.HexOrDecimal256               `json:"currentBaseFee,omitempty"`
+		ParentUncleHash       *common.Hash                        `json:"parentUncleHash"`
+		UncleHash             *common.Hash                        `json:"uncleHash,omitempty"`
+		ExcessBlobGas         *math.HexOrDecimal64                `json:"currentExcessBlobGas,omitempty"`
+		ParentExcessBlobGas   *math.HexOrDecimal64                `json:"parentExcessBlobGas,omitempty"`
+		ParentBlobGasUsed     *math.HexOrDecimal64                `json:"parentBlobGasUsed,omitempty"`
+		ParentBeaconBlockRoot *common.Hash                        `json:"parentBeaconBlockRoot"`
 	}
 	var dec stEnv
 	if err := json.Unmarshal(input, &dec); err != nil {
@@ -100,6 +121,15 @@ func (s *stEnv) UnmarshalJSON(input []byte) error {
 	}
 	if dec.ParentDifficulty != nil {
 		s.ParentDifficulty = (*big.Int)(dec.ParentDifficulty)
+	}
+	if dec.ParentBaseFee != nil {
+		s.ParentBaseFee = (*big.Int)(dec.ParentBaseFee)
+	}
+	if dec.ParentGasUsed != nil {
+		s.ParentGasUsed = uint64(*dec.ParentGasUsed)
+	}
+	if dec.ParentGasLimit != nil {
+		s.ParentGasLimit = uint64(*dec.ParentGasLimit)
 	}
 	if dec.GasLimit == nil {
 		return errors.New("missing required field 'currentGasLimit' for stEnv")
@@ -122,15 +152,6 @@ func (s *stEnv) UnmarshalJSON(input []byte) error {
 	if dec.Ommers != nil {
 		s.Ommers = dec.Ommers
 	}
-	if dec.BaseFee != nil {
-		s.BaseFee = (*big.Int)(dec.BaseFee)
-	}
-	if dec.ParentUncleHash != nil {
-		s.ParentUncleHash = *dec.ParentUncleHash
-	}
-	if dec.UncleHash != nil {
-		s.UncleHash = *dec.UncleHash
-	}
 	if dec.Withdrawals != nil {
 		s.Withdrawals = dec.Withdrawals
 	}
@@ -142,6 +163,27 @@ func (s *stEnv) UnmarshalJSON(input []byte) error {
 	}
 	if dec.RequestsRoot != nil {
 		s.RequestsRoot = dec.RequestsRoot
+	}
+	if dec.BaseFee != nil {
+		s.BaseFee = (*big.Int)(dec.BaseFee)
+	}
+	if dec.ParentUncleHash != nil {
+		s.ParentUncleHash = *dec.ParentUncleHash
+	}
+	if dec.UncleHash != nil {
+		s.UncleHash = *dec.UncleHash
+	}
+	if dec.ExcessBlobGas != nil {
+		s.ExcessBlobGas = (*uint64)(dec.ExcessBlobGas)
+	}
+	if dec.ParentExcessBlobGas != nil {
+		s.ParentExcessBlobGas = (*uint64)(dec.ParentExcessBlobGas)
+	}
+	if dec.ParentBlobGasUsed != nil {
+		s.ParentBlobGasUsed = (*uint64)(dec.ParentBlobGasUsed)
+	}
+	if dec.ParentBeaconBlockRoot != nil {
+		s.ParentBeaconBlockRoot = dec.ParentBeaconBlockRoot
 	}
 	return nil
 }
