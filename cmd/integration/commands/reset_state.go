@@ -118,8 +118,8 @@ func printStages(tx kv.Tx, snapshots *freezeblocks.RoSnapshots, borSn *freezeblo
 			}
 			at.Close()
 			r.RunOptimize()
-			fmt.Printf("r: %s: %dMil, %dmb, bytes/key=%f\n", i, r.GetCardinality()/1_000_000, r.GetSerializedSizeInBytes()/1024/1024, float64(r.GetSerializedSizeInBytes())/float64(r.GetCardinality()))
 			if r.GetCardinality() > 0 {
+				fmt.Printf("r: %s: %dMil, %dmb, bytes/key=%f\n", i, r.GetCardinality()/1_000_000, r.GetSerializedSizeInBytes()/1024/1024, float64(r.GetSerializedSizeInBytes())/float64(r.GetCardinality()))
 				ef := eliasfano32.NewEliasFano(r.GetCardinality(), r.Maximum())
 				iterR := r.Iterator()
 				for iterR.HasNext() {
@@ -129,7 +129,7 @@ func printStages(tx kv.Tx, snapshots *freezeblocks.RoSnapshots, borSn *freezeblo
 
 				var buf []byte
 				buf = ef.AppendBytes(buf[:0])
-				fmt.Printf("ef: %s: %dMil, %dmb, bytes/key=%f\n", i, r.GetCardinality()/1_000_000, len(buf), float64(len(buf))/float64(r.GetCardinality()))
+				fmt.Printf("ef: %s: %dMil, %dmb, bytes/key=%f\n", i, r.GetCardinality()/1_000_000, len(buf)/1024/1024, float64(len(buf))/float64(r.GetCardinality()))
 			}
 		}
 
