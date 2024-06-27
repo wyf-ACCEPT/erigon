@@ -17,6 +17,7 @@
 package jsonrpc
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -34,6 +35,8 @@ import (
 	"github.com/ledgerwatch/erigon-lib/log/v3"
 	types2 "github.com/ledgerwatch/erigon-lib/types"
 
+	"github.com/ledgerwatch/erigon-lib/kv/membatchwithdb"
+	"github.com/ledgerwatch/erigon/consensus"
 	"github.com/ledgerwatch/erigon/core"
 	"github.com/ledgerwatch/erigon/core/state"
 	"github.com/ledgerwatch/erigon/core/types"
@@ -41,12 +44,14 @@ import (
 	"github.com/ledgerwatch/erigon/core/vm"
 	"github.com/ledgerwatch/erigon/core/vm/evmtypes"
 	"github.com/ledgerwatch/erigon/crypto"
+	"github.com/ledgerwatch/erigon/eth/stagedsync"
 	"github.com/ledgerwatch/erigon/eth/tracers/logger"
 	"github.com/ledgerwatch/erigon/params"
 	"github.com/ledgerwatch/erigon/rpc"
 	ethapi2 "github.com/ledgerwatch/erigon/turbo/adapter/ethapi"
 	"github.com/ledgerwatch/erigon/turbo/rpchelper"
 	"github.com/ledgerwatch/erigon/turbo/transactions"
+	"github.com/ledgerwatch/erigon/turbo/trie"
 )
 
 var latestNumOrHash = rpc.BlockNumberOrHashWithNumber(rpc.LatestBlockNumber)
@@ -414,6 +419,134 @@ func (api *APIImpl) GetProof(ctx context.Context, address libcommon.Address, sto
 		}
 		return pr.ProofResult()
 	*/
+}
+
+func (api *APIImpl) GetWitness(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) (hexutility.Bytes, error) {
+	return api.getWitness(ctx, api.db, blockNrOrHash, 0, true, api.MaxGetProofRewindBlockCount, api.logger)
+}
+
+func (api *APIImpl) GetTxWitness(ctx context.Context, blockNr rpc.BlockNumberOrHash, txIndex hexutil.Uint) (hexutility.Bytes, error) {
+	return api.getWitness(ctx, api.db, blockNr, txIndex, false, api.MaxGetProofRewindBlockCount, api.logger)
+}
+
+func (api *BaseAPI) getWitness(ctx context.Context, db kv.RoDB, blockNrOrHash rpc.BlockNumberOrHash, txIndex hexutil.Uint, fullBlock bool, maxGetProofRewindBlockCount int, logger log.Logger) (hexutility.Bytes, error) {
+	tx, err := db.BeginRo(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	blockNr, hash, _, err := rpchelper.GetCanonicalBlockNumber(blockNrOrHash, tx, api.filters) // DoCall cannot be executed on non-canonical blocks
+	if err != nil {
+		return nil, err
+	}
+
+	// Witness for genesis block is empty
+	if blockNr == 0 {
+		w := trie.NewWitness(make([]trie.WitnessOperator, 0))
+
+		var buf bytes.Buffer
+		_, err = w.WriteInto(&buf)
+		if err != nil {
+			return nil, err
+		}
+
+		return buf.Bytes(), nil
+	}
+
+	block, err := api.blockWithSenders(ctx, tx, hash, blockNr)
+	if err != nil {
+		return nil, err
+	}
+	if block == nil {
+		return nil, nil
+	}
+
+	if !fullBlock && int(txIndex) >= len(block.Transactions()) {
+		return nil, fmt.Errorf("transaction index out of bounds")
+	}
+
+	latestBlock, err := rpchelper.GetLatestBlockNumber(tx)
+	if err != nil {
+		return nil, err
+	}
+
+	if latestBlock < blockNr {
+		// shouldn't happen, but check anyway
+		return nil, fmt.Errorf("block number is in the future latest=%d requested=%d", latestBlock, blockNr)
+	}
+
+	// Check if the witness is present in the database. If found, return it.
+	if fullBlock {
+		wBytes, err := stagedsync.ReadChunks(tx, kv.Witnesses, stagedsync.Uint64ToBytes(blockNr))
+		if err == nil && wBytes != nil {
+			logger.Debug("Returning witness found in db", "blockNr", blockNr)
+			return wBytes, nil
+		}
+
+		logger.Debug("Witness unavailable in db, calculating", "blockNr", blockNr)
+	}
+
+	// Compute the witness if it's for a tx or it's not present in db
+	prevHeader, err := api._blockReader.HeaderByNumber(ctx, tx, blockNr-1)
+	if err != nil {
+		return nil, err
+	}
+
+	regenerateHash := false
+	if latestBlock-blockNr > uint64(maxGetProofRewindBlockCount) {
+		regenerateHash = true
+	}
+
+	var rl *trie.RetainList
+	batch := membatchwithdb.NewMemoryBatch(tx, "", logger)
+	defer batch.Rollback()
+
+	engine, ok := api.engine().(consensus.Engine)
+	if !ok {
+		return nil, fmt.Errorf("engine is not consensus.Engine")
+	}
+
+	// Prepare witness config
+	chainConfig, err := api.chainConfig(ctx, tx)
+	if err != nil {
+		return nil, fmt.Errorf("error loading chain config: %v", err)
+	}
+
+	cfg := stagedsync.StageWitnessCfg(nil, true, 0, chainConfig, engine, api._blockReader, api.dirs)
+	batch, rl, err = stagedsync.RewindStagesForWitness(batch, blockNr, &cfg, regenerateHash, ctx, logger)
+	if err != nil {
+		return nil, err
+	}
+
+	// Update the tx to operate on the in-memory batch
+	tx = batch
+
+	store, err := stagedsync.PrepareForWitness(tx, block, prevHeader.Root, rl, &cfg, ctx, logger)
+	if err != nil {
+		return nil, err
+	}
+
+	w, txTds, err := stagedsync.GenerateWitness(tx, block, prevHeader, fullBlock, uint64(txIndex), store.Tds, store.TrieStateWriter, store.Statedb, store.GetHashFn, &cfg, regenerateHash, ctx, logger)
+	if err != nil {
+		return nil, err
+	}
+	if w == nil {
+		return nil, fmt.Errorf("unable to generate witness for block %d", blockNr)
+	}
+
+	var witness bytes.Buffer
+	_, err = w.WriteInto(&witness)
+	if err != nil {
+		return nil, err
+	}
+
+	buf, err := stagedsync.VerifyWitness(tx, block, prevHeader, fullBlock, uint64(txIndex), store.ChainReader, store.Tds, txTds, store.GetHashFn, &cfg, &witness, logger)
+	if err != nil {
+		return nil, fmt.Errorf("error verifying witness for block %d: %v", blockNr, err)
+	}
+
+	return buf.Bytes(), nil
 }
 
 func (api *APIImpl) tryBlockFromLru(hash libcommon.Hash) *types.Block {
