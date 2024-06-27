@@ -8,6 +8,7 @@ import (
 	"os"
 	"text/tabwriter"
 
+	"github.com/RoaringBitmap/roaring"
 	"github.com/RoaringBitmap/roaring/roaring64"
 	"github.com/ledgerwatch/erigon-lib/kv/backup"
 	"github.com/ledgerwatch/erigon-lib/kv/order"
@@ -121,15 +122,19 @@ func printStages(tx kv.Tx, snapshots *freezeblocks.RoSnapshots, borSn *freezeblo
 			if r.GetCardinality() > 0 {
 				fmt.Printf("r: %s: %dMil, %dmb, bytes/key=%f\n", i, r.GetCardinality()/1_000_000, r.GetSerializedSizeInBytes()/1024/1024, float64(r.GetSerializedSizeInBytes())/float64(r.GetCardinality()))
 				ef := eliasfano32.NewEliasFano(r.GetCardinality(), r.Maximum())
+				r32 := roaring.New()
 				iterR := r.Iterator()
 				for iterR.HasNext() {
-					ef.AddOffset(iterR.Next())
+					n := iterR.Next()
+					ef.AddOffset(n)
+					r32.Add(uint32(n))
 				}
 				ef.Build()
 
 				var buf []byte
 				buf = ef.AppendBytes(buf[:0])
 				fmt.Printf("ef: %s: %dMil, %dmb, bytes/key=%f\n", i, r.GetCardinality()/1_000_000, len(buf)/1024/1024, float64(len(buf))/float64(r.GetCardinality()))
+				fmt.Printf("r32: %s: %dMil, %dmb, bytes/key=%f\n", i, r32.GetCardinality()/1_000_000, r.GetSerializedSizeInBytes()/1024/1024, float64(r.GetSerializedSizeInBytes())/float64(r.GetCardinality()))
 			}
 		}
 
