@@ -116,7 +116,7 @@ func printStages(tx kv.Tx, snapshots *freezeblocks.RoSnapshots, borSn *freezeblo
 		}
 		at.Close()
 		r.RunOptimize()
-		fmt.Printf("r: %d, %dmb\n", r.GetCardinality(), r.GetSerializedSizeInBytes()/1024/1024)
+		fmt.Printf("r: %dMil, %dmb\n", r.GetCardinality()/1_000_000, r.GetSerializedSizeInBytes()/1024/1024)
 		panic(1)
 	}
 
