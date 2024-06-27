@@ -102,7 +102,7 @@ func init() {
 func printStages(tx kv.Tx, snapshots *freezeblocks.RoSnapshots, borSn *freezeblocks.BorRoSnapshots, agg *state.Aggregator) error {
 	{
 		at := agg.BeginFilesRo()
-		for i := kv.InvertedIdxPos(0); i < kv.StandaloneIdxLen; i++ {
+		for _, i := range []kv.InvertedIdx{kv.TracesFromIdx, kv.TracesToIdx, kv.LogAddrIdx, kv.LogTopicIdx} {
 			it, err := at.IndexRange(i, common.HexToAddress("0x72d9E579f691D62aA7e0703840db6dd2fa9fAE21").Bytes(), -1, -1, order.Asc, -1, tx)
 			if err != nil {
 				return err
@@ -117,7 +117,7 @@ func printStages(tx kv.Tx, snapshots *freezeblocks.RoSnapshots, borSn *freezeblo
 			}
 			at.Close()
 			r.RunOptimize()
-			fmt.Printf("r: %s: %dMil, %dmb\n", i.String(), r.GetCardinality()/1_000_000, r.GetSerializedSizeInBytes()/1024/1024)
+			fmt.Printf("r: %s: %dMil, %dmb\n", i, r.GetCardinality()/1_000_000, r.GetSerializedSizeInBytes()/1024/1024)
 		}
 
 		panic(1)
