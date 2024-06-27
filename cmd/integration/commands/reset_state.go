@@ -102,21 +102,24 @@ func init() {
 func printStages(tx kv.Tx, snapshots *freezeblocks.RoSnapshots, borSn *freezeblocks.BorRoSnapshots, agg *state.Aggregator) error {
 	{
 		at := agg.BeginFilesRo()
-		it, err := at.IndexRange(kv.TracesFromIdx, common.HexToAddress("0x72d9E579f691D62aA7e0703840db6dd2fa9fAE21").Bytes(), -1, -1, order.Asc, -1, tx)
-		if err != nil {
-			return err
-		}
-		r := roaring64.New()
-		for it.HasNext() {
-			res, err := it.Next()
+		for i := kv.InvertedIdxPos(0); i < kv.StandaloneIdxLen; i++ {
+			it, err := at.IndexRange(i, common.HexToAddress("0x72d9E579f691D62aA7e0703840db6dd2fa9fAE21").Bytes(), -1, -1, order.Asc, -1, tx)
 			if err != nil {
 				return err
 			}
-			r.Add(res)
+			r := roaring64.New()
+			for it.HasNext() {
+				res, err := it.Next()
+				if err != nil {
+					return err
+				}
+				r.Add(res)
+			}
+			at.Close()
+			r.RunOptimize()
+			fmt.Printf("r: %s: %dMil, %dmb\n", i.String(), r.GetCardinality()/1_000_000, r.GetSerializedSizeInBytes()/1024/1024)
 		}
-		at.Close()
-		r.RunOptimize()
-		fmt.Printf("r: %dMil, %dmb\n", r.GetCardinality()/1_000_000, r.GetSerializedSizeInBytes()/1024/1024)
+
 		panic(1)
 	}
 
