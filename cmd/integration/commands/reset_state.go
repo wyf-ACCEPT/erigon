@@ -8,7 +8,9 @@ import (
 	"os"
 	"text/tabwriter"
 
+	"github.com/RoaringBitmap/roaring/roaring64"
 	"github.com/ledgerwatch/erigon-lib/kv/backup"
+	"github.com/ledgerwatch/erigon-lib/kv/order"
 	"github.com/ledgerwatch/erigon-lib/log/v3"
 
 	"github.com/spf13/cobra"
@@ -98,6 +100,26 @@ func init() {
 }
 
 func printStages(tx kv.Tx, snapshots *freezeblocks.RoSnapshots, borSn *freezeblocks.BorRoSnapshots, agg *state.Aggregator) error {
+	{
+		at := agg.BeginFilesRo()
+		it, err := at.IndexRange(kv.LogAddrIdx, common.HexToAddress("0xd9db270c1b5e3bd161e8c8503c55ceabee709552").Bytes(), -1, -1, order.Asc, -1, tx)
+		if err != nil {
+			return err
+		}
+		r := roaring64.New()
+		for it.HasNext() {
+			res, err := it.Next()
+			if err != nil {
+				return err
+			}
+			r.Add(res)
+		}
+		at.Close()
+		r.RunOptimize()
+		fmt.Printf("r: %d, %dmb\n", r.GetCardinality(), r.GetSerializedSizeInBytes()/1024/1024)
+		panic(1)
+	}
+
 	var err error
 	var progress uint64
 	w := new(tabwriter.Writer)
