@@ -8,13 +8,8 @@ import (
 	"os"
 	"text/tabwriter"
 
-	"github.com/RoaringBitmap/roaring"
-	"github.com/RoaringBitmap/roaring/roaring64"
 	"github.com/ledgerwatch/erigon-lib/kv/backup"
-	"github.com/ledgerwatch/erigon-lib/kv/order"
 	"github.com/ledgerwatch/erigon-lib/log/v3"
-	"github.com/ledgerwatch/erigon-lib/recsplit/eliasfano32"
-
 	"github.com/spf13/cobra"
 
 	"github.com/ledgerwatch/erigon-lib/common"
@@ -102,47 +97,6 @@ func init() {
 }
 
 func printStages(tx kv.Tx, snapshots *freezeblocks.RoSnapshots, borSn *freezeblocks.BorRoSnapshots, agg *state.Aggregator) error {
-	{
-		at := agg.BeginFilesRo()
-		for _, i := range []kv.InvertedIdx{kv.TracesFromIdx, kv.TracesToIdx, kv.LogAddrIdx, kv.LogTopicIdx} {
-			it, err := at.IndexRange(i, common.HexToAddress("0x72d9E579f691D62aA7e0703840db6dd2fa9fAE21").Bytes(), -1, -1, order.Asc, -1, tx)
-			if err != nil {
-				return err
-			}
-			r := roaring64.New()
-			for it.HasNext() {
-				res, err := it.Next()
-				if err != nil {
-					return err
-				}
-				r.Add(res)
-			}
-			at.Close()
-			r.RunOptimize()
-
-			if r.GetCardinality() > 0 {
-				fmt.Printf("r: %s: %dMil, %dmb, bytes/key=%f\n", i, r.GetCardinality()/1_000_000, r.GetSerializedSizeInBytes()/1024/1024, float64(r.GetSerializedSizeInBytes())/float64(r.GetCardinality()))
-				ef := eliasfano32.NewEliasFano(r.GetCardinality(), r.Maximum())
-				r32 := roaring.New()
-				iterR := r.Iterator()
-				for iterR.HasNext() {
-					n := iterR.Next()
-					ef.AddOffset(n)
-					r32.Add(uint32(n))
-				}
-				ef.Build()
-
-				var buf []byte
-				buf = ef.AppendBytes(buf[:0])
-				r32.RunOptimize()
-				fmt.Printf("ef: %s: %dMil, %dmb, bytes/key=%f\n", i, r.GetCardinality()/1_000_000, len(buf)/1024/1024, float64(len(buf))/float64(r.GetCardinality()))
-				fmt.Printf("r32: %s: %dMil, %dmb, bytes/key=%f\n", i, r32.GetCardinality()/1_000_000, r32.GetFrozenSizeInBytes()/1024/1024, float64(r32.GetFrozenSizeInBytes())/float64(r32.GetCardinality()))
-			}
-		}
-
-		panic(1)
-	}
-
 	var err error
 	var progress uint64
 	w := new(tabwriter.Writer)
