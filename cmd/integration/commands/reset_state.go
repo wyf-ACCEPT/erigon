@@ -102,7 +102,7 @@ func init() {
 func printStages(tx kv.Tx, snapshots *freezeblocks.RoSnapshots, borSn *freezeblocks.BorRoSnapshots, agg *state.Aggregator) error {
 	{
 		at := agg.BeginFilesRo()
-		it, err := at.IndexRange(kv.LogAddrIdx, common.HexToAddress("0x72d9E579f691D62aA7e0703840db6dd2fa9fAE21").Bytes(), -1, -1, order.Asc, -1, tx)
+		it, err := at.IndexRange(kv.TracesFromIdx, common.HexToAddress("0x72d9E579f691D62aA7e0703840db6dd2fa9fAE21").Bytes(), -1, -1, order.Asc, -1, tx)
 		if err != nil {
 			return err
 		}
