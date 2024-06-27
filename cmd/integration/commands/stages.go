@@ -12,9 +12,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/RoaringBitmap/roaring/roaring64"
 	"github.com/c2h5oh/datasize"
 	"github.com/erigontech/mdbx-go/mdbx"
 	lru "github.com/hashicorp/golang-lru/arc/v2"
+	"github.com/ledgerwatch/erigon-lib/kv/order"
 	"github.com/ledgerwatch/secp256k1"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
@@ -984,6 +986,22 @@ func stageExec(db kv.RwDB, ctx context.Context, logger log.Logger) error {
 		}
 		return nil
 	}
+	at := agg.BeginFilesRo()
+	it, err := at.IndexRange(kv.LogAddrIdx, libcommon.HexToAddress("0xd9db270c1b5e3bd161e8c8503c55ceabee709552").Bytes(), -1, -1, order.Asc, -1, tx)
+	if err != nil {
+		return err
+	}
+	r := roaring64.New()
+	for it.HasNext() {
+		res, err := it.Next()
+		if err != nil {
+			return err
+		}
+		r.Add(res)
+	}
+	at.Close()
+	r.RunOptimize()
+	fmt.Printf("r: %d, %dmb\n", r.GetCardinality(), r.GetSerializedSizeInBytes()/1024/1024)
 
 	if txtrace {
 		// Activate tracing and writing into json files for each transaction
