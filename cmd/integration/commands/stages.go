@@ -987,21 +987,24 @@ func stageExec(db kv.RwDB, ctx context.Context, logger log.Logger) error {
 		return nil
 	}
 	at := agg.BeginFilesRo()
-	it, err := at.IndexRange(kv.LogAddrIdx, libcommon.HexToAddress("0xd9db270c1b5e3bd161e8c8503c55ceabee709552").Bytes(), -1, -1, order.Asc, -1, tx)
-	if err != nil {
-		return err
-	}
-	r := roaring64.New()
-	for it.HasNext() {
-		res, err := it.Next()
+	db.View(context.Background(), func(tx kv.Tx) error {
+		it, err := at.IndexRange(kv.LogAddrIdx, libcommon.HexToAddress("0xd9db270c1b5e3bd161e8c8503c55ceabee709552").Bytes(), -1, -1, order.Asc, -1, tx)
 		if err != nil {
 			return err
 		}
-		r.Add(res)
-	}
-	at.Close()
-	r.RunOptimize()
-	fmt.Printf("r: %d, %dmb\n", r.GetCardinality(), r.GetSerializedSizeInBytes()/1024/1024)
+		r := roaring64.New()
+		for it.HasNext() {
+			res, err := it.Next()
+			if err != nil {
+				return err
+			}
+			r.Add(res)
+		}
+		at.Close()
+		r.RunOptimize()
+		fmt.Printf("r: %d, %dmb\n", r.GetCardinality(), r.GetSerializedSizeInBytes()/1024/1024)
+		panic(1)
+	})
 
 	if txtrace {
 		// Activate tracing and writing into json files for each transaction
