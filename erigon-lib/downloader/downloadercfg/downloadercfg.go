@@ -59,6 +59,8 @@ type Cfg struct {
 	ChainName                       string
 
 	Dirs datadir.Dirs
+
+	MdbxWriteMap bool
 }
 
 func Default() *torrent.ClientConfig {
@@ -102,7 +104,7 @@ func Default() *torrent.ClientConfig {
 	return torrentConfig
 }
 
-func New(dirs datadir.Dirs, version string, verbosity lg.Level, downloadRate, uploadRate datasize.ByteSize, port, connsPerFile, downloadSlots int, staticPeers, webseeds []string, chainName string, lockSnapshots bool) (*Cfg, error) {
+func New(dirs datadir.Dirs, version string, verbosity lg.Level, downloadRate, uploadRate datasize.ByteSize, port, connsPerFile, downloadSlots int, staticPeers, webseeds []string, chainName string, lockSnapshots, mdbxWriteMap bool) (*Cfg, error) {
 	torrentConfig := Default()
 	//torrentConfig.PieceHashersPerTorrent = runtime.NumCPU()
 	torrentConfig.DataDir = dirs.Snap // `DataDir` of torrent-client-lib is different from Erigon's `DataDir`. Just same naming.
@@ -176,7 +178,12 @@ func New(dirs datadir.Dirs, version string, verbosity lg.Level, downloadRate, up
 		if !strings.HasPrefix(webseed, "v") { // has marker v1/v2/...
 			uri, err := url.ParseRequestURI(webseed)
 			if err != nil {
-				if strings.HasSuffix(webseed, ".toml") && dir.FileExist(webseed) {
+				exists, err := dir.FileExist(webseed)
+				if err != nil {
+					log.Warn("[webseed] FileExist error", "err", err)
+					continue
+				}
+				if strings.HasSuffix(webseed, ".toml") && exists {
 					webseedFileProviders = append(webseedFileProviders, webseed)
 				}
 				continue
@@ -201,7 +208,12 @@ func New(dirs datadir.Dirs, version string, verbosity lg.Level, downloadRate, up
 		}
 	}
 	localCfgFile := filepath.Join(dirs.DataDir, "webseed.toml") // datadir/webseed.toml allowed
-	if dir.FileExist(localCfgFile) {
+	exists, err := dir.FileExist(localCfgFile)
+	if err != nil {
+		log.Error("[webseed] FileExist error", "err", err)
+		return nil, err
+	}
+	if exists {
 		webseedFileProviders = append(webseedFileProviders, localCfgFile)
 	}
 
@@ -210,6 +222,7 @@ func New(dirs datadir.Dirs, version string, verbosity lg.Level, downloadRate, up
 		WebSeedUrls: webseedHttpProviders, WebSeedFiles: webseedFileProviders,
 		DownloadTorrentFilesFromWebseed: true, AddTorrentsFromDisk: true, SnapshotLock: lockSnapshots,
 		SnapshotConfig: snapcfg.KnownCfg(chainName),
+		MdbxWriteMap:   mdbxWriteMap,
 	}, nil
 }
 

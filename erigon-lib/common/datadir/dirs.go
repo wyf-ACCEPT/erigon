@@ -122,7 +122,10 @@ func (dirs Dirs) MustFlock() (Dirs, *flock.Flock, error) {
 
 // ApplyMigrations - if can get flock.
 func ApplyMigrations(dirs Dirs) error { //nolint
-	need := downloaderV2MigrationNeeded(dirs)
+	need, err := downloaderV2MigrationNeeded(dirs)
+	if err != nil {
+		return err
+	}
 	if !need {
 		return nil
 	}
@@ -144,12 +147,16 @@ func ApplyMigrations(dirs Dirs) error { //nolint
 	return nil
 }
 
-func downloaderV2MigrationNeeded(dirs Dirs) bool {
+func downloaderV2MigrationNeeded(dirs Dirs) (bool, error) {
 	return dir.FileExist(filepath.Join(dirs.Snap, "db", "mdbx.dat"))
 }
 func downloaderV2Migration(dirs Dirs) error {
 	// move db from `datadir/snapshot/db` to `datadir/downloader`
-	if !downloaderV2MigrationNeeded(dirs) {
+	exists, err := downloaderV2MigrationNeeded(dirs)
+	if err != nil {
+		return err
+	}
+	if !exists {
 		return nil
 	}
 	from, to := filepath.Join(dirs.Snap, "db", "mdbx.dat"), filepath.Join(dirs.Downloader, "mdbx.dat")

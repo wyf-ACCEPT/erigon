@@ -229,7 +229,7 @@ type Getter interface {
 	//   - implementations of local db - stop
 	//   - implementations of remote db - do not handle this error and may finish (send all entries to client) before error happen.
 	ForEach(table string, fromPrefix []byte, walker func(k, v []byte) error) error
-	ForPrefix(table string, prefix []byte, walker func(k, v []byte) error) error
+
 	ForAmount(table string, prefix []byte, amount uint32, walker func(k, v []byte) error) error
 }
 
@@ -319,7 +319,7 @@ type StatelessReadTx interface {
 	Commit() error // Commit all the operations of a transaction into the database.
 	Rollback()     // Rollback - abandon all the operations of the transaction instead of saving them.
 
-	// ReadSequence - allows to create a linear sequence of unique positive integers for each table.
+	// ReadSequence - allows to create a linear sequence of unique positive integers for each table (AutoIncrement).
 	// Can be called for a read transaction to retrieve the current sequence value, and the increment must be zero.
 	// Sequence changes become visible outside the current write transaction after it is committed, and discarded on abort.
 	// Starts from 0.
@@ -421,7 +421,6 @@ type Tx interface {
 	// --- High-Level deprecated methods ---
 
 	ForEach(table string, fromPrefix []byte, walker func(k, v []byte) error) error
-	ForPrefix(table string, prefix []byte, walker func(k, v []byte) error) error
 	ForAmount(table string, prefix []byte, amount uint32, walker func(k, v []byte) error) error
 
 	// Pointer to the underlying C transaction handle (e.g. *C.MDBX_txn)
