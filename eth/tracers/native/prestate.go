@@ -117,7 +117,8 @@ func (t *prestateTracer) CaptureStart(env *vm.EVM, from libcommon.Address, to li
 		// We need to re-add it to get the pre-tx balance.
 		fromBal.Add(fromBal, valueBig)
 
-		// Nonce has been incremented before reaching here.
+		// Nonce has been incremented before reaching here
+		// when txn is not a "create".
 		// We need to decrement it to get the pre-tx nonce.
 		if t.pre[from].Nonce > 0 {
 			t.pre[from].Nonce--

@@ -35,6 +35,13 @@ func main() {
 	printHexToBig("0x12a1daccc28e6a35f", "0x5124fcc2b3f99f571ad67d075643c743f38f1c34 - post - in test")
 
 	printHexToBig("0x1294400ef3db5e928", "balance check")
+
+	printHexToBig("0x2cdb96c56db040b43", "0x808b4da0be6c9512e948521452227efc619bea52 - pre")
+	printHexToBig("0x2cd987071ba2346b6", "0x808b4da0be6c9512e948521452227efc619bea52 - post - in test")
+	printHexToBig("0x2cd72a36dd031f089", "0x808b4da0be6c9512e948521452227efc619bea52 - post - expected")
+
+	printBigToHex("51717486916183264067", "0x808b4dA0Be6c9512E948521452227EFc619BeA52 - pre - REAL")
+	printBigToHex("51709147410379106417", "0x808b4dA0Be6c9512E948521452227EFc619BeA52 - post - REAL")
 }
 
 func printHexToBig(hex string, printTag string) {
