@@ -150,7 +150,7 @@ require (
 )
 
 replace (
-	github.com/anacrolix/torrent => github.com/erigontech/torrent 03e12459204587749155674208e91dcb765e7ded
+	github.com/anacrolix/torrent => github.com/erigontech/torrent v1.54.2-alpha-9.0.20240703041717-03e124592045
 	github.com/holiman/bloomfilter/v2 => github.com/AskAlexSharov/bloomfilter/v2 v2.0.8
 	github.com/tidwall/btree => github.com/AskAlexSharov/btree v1.6.2
 )
