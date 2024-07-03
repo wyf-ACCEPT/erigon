@@ -2209,10 +2209,12 @@ func (d *Downloader) ReCalcStats(interval time.Duration) {
 
 		if len(noDownloadProgress) > 0 {
 			progressStatus := getProgressStatus(torrentClient, noDownloadProgress)
+			fmt.Printf("before print debug logs\n")
 			for file, status := range progressStatus {
 				logger.Debug(fmt.Sprintf("[snapshots] torrent status: %s\n    %s", file,
 					string(bytes.TrimRight(bytes.ReplaceAll(status, []byte("\n"), []byte("\n    ")), "\n "))))
 			}
+			fmt.Printf("after print debug logs\n")
 		}
 	}
 
@@ -2299,7 +2301,9 @@ func getProgressStatus(torrentClient *torrent.Client, noDownloadProgress []strin
 		writer.files[file] = nil
 	}
 
+	fmt.Printf("[dbg] before write status\n")
 	torrentClient.WriteStatus(&writer)
+	fmt.Printf("[dbg] after write status\n")
 
 	return writer.files
 }
