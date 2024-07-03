@@ -2211,10 +2211,10 @@ func (d *Downloader) ReCalcStats(interval time.Duration) {
 			progressStatus := getProgressStatus(torrentClient, noDownloadProgress)
 			_ = progressStatus
 			fmt.Printf("before print debug logs\n")
-			//for file, status := range progressStatus {
-			//logger.Debug(fmt.Sprintf("[snapshots] torrent status: %s\n    %s", file,
-			//	string(bytes.TrimRight(bytes.ReplaceAll(status, []byte("\n"), []byte("\n    ")), "\n "))))
-			//}
+			for file, status := range progressStatus {
+				logger.Debug(fmt.Sprintf("[snapshots] torrent status: %s\n    %s", file,
+					string(bytes.TrimRight(bytes.ReplaceAll(status, []byte("\n"), []byte("\n    ")), "\n "))))
+			}
 			fmt.Printf("after print debug logs\n")
 		}
 	}
