@@ -834,9 +834,8 @@ func (d *Downloader) mainLoop(silent bool) error {
 			defer d.lock.Unlock()
 
 			for _, t := range d.torrentClient.Torrents() {
-				fmt.Printf("[dbg] add ws4: %s, %d\n", t.Name(), len(urls))
-
-				if urls, ok := d.webseeds.ByFileName(t.Name()); ok {
+				urls, ok := d.webseeds.ByFileName(t.Name())
+				if ok {
 					// if we have created a torrent, but it has no info, assume that the
 					// webseed download either has not been called yet or has failed and
 					// try again here - otherwise the torrent will be left with no info
@@ -854,6 +853,8 @@ func (d *Downloader) mainLoop(silent bool) error {
 
 					fmt.Printf("[dbg] add ws4: %s, %d\n", t.Name(), len(urls))
 					t.AddWebSeeds(urls)
+				} else {
+					fmt.Printf("[dbg] add ws5: %s, %d\n", t.Name(), len(urls))
 				}
 			}
 		}()
