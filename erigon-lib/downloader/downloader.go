@@ -823,7 +823,7 @@ func (d *Downloader) mainLoop(silent bool) error {
 			// webseeds.Discover may create new .torrent files on disk
 			d.webseeds.Discover(d.ctx, d.cfg.WebSeedFiles, d.cfg.Dirs.Snap)
 			// apply webseeds to existing torrents
-			fmt.Printf("[dbg] after discover\n")
+			fmt.Printf("[dbg] after discover: %d, %d\n", len(d.webseeds.torrentUrls), len(d.webseeds.byFileName))
 			if err := d.addTorrentFilesFromDisk(true); err != nil && !errors.Is(err, context.Canceled) {
 				d.logger.Warn("[snapshots] addTorrentFilesFromDisk", "err", err)
 			}
@@ -834,11 +834,14 @@ func (d *Downloader) mainLoop(silent bool) error {
 			defer d.lock.Unlock()
 
 			for _, t := range d.torrentClient.Torrents() {
+				fmt.Printf("[dbg] add ws4: %s, %d\n", t.Name(), len(urls))
+
 				if urls, ok := d.webseeds.ByFileName(t.Name()); ok {
 					// if we have created a torrent, but it has no info, assume that the
 					// webseed download either has not been called yet or has failed and
 					// try again here - otherwise the torrent will be left with no info
 					if t.Info() == nil {
+						fmt.Printf("[dbg] add ws3: %s, %d\n", t.Name(), len(urls))
 						ts, ok, err := d.webseeds.DownloadAndSaveTorrentFile(d.ctx, t.Name())
 						if ok && err == nil {
 							_, _, err = addTorrentFile(d.ctx, ts, d.torrentClient, d.db, d.webseeds)
@@ -849,7 +852,7 @@ func (d *Downloader) mainLoop(silent bool) error {
 						}
 					}
 
-					fmt.Printf("[dbg] add ws2: %s, %d\n", t.Name(), len(urls))
+					fmt.Printf("[dbg] add ws4: %s, %d\n", t.Name(), len(urls))
 					t.AddWebSeeds(urls)
 				}
 			}

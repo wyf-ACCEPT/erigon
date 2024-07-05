@@ -333,6 +333,7 @@ func _addTorrentFile(ctx context.Context, ts *torrent.TorrentSpec, torrentClient
 		return nil, false, nil
 	}
 	ts.Webseeds, _ = webseeds.ByFileName(ts.DisplayName)
+	fmt.Printf("[dbg] addTorrentFile1 %s, %d\n", ts.DisplayName, len(ts.Webseeds))
 	var have bool
 	t, have = torrentClient.Torrent(ts.InfoHash)
 
@@ -357,7 +358,6 @@ func _addTorrentFile(ctx context.Context, ts *torrent.TorrentSpec, torrentClient
 	}
 
 	if t.Info() != nil {
-		fmt.Printf("[dbg] addTorrentFile1 %s\n", ts.DisplayName)
 		t.AddWebSeeds(ts.Webseeds)
 		if err := db.Update(ctx, torrentInfoUpdater(ts.DisplayName, ts.InfoHash.Bytes(), t.Info().Length, nil)); err != nil {
 			return nil, false, fmt.Errorf("update torrent info %s: %w", ts.DisplayName, err)
