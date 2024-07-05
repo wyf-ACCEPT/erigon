@@ -828,6 +828,7 @@ func (d *Downloader) mainLoop(silent bool) error {
 				d.logger.Warn("[snapshots] addTorrentFilesFromDisk", "err", err)
 			}
 			fmt.Printf("[dbg] before add ws2\n")
+			defer fmt.Printf("[dbg] after add ws2\n")
 
 			d.lock.Lock()
 			defer d.lock.Unlock()
@@ -1519,6 +1520,7 @@ func getWebpeerTorrentInfo(ctx context.Context, downloadUrl *url.URL) (*metainfo
 }
 
 func (d *Downloader) torrentDownload(t *torrent.Torrent, statusChan chan downloadStatus) {
+	fmt.Printf("[dbg] torrentDownload(%s)\n", t.Name())
 	d.lock.Lock()
 	d.downloading[t.Name()] = &downloadInfo{torrent: t}
 	d.lock.Unlock()
