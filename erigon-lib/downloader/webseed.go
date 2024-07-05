@@ -346,9 +346,13 @@ func (d *WebSeeds) VerifyManifestedBucket(ctx context.Context, webSeedProviderUR
 
 func (d *WebSeeds) Discover(ctx context.Context, files []string, rootDir string) {
 	listsOfFiles := d.constructListsOfFiles(ctx, d.seeds, files)
+	fmt.Printf("[dbg] discover.constructListsOfFiles: %d\n", len(listsOfFiles))
 	torrentMap := d.makeTorrentUrls(listsOfFiles)
+	fmt.Printf("[dbg] discover.makeTorrentUrls: %d\n", len(torrentMap))
 	webSeedMap := d.downloadTorrentFilesFromProviders(ctx, rootDir, torrentMap)
+	fmt.Printf("[dbg] discover.downloadTorrentFilesFromProviders: %d\n", len(listsOfFiles))
 	d.makeWebSeedUrls(listsOfFiles, webSeedMap)
+	fmt.Printf("[dbg] discover.makeWebSeedUrls: %d\n", len(d.byFileName))
 }
 
 func (d *WebSeeds) constructListsOfFiles(ctx context.Context, httpProviders []*url.URL, diskProviders []string) []snaptype.WebSeedsFromProvider {
