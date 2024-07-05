@@ -408,6 +408,7 @@ func (d *WebSeeds) makeTorrentUrls(listsOfFiles []snaptype.WebSeedsFromProvider)
 			if !strings.HasSuffix(name, ".torrent") {
 				continue
 			}
+			fmt.Printf("[dbg] discover.makeTorrentUrls1: %s, %s\n", name, d.torrentsWhitelist)
 			if !nameWhitelisted(name, d.torrentsWhitelist) {
 				continue
 			}
