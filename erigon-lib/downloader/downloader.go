@@ -823,9 +823,11 @@ func (d *Downloader) mainLoop(silent bool) error {
 			// webseeds.Discover may create new .torrent files on disk
 			d.webseeds.Discover(d.ctx, d.cfg.WebSeedFiles, d.cfg.Dirs.Snap)
 			// apply webseeds to existing torrents
+			fmt.Printf("[dbg] after discover\n")
 			if err := d.addTorrentFilesFromDisk(true); err != nil && !errors.Is(err, context.Canceled) {
 				d.logger.Warn("[snapshots] addTorrentFilesFromDisk", "err", err)
 			}
+			fmt.Printf("[dbg] before add ws2\n")
 
 			d.lock.Lock()
 			defer d.lock.Unlock()
@@ -846,6 +848,7 @@ func (d *Downloader) mainLoop(silent bool) error {
 						}
 					}
 
+					fmt.Printf("[dbg] add ws2: %s, %d\n", t.Name(), len(urls))
 					t.AddWebSeeds(urls)
 				}
 			}

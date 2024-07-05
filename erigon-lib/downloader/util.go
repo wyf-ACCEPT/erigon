@@ -301,6 +301,7 @@ func IsSnapNameAllowed(name string) bool {
 // kept in `piece completion storage` (surviving reboot). Once it done - no disk IO needed again.
 // Don't need call torrent.VerifyData manually
 func addTorrentFile(ctx context.Context, ts *torrent.TorrentSpec, torrentClient *torrent.Client, db kv.RwDB, webseeds *WebSeeds) (t *torrent.Torrent, ok bool, err error) {
+
 	ts.ChunkSize = downloadercfg.DefaultNetworkChunkSize
 	ts.DisallowDataDownload = true
 	//ts.DisableInitialPieceCheck = true
@@ -356,11 +357,13 @@ func _addTorrentFile(ctx context.Context, ts *torrent.TorrentSpec, torrentClient
 	}
 
 	if t.Info() != nil {
+		fmt.Printf("[dbg] addTorrentFile1 %s\n", ts.DisplayName)
 		t.AddWebSeeds(ts.Webseeds)
 		if err := db.Update(ctx, torrentInfoUpdater(ts.DisplayName, ts.InfoHash.Bytes(), t.Info().Length, nil)); err != nil {
 			return nil, false, fmt.Errorf("update torrent info %s: %w", ts.DisplayName, err)
 		}
 	} else {
+		fmt.Printf("[dbg] addTorrentFile2! %s\n", ts.DisplayName)
 		t, _, err = torrentClient.AddTorrentSpec(ts)
 		if err != nil {
 			return t, true, fmt.Errorf("add torrent file %s: %w", ts.DisplayName, err)
