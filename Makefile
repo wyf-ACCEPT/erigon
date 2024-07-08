@@ -23,8 +23,7 @@ CGO_CFLAGS += -DMDBX_DISABLE_VALIDATION=0 # This feature is not ready yet
 #CGO_CFLAGS += -DMDBX_ENABLE_PROFGC=0 # Disabled by default, but may be useful for performance debugging
 #CGO_CFLAGS += -DMDBX_ENABLE_PGOP_STAT=0 # Disabled by default, but may be useful for performance debugging
 #CGO_CFLAGS += -DMDBX_ENV_CHECKPID=0 # Erigon doesn't do fork() syscall
-CGO_CFLAGS += -DMDBX_DEBUG=2 # to enable more logs
-CGO_CFLAGS += -O
+#CGO_CFLAGS += -DMDBX_DEBUG=2 # to enable more logs
 CGO_CFLAGS += -D__BLST_PORTABLE__
 CGO_CFLAGS += -Wno-unknown-warning-option -Wno-enum-int-mismatch -Wno-strict-prototypes -Wno-unused-but-set-variable
 
