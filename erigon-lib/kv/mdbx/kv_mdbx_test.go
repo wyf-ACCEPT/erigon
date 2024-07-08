@@ -1,18 +1,18 @@
-/*
-   Copyright 2022 Erigon contributors
-
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-*/
+// Copyright 2022 The Erigon Authors
+// This file is part of Erigon.
+//
+// Erigon is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Erigon is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Erigon. If not, see <http://www.gnu.org/licenses/>.
 
 package mdbx
 
@@ -648,7 +648,7 @@ func TestCurrentDup(t *testing.T) {
 
 	count, err := c.CountDuplicates()
 	require.Nil(t, err)
-	require.Equal(t, count, uint64(2))
+	require.Equal(t, uint64(2), count)
 
 	require.Error(t, c.PutNoDupData([]byte("key3"), []byte("value3.3")))
 	require.NoError(t, c.DeleteCurrentDuplicates())
@@ -664,7 +664,7 @@ func TestCurrentDup(t *testing.T) {
 }
 
 func TestDupDelete(t *testing.T) {
-	_, _, c := BaseCase(t)
+	_, tx, c := BaseCase(t)
 
 	k, _, err := c.Current()
 	require.Nil(t, err)
@@ -676,7 +676,8 @@ func TestDupDelete(t *testing.T) {
 	err = c.Delete([]byte("key1"))
 	require.Nil(t, err)
 
-	count, err := c.Count()
+	//TODO: find better way
+	count, err := tx.Count("Table")
 	require.Nil(t, err)
 	assert.Zero(t, count)
 }
