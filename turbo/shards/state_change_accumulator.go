@@ -18,6 +18,7 @@ package shards
 
 import (
 	"context"
+	"fmt"
 
 	libcommon "github.com/ledgerwatch/erigon-lib/common"
 	"github.com/ledgerwatch/erigon-lib/gointerfaces"
@@ -64,6 +65,7 @@ func (a *Accumulator) SetStateID(stateID uint64) {
 
 // StartChange begins accumulation of changes for a new block
 func (a *Accumulator) StartChange(blockHeight uint64, blockHash libcommon.Hash, txs [][]byte, unwind bool) {
+	fmt.Printf("[dbg] Accumulator.StartChange(%d, %x, %d, %t)\n", blockHeight, blockHash, len(txs), unwind)
 	a.changes = append(a.changes, &remote.StateChange{})
 	a.latestChange = a.changes[len(a.changes)-1]
 	a.latestChange.BlockHeight = blockHeight
