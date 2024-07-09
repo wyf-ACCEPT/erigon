@@ -34,17 +34,16 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/ledgerwatch/erigon-lib/common/assert"
-	"github.com/ledgerwatch/erigon-lib/common/hexutility"
-	"github.com/ledgerwatch/erigon-lib/kv/order"
-	"github.com/ledgerwatch/erigon-lib/log/v3"
-	"github.com/ledgerwatch/erigon-lib/seg"
-
 	"github.com/ledgerwatch/erigon-lib/common/background"
 	"github.com/ledgerwatch/erigon-lib/common/datadir"
 	"github.com/ledgerwatch/erigon-lib/common/dir"
+	"github.com/ledgerwatch/erigon-lib/common/hexutility"
 	"github.com/ledgerwatch/erigon-lib/etl"
 	"github.com/ledgerwatch/erigon-lib/kv"
+	"github.com/ledgerwatch/erigon-lib/kv/order"
+	"github.com/ledgerwatch/erigon-lib/log/v3"
 	"github.com/ledgerwatch/erigon-lib/recsplit"
+	"github.com/ledgerwatch/erigon-lib/seg"
 )
 
 // Appendable - data type allows store data for different blockchain forks.
@@ -128,22 +127,21 @@ func (ap *Appendable) fileNamesOnDisk() ([]string, error) {
 	return filesFromDir(ap.cfg.Dirs.SnapHistory)
 }
 
-func (ap *Appendable) openList(fNames []string, readonly bool) error {
+func (ap *Appendable) openList(fNames []string) error {
 	ap.closeWhatNotInList(fNames)
 	ap.scanDirtyFiles(fNames)
 	if err := ap.openDirtyFiles(); err != nil {
 		return fmt.Errorf("NewHistory.openDirtyFiles: %w, %s", err, ap.filenameBase)
 	}
-	_ = readonly // for future safety features. RPCDaemon must not delte files
 	return nil
 }
 
-func (ap *Appendable) openFolder(readonly bool) error {
+func (ap *Appendable) openFolder() error {
 	files, err := ap.fileNamesOnDisk()
 	if err != nil {
 		return err
 	}
-	return ap.openList(files, readonly)
+	return ap.openList(files)
 }
 
 func (ap *Appendable) scanDirtyFiles(fileNames []string) (garbageFiles []*filesItem) {
@@ -491,6 +489,7 @@ func (ap *Appendable) BeginFilesRo() *AppendableRoTx {
 			files[i].src.refcount.Add(1)
 		}
 	}
+
 	return &AppendableRoTx{
 		ap:    ap,
 		files: files,

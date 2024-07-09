@@ -308,32 +308,15 @@ func (a *Aggregator) OpenFolder() error {
 		ii := ii
 		eg.Go(func() error { return ii.openFolder() })
 	}
+	for _, ap := range a.ap {
+		ap := ap
+		eg.Go(func() error { return ap.openFolder() })
+	}
 	if err := eg.Wait(); err != nil {
 		return fmt.Errorf("openFolder: %w", err)
 	}
 	return nil
 }
-
-func (a *Aggregator) OpenList(files []string, readonly bool) error {
-	defer a.recalcVisibleFiles()
-
-	a.dirtyFilesLock.Lock()
-	defer a.dirtyFilesLock.Unlock()
-	eg := &errgroup.Group{}
-	for _, d := range a.d {
-		d := d
-		eg.Go(func() error { return d.openFolder() })
-	}
-	for _, ii := range a.iis {
-		ii := ii
-		eg.Go(func() error { return ii.openFolder() })
-	}
-	if err := eg.Wait(); err != nil {
-		return fmt.Errorf("openList: %w", err)
-	}
-	return nil
-}
-
 func (a *Aggregator) Close() {
 	if a.ctxCancel == nil { // invariant: it's safe to call Close multiple times
 		return
@@ -1492,6 +1475,7 @@ func (ac *AggregatorRoTx) findMergeRange(maxEndTxNum, maxSpan uint64) RangesV3 {
 	for id, ap := range ac.appendable {
 		r.appendable[id] = ap.findMergeRange(maxEndTxNum, maxSpan)
 	}
+
 	//log.Info(fmt.Sprintf("findMergeRange(%d, %d)=%s\n", maxEndTxNum/ac.a.aggregationStep, maxSpan/ac.a.aggregationStep, r))
 	return r
 }
