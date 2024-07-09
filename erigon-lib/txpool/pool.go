@@ -358,7 +358,7 @@ func (p *TxPool) OnNewBlock(ctx context.Context, stateChanges *remote.StateChang
 	baseFee := stateChanges.PendingBlockBaseFee
 	available := len(p.pending.best.ms)
 	for _, hi := range stateChanges.ChangeBatch {
-		fmt.Printf("stateChanges: %d, %s\n", hi.BlockHeight, hi.BlockHash)
+		fmt.Printf("stateChanges: %d, %x\n", hi.BlockHeight, gointerfaces.ConvertH256ToHash(hi.BlockHash))
 	}
 	defer func() {
 		p.logger.Debug("[txpool] New block", "block", block, "unwound", len(unwindTxs.Txs), "mined", len(minedTxs.Txs), "baseFee", baseFee, "pending-pre", available, "pending", p.pending.Len(), "baseFee", p.baseFee.Len(), "queued", p.queued.Len(), "err", err)
