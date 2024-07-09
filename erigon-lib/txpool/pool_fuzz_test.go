@@ -1,3 +1,19 @@
+// Copyright 2024 The Erigon Authors
+// This file is part of Erigon.
+//
+// Erigon is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Erigon is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Erigon. If not, see <http://www.gnu.org/licenses/>.
+
 //go:build !nofuzz
 
 package txpool
@@ -223,7 +239,7 @@ func poolsFromFuzzBytes(rawTxNonce, rawValues, rawTips, rawFeeCap, rawSender []b
 	return sendersInfo, senderIDs, txs, true
 }
 
-// fakeRlpTx add anything what identifying tx to `data` to make hash unique
+// fakeRlpTx add anything what identifying txn to `data` to make hash unique
 func fakeRlpTx(slot *types.TxSlot, data []byte) []byte {
 	dataLen := rlp.U64Len(1) + //chainID
 		rlp.U64Len(slot.Nonce) + rlp.U256Len(&slot.Tip) + rlp.U256Len(&slot.FeeCap) +
@@ -339,21 +355,21 @@ func FuzzOnNewBlocks(f *testing.F) {
 			if worst != nil && worst.subPool < 0b1110 {
 				t.Fatalf("pending worst too small %b", worst.subPool)
 			}
-			for _, tx := range pending.best.ms {
-				i := tx.Tx
-				if tx.subPool&NoNonceGaps > 0 {
+			for _, txn := range pending.best.ms {
+				i := txn.Tx
+				if txn.subPool&NoNonceGaps > 0 {
 					assert.GreaterOrEqual(i.Nonce, senders[i.SenderID].nonce, msg, i.SenderID)
 				}
-				if tx.subPool&EnoughFeeCapBlock > 0 {
-					assert.LessOrEqual(pendingBaseFee, tx.Tx.FeeCap, msg)
+				if txn.subPool&EnoughFeeCapBlock > 0 {
+					assert.LessOrEqual(pendingBaseFee, txn.Tx.FeeCap, msg)
 				}
 
 				// side data structures must have all txs
-				assert.True(pool.all.has(tx), msg)
+				assert.True(pool.all.has(txn), msg)
 				_, ok = pool.byHash[string(i.IDHash[:])]
 				assert.True(ok)
 
-				// pools can't have more then 1 tx with same SenderID+Nonce
+				// pools can't have more then 1 txn with same SenderID+Nonce
 				iterateSubPoolUnordered(baseFee, func(mtx2 *metaTx) {
 					tx2 := mtx2.Tx
 					assert.False(tx2.SenderID == i.SenderID && tx2.Nonce == i.Nonce, msg)

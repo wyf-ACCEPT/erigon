@@ -1,3 +1,19 @@
+// Copyright 2024 The Erigon Authors
+// This file is part of Erigon.
+//
+// Erigon is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Erigon is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Erigon. If not, see <http://www.gnu.org/licenses/>.
+
 package commands
 
 import (
@@ -105,7 +121,7 @@ var readDomains = &cobra.Command{
 }
 
 func requestDomains(chainDb, stateDb kv.RwDB, ctx context.Context, readDomain string, addrs [][]byte, logger log.Logger) error {
-	sn, bsn, agg := allSnapshots(ctx, chainDb, logger)
+	sn, bsn, agg, _ := allSnapshots(ctx, chainDb, logger)
 	defer sn.Close()
 	defer bsn.Close()
 	defer agg.Close()
@@ -124,11 +140,11 @@ func requestDomains(chainDb, stateDb kv.RwDB, ctx context.Context, readDomain st
 
 	r := state.NewReaderV4(domains)
 	if err != nil && startTxNum != 0 {
-		return fmt.Errorf("failed to seek commitment to tx %d: %w", startTxNum, err)
+		return fmt.Errorf("failed to seek commitment to txn %d: %w", startTxNum, err)
 	}
 	latestTx := domains.TxNum()
 	if latestTx < startTxNum {
-		return fmt.Errorf("latest available tx to start is  %d and its less than start tx %d", latestTx, startTxNum)
+		return fmt.Errorf("latest available txn to start is  %d and its less than start txn %d", latestTx, startTxNum)
 	}
 	logger.Info("seek commitment", "block", domains.BlockNum(), "tx", latestTx)
 

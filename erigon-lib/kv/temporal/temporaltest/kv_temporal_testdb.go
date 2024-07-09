@@ -1,3 +1,19 @@
+// Copyright 2024 The Erigon Authors
+// This file is part of Erigon.
+//
+// Erigon is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Erigon is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Erigon. If not, see <http://www.gnu.org/licenses/>.
+
 package temporaltest
 
 import (
@@ -27,7 +43,7 @@ func NewTestDB(tb testing.TB, dirs datadir.Dirs) (db kv.RwDB, agg *state.Aggrega
 	}
 
 	var err error
-	agg, err = state.NewAggregator(context.Background(), dirs, config3.HistoryV3AggregationStep, db, logger)
+	agg, err = state.NewAggregator(context.Background(), dirs, config3.HistoryV3AggregationStep, db, nil, logger)
 	if err != nil {
 		panic(err)
 	}

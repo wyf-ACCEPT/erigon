@@ -1,3 +1,19 @@
+// Copyright 2024 The Erigon Authors
+// This file is part of Erigon.
+//
+// Erigon is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Erigon is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Erigon. If not, see <http://www.gnu.org/licenses/>.
+
 package stagedsync
 
 import (
@@ -294,7 +310,7 @@ func BorHeimdallForward(
 			// if the last time we persisted snapshots is too far away re-run the forward
 			// initialization process - this is to avoid memory growth due to recusrion
 			// in persistValidatorSets
-			if snap == nil && blockNum-lastPersistedBlockNum > (snapshotPersistInterval*5) {
+			if snap == nil && (blockNum == 1 || blockNum-lastPersistedBlockNum > (snapshotPersistInterval*5)) {
 				snap, err = initValidatorSets(
 					ctx,
 					tx,
@@ -546,10 +562,7 @@ func persistValidatorSets(
 		case <-logEvery.C:
 			if dbsize == 0 {
 				_ = snapDb.View(context.Background(), func(tx kv.Tx) error {
-					if cursor, err := tx.Cursor(kv.BorSeparate); err == nil {
-						dbsize, _ = cursor.Count()
-						cursor.Close()
-					}
+					dbsize, _ = tx.Count(kv.BorSeparate)
 					return nil
 				})
 			}

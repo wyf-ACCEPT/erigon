@@ -1,3 +1,22 @@
+// Copyright 2021 The go-ethereum Authors
+// (original work)
+// Copyright 2024 The Erigon Authors
+// (modifications)
+// This file is part of Erigon.
+//
+// Erigon is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Erigon is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Erigon. If not, see <http://www.gnu.org/licenses/>.
+
 package types
 
 import (
@@ -50,7 +69,7 @@ type txJSON struct {
 
 func (tx *LegacyTx) MarshalJSON() ([]byte, error) {
 	var enc txJSON
-	// These are set for all tx types.
+	// These are set for all txn types.
 	enc.Hash = tx.Hash()
 	enc.Type = hexutil.Uint64(tx.Type())
 	enc.Nonce = (*hexutil.Uint64)(&tx.Nonce)
@@ -70,7 +89,7 @@ func (tx *LegacyTx) MarshalJSON() ([]byte, error) {
 
 func (tx *AccessListTx) MarshalJSON() ([]byte, error) {
 	var enc txJSON
-	// These are set for all tx types.
+	// These are set for all txn types.
 	enc.Hash = tx.Hash()
 	enc.Type = hexutil.Uint64(tx.Type())
 	enc.ChainID = (*hexutil.Big)(tx.ChainID.ToBig())
@@ -89,7 +108,7 @@ func (tx *AccessListTx) MarshalJSON() ([]byte, error) {
 
 func (tx *DynamicFeeTransaction) MarshalJSON() ([]byte, error) {
 	var enc txJSON
-	// These are set for all tx types.
+	// These are set for all txn types.
 	enc.Hash = tx.Hash()
 	enc.Type = hexutil.Uint64(tx.Type())
 	enc.ChainID = (*hexutil.Big)(tx.ChainID.ToBig())
@@ -109,7 +128,7 @@ func (tx *DynamicFeeTransaction) MarshalJSON() ([]byte, error) {
 
 func toBlobTxJSON(tx *BlobTx) *txJSON {
 	var enc txJSON
-	// These are set for all tx types.
+	// These are set for all txn types.
 	enc.Hash = tx.Hash()
 	enc.Type = hexutil.Uint64(tx.Type())
 	enc.ChainID = (*hexutil.Big)(tx.ChainID.ToBig())

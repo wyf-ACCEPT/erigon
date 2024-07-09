@@ -1,18 +1,18 @@
-/*
-   Copyright 2021 Erigon contributors
-
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-*/
+// Copyright 2021 The Erigon Authors
+// This file is part of Erigon.
+//
+// Erigon is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Erigon is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Erigon. If not, see <http://www.gnu.org/licenses/>.
 
 package iter_test
 
@@ -88,10 +88,10 @@ func TestUnionPairs(t *testing.T) {
 		_ = tx.Put(kv.E2AccountsHistory, []byte{1}, []byte{1})
 		_ = tx.Put(kv.E2AccountsHistory, []byte{3}, []byte{1})
 		_ = tx.Put(kv.E2AccountsHistory, []byte{4}, []byte{1})
-		_ = tx.Put(kv.PlainState, []byte{2}, []byte{9})
-		_ = tx.Put(kv.PlainState, []byte{3}, []byte{9})
+		_ = tx.Put(kv.AccountChangeSet, []byte{2}, []byte{9})
+		_ = tx.Put(kv.AccountChangeSet, []byte{3}, []byte{9})
 		it, _ := tx.Range(kv.E2AccountsHistory, nil, nil)
-		it2, _ := tx.Range(kv.PlainState, nil, nil)
+		it2, _ := tx.Range(kv.AccountChangeSet, nil, nil)
 		keys, values, err := iter.ToArrayKV(iter.UnionKV(it, it2, -1))
 		require.NoError(err)
 		require.Equal([][]byte{{1}, {2}, {3}, {4}}, keys)
@@ -101,10 +101,10 @@ func TestUnionPairs(t *testing.T) {
 		require := require.New(t)
 		tx, _ := db.BeginRw(ctx)
 		defer tx.Rollback()
-		_ = tx.Put(kv.PlainState, []byte{2}, []byte{9})
-		_ = tx.Put(kv.PlainState, []byte{3}, []byte{9})
+		_ = tx.Put(kv.AccountChangeSet, []byte{2}, []byte{9})
+		_ = tx.Put(kv.AccountChangeSet, []byte{3}, []byte{9})
 		it, _ := tx.Range(kv.E2AccountsHistory, nil, nil)
-		it2, _ := tx.Range(kv.PlainState, nil, nil)
+		it2, _ := tx.Range(kv.AccountChangeSet, nil, nil)
 		keys, _, err := iter.ToArrayKV(iter.UnionKV(it, it2, -1))
 		require.NoError(err)
 		require.Equal([][]byte{{2}, {3}}, keys)
@@ -117,7 +117,7 @@ func TestUnionPairs(t *testing.T) {
 		_ = tx.Put(kv.E2AccountsHistory, []byte{3}, []byte{1})
 		_ = tx.Put(kv.E2AccountsHistory, []byte{4}, []byte{1})
 		it, _ := tx.Range(kv.E2AccountsHistory, nil, nil)
-		it2, _ := tx.Range(kv.PlainState, nil, nil)
+		it2, _ := tx.Range(kv.AccountChangeSet, nil, nil)
 		keys, _, err := iter.ToArrayKV(iter.UnionKV(it, it2, -1))
 		require.NoError(err)
 		require.Equal([][]byte{{1}, {3}, {4}}, keys)
@@ -127,7 +127,7 @@ func TestUnionPairs(t *testing.T) {
 		tx, _ := db.BeginRw(ctx)
 		defer tx.Rollback()
 		it, _ := tx.Range(kv.E2AccountsHistory, nil, nil)
-		it2, _ := tx.Range(kv.PlainState, nil, nil)
+		it2, _ := tx.Range(kv.AccountChangeSet, nil, nil)
 		m := iter.UnionKV(it, it2, -1)
 		require.False(m.HasNext())
 	})

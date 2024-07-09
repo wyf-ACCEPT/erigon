@@ -1,3 +1,19 @@
+// Copyright 2024 The Erigon Authors
+// This file is part of Erigon.
+//
+// Erigon is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Erigon is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Erigon. If not, see <http://www.gnu.org/licenses/>.
+
 package stagedsync
 
 import (
@@ -36,7 +52,7 @@ func TestStagesSuccess(t *testing.T) {
 		},
 		{
 			ID:          stages.Senders,
-			Description: "Recovering senders from tx signatures",
+			Description: "Recovering senders from txn signatures",
 			Forward: func(badBlockUnwind bool, s *StageState, u Unwinder, txc wrap.TxContainer, logger log.Logger) error {
 				flow = append(flow, stages.Senders)
 				return nil
@@ -76,7 +92,7 @@ func TestDisabledStages(t *testing.T) {
 		},
 		{
 			ID:          stages.Senders,
-			Description: "Recovering senders from tx signatures",
+			Description: "Recovering senders from txn signatures",
 			Forward: func(badBlockUnwind bool, s *StageState, u Unwinder, txc wrap.TxContainer, logger log.Logger) error {
 				flow = append(flow, stages.Senders)
 				return nil
@@ -116,7 +132,7 @@ func TestErroredStage(t *testing.T) {
 		},
 		{
 			ID:          stages.Senders,
-			Description: "Recovering senders from tx signatures",
+			Description: "Recovering senders from txn signatures",
 			Forward: func(badBlockUnwind bool, s *StageState, u Unwinder, txc wrap.TxContainer, logger log.Logger) error {
 				flow = append(flow, stages.Senders)
 				return nil
@@ -170,7 +186,7 @@ func TestUnwindSomeStagesBehindUnwindPoint(t *testing.T) {
 		},
 		{
 			ID:          stages.Senders,
-			Description: "Recovering senders from tx signatures",
+			Description: "Recovering senders from txn signatures",
 			Forward: func(badBlockUnwind bool, s *StageState, u Unwinder, txc wrap.TxContainer, logger log.Logger) error {
 				if s.BlockNumber == 0 {
 					if err := s.Update(txc.Tx, 1700); err != nil {
@@ -268,7 +284,7 @@ func TestUnwind(t *testing.T) {
 		},
 		{
 			ID:          stages.Senders,
-			Description: "Recovering senders from tx signatures",
+			Description: "Recovering senders from txn signatures",
 			Forward: func(badBlockUnwind bool, s *StageState, u Unwinder, txc wrap.TxContainer, logger log.Logger) error {
 				flow = append(flow, stages.Senders)
 				if !unwound {
@@ -372,7 +388,7 @@ func TestUnwindEmptyUnwinder(t *testing.T) {
 		},
 		{
 			ID:          stages.Senders,
-			Description: "Recovering senders from tx signatures",
+			Description: "Recovering senders from txn signatures",
 			Forward: func(badBlockUnwind bool, s *StageState, u Unwinder, txc wrap.TxContainer, logger log.Logger) error {
 				flow = append(flow, stages.Senders)
 				if !unwound {
@@ -436,7 +452,7 @@ func TestSyncDoTwice(t *testing.T) {
 		},
 		{
 			ID:          stages.Senders,
-			Description: "Recovering senders from tx signatures",
+			Description: "Recovering senders from txn signatures",
 			Forward: func(badBlockUnwind bool, s *StageState, u Unwinder, txc wrap.TxContainer, logger log.Logger) error {
 				flow = append(flow, stages.Senders)
 				return s.Update(txc.Tx, s.BlockNumber+300)
@@ -494,7 +510,7 @@ func TestStateSyncInterruptRestart(t *testing.T) {
 		},
 		{
 			ID:          stages.Senders,
-			Description: "Recovering senders from tx signatures",
+			Description: "Recovering senders from txn signatures",
 			Forward: func(badBlockUnwind bool, s *StageState, u Unwinder, txc wrap.TxContainer, logger log.Logger) error {
 				flow = append(flow, stages.Senders)
 				return nil
@@ -560,7 +576,7 @@ func TestSyncInterruptLongUnwind(t *testing.T) {
 		},
 		{
 			ID:          stages.Senders,
-			Description: "Recovering senders from tx signatures",
+			Description: "Recovering senders from txn signatures",
 			Forward: func(badBlockUnwind bool, s *StageState, u Unwinder, txc wrap.TxContainer, logger log.Logger) error {
 				flow = append(flow, stages.Senders)
 				if !unwound {

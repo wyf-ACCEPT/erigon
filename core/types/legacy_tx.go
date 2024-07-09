@@ -1,18 +1,21 @@
 // Copyright 2020 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// (original work)
+// Copyright 2024 The Erigon Authors
+// (modifications)
+// This file is part of Erigon.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// Erigon is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// Erigon is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with Erigon. If not, see <http://www.gnu.org/licenses/>.
 
 package types
 
@@ -292,7 +295,7 @@ func (tx *LegacyTx) EncodeRLP(w io.Writer) error {
 func (tx *LegacyTx) DecodeRLP(s *rlp.Stream) error {
 	_, err := s.List()
 	if err != nil {
-		return fmt.Errorf("legacy tx must be a list: %w", err)
+		return fmt.Errorf("legacy txn must be a list: %w", err)
 	}
 	if tx.Nonce, err = s.Uint(); err != nil {
 		return fmt.Errorf("read Nonce: %w", err)
@@ -335,7 +338,7 @@ func (tx *LegacyTx) DecodeRLP(s *rlp.Stream) error {
 	}
 	tx.S.SetBytes(b)
 	if err = s.ListEnd(); err != nil {
-		return fmt.Errorf("close tx struct: %w", err)
+		return fmt.Errorf("close txn struct: %w", err)
 	}
 	return nil
 }
@@ -440,7 +443,10 @@ func (tx *LegacyTx) cashedSender() (sender libcommon.Address, ok bool) {
 }
 func (tx *LegacyTx) Sender(signer Signer) (libcommon.Address, error) {
 	if sc := tx.from.Load(); sc != nil {
-		return sc.(libcommon.Address), nil
+		zeroAddr := libcommon.Address{}
+		if sc.(libcommon.Address) != zeroAddr { // Sender address can never be zero in a transaction with a valid signer
+			return sc.(libcommon.Address), nil
+		}
 	}
 	addr, err := signer.Sender(tx)
 	if err != nil {

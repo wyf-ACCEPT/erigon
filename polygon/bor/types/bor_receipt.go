@@ -1,3 +1,19 @@
+// Copyright 2024 The Erigon Authors
+// This file is part of Erigon.
+//
+// Erigon is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Erigon is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Erigon. If not, see <http://www.gnu.org/licenses/>.
+
 package types
 
 import (
@@ -17,7 +33,7 @@ func BorReceiptKey(number uint64) []byte {
 	return dbutils.EncodeBlockNumber(number)
 }
 
-// ComputeBorTxHash get derived tx hash from block number and hash
+// ComputeBorTxHash get derived txn hash from block number and hash
 func ComputeBorTxHash(blockNumber uint64, blockHash libcommon.Hash) libcommon.Hash {
 	txKeyPlain := make([]byte, 0, len(BorTxKeyPrefix)+8+32)
 	txKeyPlain = append(txKeyPlain, BorTxKeyPrefix...)
@@ -37,7 +53,7 @@ func DeriveFieldsForBorReceipt(receipt *types.Receipt, blockHash libcommon.Hash,
 	txHash := ComputeBorTxHash(blockNumber, blockHash)
 	txIndex := uint(len(receipts))
 
-	// set tx hash and tx index
+	// set txn hash and txn index
 	receipt.TxHash = txHash
 	receipt.TransactionIndex = txIndex
 	receipt.BlockHash = blockHash

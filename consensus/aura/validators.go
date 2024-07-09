@@ -1,3 +1,19 @@
+// Copyright 2024 The Erigon Authors
+// This file is part of Erigon.
+//
+// Erigon is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Erigon is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Erigon. If not, see <http://www.gnu.org/licenses/>.
+
 package aura
 
 import (
@@ -9,8 +25,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/hashicorp/golang-lru/v2"
-
+	lru "github.com/hashicorp/golang-lru/v2"
 	libcommon "github.com/ledgerwatch/erigon-lib/common"
 	"github.com/ledgerwatch/erigon-lib/log/v3"
 
@@ -551,7 +566,7 @@ func checkFirstValidatorSetProof(contract_address libcommon.Address, oldHeader *
 		    let (data, decoder) = validator_set::functions::get_validators::call();
 
 		    let from = Address::default();
-		    let tx = TypedTransaction::Legacy(Transaction {
+		    let txn = TypedTransaction::Legacy(Transaction {
 		        nonce: machine.account_start_nonce(number),
 		        action: Action::Call(contract_address),
 		        gas: PROVIDED_GAS.into(),

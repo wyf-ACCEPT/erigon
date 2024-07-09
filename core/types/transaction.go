@@ -1,18 +1,21 @@
 // Copyright 2014 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// (original work)
+// Copyright 2024 The Erigon Authors
+// (modifications)
+// This file is part of Erigon.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// Erigon is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// Erigon is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with Erigon. If not, see <http://www.gnu.org/licenses/>.
 
 package types
 
@@ -93,7 +96,7 @@ type Transaction interface {
 	GetSender() (libcommon.Address, bool)
 	SetSender(libcommon.Address)
 	IsContractDeploy() bool
-	Unwrap() Transaction // If this is a network wrapper, returns the unwrapped tx. Otherwise returns itself.
+	Unwrap() Transaction // If this is a network wrapper, returns the unwrapped txn. Otherwise returns itself.
 }
 
 // TransactionMisc is collection of miscellaneous fields for transaction that is supposed to be embedded into concrete
@@ -121,16 +124,16 @@ func DecodeRLPTransaction(s *rlp.Stream, blobTxnsAreWrappedWithBlobs bool) (Tran
 		return nil, err
 	}
 	if rlp.List == kind {
-		tx := &LegacyTx{}
-		if err = tx.DecodeRLP(s); err != nil {
+		txn := &LegacyTx{}
+		if err = txn.DecodeRLP(s); err != nil {
 			return nil, err
 		}
-		return tx, nil
+		return txn, nil
 	}
 	if rlp.String != kind {
 		return nil, fmt.Errorf("not an RLP encoded transaction. If this is a canonical encoded transaction, use UnmarshalTransactionFromBinary instead. Got %v for kind, expected String", kind)
 	}
-	// Decode the EIP-2718 typed TX envelope.
+	// Decode the EIP-2718 typed txn envelope.
 	var b []byte
 	if b, err = s.Bytes(); err != nil {
 		return nil, err
@@ -196,7 +199,7 @@ func UnmarshalTransactionFromBinary(data []byte, blobTxnsAreWrappedWithBlobs boo
 		}
 	default:
 		if data[0] >= 0x80 {
-			// Tx is type legacy which is RLP encoded
+			// txn is type legacy which is RLP encoded
 			return DecodeTransaction(data)
 		}
 		return nil, ErrTxTypeNotSupported
@@ -318,13 +321,13 @@ func TxDifference(a, b Transactions) Transactions {
 	keep := make(Transactions, 0, len(a))
 
 	remove := make(map[libcommon.Hash]struct{})
-	for _, tx := range b {
-		remove[tx.Hash()] = struct{}{}
+	for _, txn := range b {
+		remove[txn.Hash()] = struct{}{}
 	}
 
-	for _, tx := range a {
-		if _, ok := remove[tx.Hash()]; !ok {
-			keep = append(keep, tx)
+	for _, txn := range a {
+		if _, ok := remove[txn.Hash()]; !ok {
+			keep = append(keep, txn)
 		}
 	}
 

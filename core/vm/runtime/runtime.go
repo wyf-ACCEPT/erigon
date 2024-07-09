@@ -1,18 +1,21 @@
 // Copyright 2015 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// (original work)
+// Copyright 2024 The Erigon Authors
+// (modifications)
+// This file is part of Erigon.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// Erigon is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// Erigon is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with Erigon. If not, see <http://www.gnu.org/licenses/>.
 
 package runtime
 
@@ -36,6 +39,7 @@ import (
 	"github.com/ledgerwatch/erigon-lib/kv/memdb"
 	"github.com/ledgerwatch/erigon-lib/kv/temporal"
 	state3 "github.com/ledgerwatch/erigon-lib/state"
+	"github.com/ledgerwatch/erigon/core/rawdb"
 	"github.com/ledgerwatch/erigon/core/state"
 	"github.com/ledgerwatch/erigon/core/vm"
 	"github.com/ledgerwatch/erigon/crypto"
@@ -129,7 +133,8 @@ func Execute(code, input []byte, cfg *Config, tempdir string) ([]byte, *state.In
 	if !externalState {
 		db := memdb.NewStateDB(tempdir)
 		defer db.Close()
-		agg, err := state3.NewAggregator(context.Background(), datadir.New(tempdir), config3.HistoryV3AggregationStep, db, log.New())
+		cr := rawdb.NewCanonicalReader()
+		agg, err := state3.NewAggregator(context.Background(), datadir.New(tempdir), config3.HistoryV3AggregationStep, db, cr, log.New())
 		if err != nil {
 			return nil, nil, err
 		}
@@ -191,7 +196,8 @@ func Create(input []byte, cfg *Config, blockNr uint64) ([]byte, libcommon.Addres
 
 		db := memdb.NewStateDB(tmp)
 		defer db.Close()
-		agg, err := state3.NewAggregator(context.Background(), datadir.New(tmp), config3.HistoryV3AggregationStep, db, log.New())
+		cr := rawdb.NewCanonicalReader()
+		agg, err := state3.NewAggregator(context.Background(), datadir.New(tmp), config3.HistoryV3AggregationStep, db, cr, log.New())
 		if err != nil {
 			return nil, [20]byte{}, 0, err
 		}

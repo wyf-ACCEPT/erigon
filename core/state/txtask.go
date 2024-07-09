@@ -1,3 +1,19 @@
+// Copyright 2024 The Erigon Authors
+// This file is part of Erigon.
+//
+// Erigon is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Erigon is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Erigon. If not, see <http://www.gnu.org/licenses/>.
+
 package state
 
 import (
@@ -8,10 +24,9 @@ import (
 
 	"github.com/holiman/uint256"
 
-	"github.com/ledgerwatch/erigon-lib/state"
-
 	"github.com/ledgerwatch/erigon-lib/chain"
 	libcommon "github.com/ledgerwatch/erigon-lib/common"
+	"github.com/ledgerwatch/erigon-lib/state"
 	"github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/core/types/accounts"
 	"github.com/ledgerwatch/erigon/core/vm/evmtypes"
@@ -40,7 +55,7 @@ type TxTask struct {
 	TxAsMessage     types.Message
 	EvmBlockContext evmtypes.BlockContext
 
-	HistoryExecution bool // use history reader for that tx instead of state reader
+	HistoryExecution bool // use history reader for that txn instead of state reader
 
 	BalanceIncreaseSet map[libcommon.Address]uint256.Int
 	ReadLists          map[string]*state.KvList
@@ -66,6 +81,23 @@ type TxTask struct {
 	Requests types.Requests
 }
 
+func (t *TxTask) CreateReceipt(cumulativeGasUsed uint64) *types.Receipt {
+	receipt := &types.Receipt{
+		BlockNumber:       t.Header.Number,
+		BlockHash:         t.BlockHash,
+		TransactionIndex:  uint(t.TxIndex),
+		Type:              t.Tx.Type(),
+		CumulativeGasUsed: cumulativeGasUsed,
+		TxHash:            t.Tx.Hash(),
+		Logs:              t.Logs,
+	}
+	if t.Failed {
+		receipt.Status = types.ReceiptStatusFailed
+	} else {
+		receipt.Status = types.ReceiptStatusSuccessful
+	}
+	return receipt
+}
 func (t *TxTask) Reset() {
 	t.BalanceIncreaseSet = nil
 	returnReadList(t.ReadLists)
@@ -273,13 +305,12 @@ func (q *ResultsQueue) Add(ctx context.Context, task *TxTask) error {
 	}
 	return nil
 }
-func (q *ResultsQueue) drainNoBlock(task *TxTask) (resultsQueueLen int) {
+func (q *ResultsQueue) drainNoBlock(task *TxTask) {
 	q.Lock()
 	defer q.Unlock()
 	if task != nil {
 		heap.Push(q.results, task)
 	}
-	resultsQueueLen = q.results.Len()
 
 	for {
 		select {
@@ -289,10 +320,10 @@ func (q *ResultsQueue) drainNoBlock(task *TxTask) (resultsQueueLen int) {
 			}
 			if txTask != nil {
 				heap.Push(q.results, txTask)
-				resultsQueueLen = q.results.Len()
+				q.results.Len()
 			}
 		default: // we are inside mutex section, can't block here
-			return resultsQueueLen
+			return
 		}
 	}
 }

@@ -1,18 +1,18 @@
-/*
-   Copyright 2021 The Erigon contributors
-
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-*/
+// Copyright 2021 The Erigon Authors
+// This file is part of Erigon.
+//
+// Erigon is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Erigon is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Erigon. If not, see <http://www.gnu.org/licenses/>.
 
 package txpool
 
@@ -265,7 +265,7 @@ func TestReplaceWithHigherFee(t *testing.T) {
 		assert.True(ok)
 		assert.Equal(uint64(3), nonce)
 	}
-	// Bumped both tip and feeCap by 10%, tx accepted
+	// Bumped both tip and feeCap by 10%, txn accepted
 	{
 		txSlots := types.TxSlots{}
 		txSlot := &types.TxSlot{
@@ -344,7 +344,6 @@ func TestReverseNonces(t *testing.T) {
 			assert.Equal(txpoolcfg.Success, reason, reason.String())
 		}
 	}
-	fmt.Printf("AFTER TX 1\n")
 	select {
 	case annoucements := <-ch:
 		for i := 0; i < annoucements.Len(); i++ {
@@ -372,7 +371,6 @@ func TestReverseNonces(t *testing.T) {
 			assert.Equal(txpoolcfg.Success, reason, reason.String())
 		}
 	}
-	fmt.Printf("AFTER TX 2\n")
 	select {
 	case annoucements := <-ch:
 		for i := 0; i < annoucements.Len(); i++ {
@@ -400,7 +398,6 @@ func TestReverseNonces(t *testing.T) {
 			assert.Equal(txpoolcfg.Success, reason, reason.String())
 		}
 	}
-	fmt.Printf("AFTER TX 3\n")
 	select {
 	case annoucements := <-ch:
 		for i := 0; i < annoucements.Len(); i++ {
@@ -810,7 +807,7 @@ func TestBlobTxReplacement(t *testing.T) {
 	}
 
 	{
-		// try to replace it with 5% extra blob gas, 2x higher tx fee - should fail
+		// try to replace it with 5% extra blob gas, 2x higher txn fee - should fail
 		txSlots := types.TxSlots{}
 		blobTxn := makeBlobTx()
 		blobTxn.Nonce = 0x2
@@ -903,7 +900,7 @@ func TestBlobTxReplacement(t *testing.T) {
 	}
 }
 
-// Todo, make the tx more realistic with good values
+// Todo, make the txn more realistic with good values
 func makeBlobTx() types.TxSlot {
 
 	bodyRlp := hexutility.MustDecodeHex(BodyRlpHex)
@@ -1039,7 +1036,7 @@ func TestDropRemoteAtNoGossip(t *testing.T) {
 
 	}
 
-	// 2. Try same Tx, but as remote; tx must be dropped
+	// 2. Try same Tx, but as remote; txn must be dropped
 	{
 		var txSlots types.TxSlots
 		txSlot := &types.TxSlot{
@@ -1136,7 +1133,7 @@ func TestBlobSlots(t *testing.T) {
 		}
 	}
 
-	// Adding another blob tx should reject
+	// Adding another blob txn should reject
 	txSlots := types.TxSlots{}
 	addr[0] = 11
 	blobTxn := makeBlobTx()
