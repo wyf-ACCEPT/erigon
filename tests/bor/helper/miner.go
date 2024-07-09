@@ -96,6 +96,7 @@ func InitMiner(ctx context.Context, genesis *types.Genesis, privKey *ecdsa.Priva
 			AllowedPorts:    []uint{30303, 30304, 30305, 30306, 30307, 30308, 30309, 30310},
 			PrivateKey:      privKey,
 			NAT:             nat.Any(),
+			NoDiscovery:     true,
 		},
 
 		// These are set to prevent disk and page size churn which can be excessive
