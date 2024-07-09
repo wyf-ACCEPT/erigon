@@ -341,6 +341,10 @@ func (p *TxPool) Start(ctx context.Context, db kv.RwDB) error {
 }
 
 func (p *TxPool) OnNewBlock(ctx context.Context, stateChanges *remote.StateChangeBatch, unwindTxs, unwindBlobTxs, minedTxs types.TxSlots, tx kv.Tx) error {
+	for _, hi := range stateChanges.ChangeBatch {
+		fmt.Printf("OnNewBlock: %d, %x, %d\n", hi.BlockHeight, gointerfaces.ConvertH256ToHash(hi.BlockHash), len(hi.Txs))
+	}
+
 	defer newBlockTimer.ObserveDuration(time.Now())
 	//t := time.Now()
 
@@ -357,9 +361,6 @@ func (p *TxPool) OnNewBlock(ctx context.Context, stateChanges *remote.StateChang
 	block := stateChanges.ChangeBatch[len(stateChanges.ChangeBatch)-1].BlockHeight
 	baseFee := stateChanges.PendingBlockBaseFee
 	available := len(p.pending.best.ms)
-	for _, hi := range stateChanges.ChangeBatch {
-		fmt.Printf("stateChanges: %d, %x\n", hi.BlockHeight, gointerfaces.ConvertH256ToHash(hi.BlockHash))
-	}
 	defer func() {
 		p.logger.Debug("[txpool] New block", "block", block, "unwound", len(unwindTxs.Txs), "mined", len(minedTxs.Txs), "baseFee", baseFee, "pending-pre", available, "pending", p.pending.Len(), "baseFee", p.baseFee.Len(), "queued", p.queued.Len(), "err", err)
 	}()
