@@ -1,18 +1,18 @@
-/*
-   Copyright 2022 Erigon contributors
-
-   Licensed under the Apache License, VerSsion 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-*/
+// Copyright 2022 The Erigon Authors
+// This file is part of Erigon.
+//
+// Erigon is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Erigon is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Erigon. If not, see <http://www.gnu.org/licenses/>.
 
 package state
 
@@ -117,7 +117,7 @@ func TestDomain_OpenFolder(t *testing.T) {
 	err = os.WriteFile(fn, make([]byte, 33), 0644)
 	require.NoError(t, err)
 
-	err = d.OpenFolder()
+	err = d.openFolder()
 	require.NoError(t, err)
 	d.Close()
 }
@@ -585,7 +585,7 @@ func TestDomain_ScanFiles(t *testing.T) {
 	dc := d.BeginFilesRo()
 	defer dc.Close()
 	d.closeWhatNotInList([]string{})
-	require.NoError(t, d.OpenFolder())
+	require.NoError(t, d.openFolder())
 
 	// Check the history
 	checkHistory(t, db, d, txs)
@@ -873,7 +873,8 @@ func TestDomain_OpenFilesWithDeletions(t *testing.T) {
 	}
 	dom.Close()
 
-	err = dom.OpenFolder()
+	err = dom.openFolder()
+	dom.reCalcVisibleFiles()
 	require.NoError(t, err)
 
 	// domain files for same range should not be available so lengths should match
@@ -935,7 +936,7 @@ func TestScanStaticFilesD(t *testing.T) {
 		"v1-test.3-4.kv",
 		"v1-test.4-5.kv",
 	}
-	ii.scanStateFiles(files)
+	ii.scanDirtyFiles(files)
 	var found []string
 	ii.dirtyFiles.Walk(func(items []*filesItem) bool {
 		for _, item := range items {
@@ -1125,7 +1126,7 @@ func TestDomainContext_getFromFiles(t *testing.T) {
 			ks, _ := hex.DecodeString(key)
 			val, err := dc.GetAsOf(ks, beforeTx, tx)
 			require.NoError(t, err)
-			require.EqualValuesf(t, bufs[i], val, "key %s, tx %d", key, beforeTx)
+			require.EqualValuesf(t, bufs[i], val, "key %s, txn %d", key, beforeTx)
 			beforeTx += d.aggregationStep
 		}
 	}
@@ -1389,7 +1390,7 @@ func TestDomain_GetAfterAggregation(t *testing.T) {
 		for i := 1; i < len(updates); i++ {
 			v, err := dc.GetAsOf([]byte(key), updates[i].txNum, tx)
 			require.NoError(t, err)
-			require.EqualValuesf(t, updates[i-1].value, v, "(%d/%d) key %x, tx %d", kc, len(data), []byte(key), updates[i-1].txNum)
+			require.EqualValuesf(t, updates[i-1].value, v, "(%d/%d) key %x, txn %d", kc, len(data), []byte(key), updates[i-1].txNum)
 		}
 		if len(updates) == 0 {
 			continue
@@ -1553,7 +1554,7 @@ func TestDomain_PruneAfterAggregation(t *testing.T) {
 		for i := 1; i < len(updates); i++ {
 			v, err := dc.GetAsOf([]byte(key), updates[i].txNum, tx)
 			require.NoError(t, err)
-			require.EqualValuesf(t, updates[i-1].value, v, "(%d/%d) key %x, tx %d", kc, len(data), []byte(key), updates[i-1].txNum)
+			require.EqualValuesf(t, updates[i-1].value, v, "(%d/%d) key %x, txn %d", kc, len(data), []byte(key), updates[i-1].txNum)
 		}
 		if len(updates) == 0 {
 			continue
@@ -1776,8 +1777,8 @@ func TestDomain_Unwind(t *testing.T) {
 		for i := uint64(0); i < maxTx; i++ {
 			writer.diff = &StateDiffDomain{}
 			writer.SetTxNum(i)
-			if i%3 == 0 && i > 0 { // once in 3 tx put key3 -> value3.i and skip other keys update
-				if i%12 == 0 { // once in 12 tx delete key3 before update
+			if i%3 == 0 && i > 0 { // once in 3 txn put key3 -> value3.i and skip other keys update
+				if i%12 == 0 { // once in 12 txn delete key3 before update
 					err = writer.DeleteWithPrev([]byte("key3"), nil, preval3, 0)
 					require.NoError(t, err)
 					preval3 = nil
@@ -1884,10 +1885,10 @@ func TestDomain_Unwind(t *testing.T) {
 			defer ectx.Close()
 			uc := d.BeginFilesRo()
 			defer uc.Close()
-			et, err := ectx.DomainRange(etx, nil, nil, unwindTo, order.Asc, -1)
+			et, err := ectx.DomainRange(context.Background(), etx, nil, nil, unwindTo, order.Asc, -1)
 			require.NoError(t, err)
 
-			ut, err := uc.DomainRange(etx, nil, nil, unwindTo, order.Asc, -1)
+			ut, err := uc.DomainRange(context.Background(), etx, nil, nil, unwindTo, order.Asc, -1)
 			require.NoError(t, err)
 
 			compareIterators(t, et, ut)
@@ -1908,10 +1909,10 @@ func TestDomain_Unwind(t *testing.T) {
 			uc := d.BeginFilesRo()
 			defer uc.Close()
 
-			et, err := ectx.ht.WalkAsOf(unwindTo-1, nil, nil, etx, -1)
+			et, err := ectx.ht.WalkAsOf(context.Background(), unwindTo-1, nil, nil, etx, -1)
 			require.NoError(t, err)
 
-			ut, err := uc.ht.WalkAsOf(unwindTo-1, nil, nil, utx, -1)
+			ut, err := uc.ht.WalkAsOf(context.Background(), unwindTo-1, nil, nil, utx, -1)
 			require.NoError(t, err)
 
 			compareIterators(t, et, ut)

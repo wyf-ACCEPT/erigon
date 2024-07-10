@@ -1,18 +1,18 @@
-/*
-   Copyright 2022 Erigon contributors
-
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-*/
+// Copyright 2022 The Erigon Authors
+// This file is part of Erigon.
+//
+// Erigon is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Erigon is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Erigon. If not, see <http://www.gnu.org/licenses/>.
 
 package state
 
@@ -171,23 +171,15 @@ func (dt *DomainRoTx) NewWriter() *domainBufferedWriter { return dt.newWriter(dt
 // If some file already open: noop.
 // If some file already open but not in provided list: close and remove from `files` field.
 func (d *Domain) OpenList(idxFiles, histFiles, domainFiles []string) error {
-	if err := d.History.OpenList(idxFiles, histFiles); err != nil {
+	if err := d.History.openList(idxFiles, histFiles); err != nil {
 		return err
 	}
-	if err := d.openList(domainFiles); err != nil {
-		return fmt.Errorf("Domain(%s).OpenFolder: %w", d.filenameBase, err)
-	}
-	return nil
-}
 
-func (d *Domain) openList(names []string) error {
-	defer d.reCalcVisibleFiles()
-	d.closeWhatNotInList(names)
-	d.scanStateFiles(names)
-	if err := d.openFiles(); err != nil {
-		return fmt.Errorf("Domain.openList: %w, %s", err, d.filenameBase)
+	d.closeWhatNotInList(domainFiles)
+	d.scanDirtyFiles(domainFiles)
+	if err := d.openDirtyFiles(); err != nil {
+		return fmt.Errorf("Domain(%s).openList: %w", d.filenameBase, err)
 	}
-	d.reCalcVisibleFiles()
 	d.protectFromHistoryFilesAheadOfDomainFiles()
 	return nil
 }
@@ -199,10 +191,10 @@ func (d *Domain) protectFromHistoryFilesAheadOfDomainFiles() {
 	d.closeFilesAfterStep(d.dirtyFilesEndTxNumMinimax() / d.aggregationStep)
 }
 
-func (d *Domain) OpenFolder() error {
+func (d *Domain) openFolder() error {
 	idx, histFiles, domainFiles, err := d.fileNamesOnDisk()
 	if err != nil {
-		return fmt.Errorf("Domain(%s).OpenFolder: %w", d.filenameBase, err)
+		return fmt.Errorf("Domain(%s).openFolder: %w", d.filenameBase, err)
 	}
 	if err := d.OpenList(idx, histFiles, domainFiles); err != nil {
 		return err
@@ -271,7 +263,7 @@ func (d *Domain) closeFilesAfterStep(lowerBound uint64) {
 	}
 }
 
-func (d *Domain) scanStateFiles(fileNames []string) (garbageFiles []*filesItem) {
+func (d *Domain) scanDirtyFiles(fileNames []string) (garbageFiles []*filesItem) {
 	re := regexp.MustCompile("^v([0-9]+)-" + d.filenameBase + ".([0-9]+)-([0-9]+).kv$")
 	var err error
 
@@ -322,7 +314,7 @@ func (d *Domain) scanStateFiles(fileNames []string) (garbageFiles []*filesItem) 
 	return garbageFiles
 }
 
-func (d *Domain) openFiles() (err error) {
+func (d *Domain) openDirtyFiles() (err error) {
 	invalidFileItems := make([]*filesItem, 0)
 	invalidFileItemsLock := sync.Mutex{}
 	d.dirtyFiles.Walk(func(items []*filesItem) bool {
@@ -333,7 +325,7 @@ func (d *Domain) openFiles() (err error) {
 				exists, err := dir.FileExist(fPath)
 				if err != nil {
 					_, fName := filepath.Split(fPath)
-					d.logger.Debug("[agg] Domain.openFiles: FileExist err", "f", fName, "err", err)
+					d.logger.Debug("[agg] Domain.openDirtyFiles: FileExist err", "f", fName, "err", err)
 					invalidFileItemsLock.Lock()
 					invalidFileItems = append(invalidFileItems, item)
 					invalidFileItemsLock.Unlock()
@@ -341,7 +333,7 @@ func (d *Domain) openFiles() (err error) {
 				}
 				if !exists {
 					_, fName := filepath.Split(fPath)
-					d.logger.Debug("[agg] Domain.openFiles: file does not exists", "f", fName)
+					d.logger.Debug("[agg] Domain.openDirtyFiles: file does not exists", "f", fName)
 					invalidFileItemsLock.Lock()
 					invalidFileItems = append(invalidFileItems, item)
 					invalidFileItemsLock.Unlock()
@@ -351,9 +343,9 @@ func (d *Domain) openFiles() (err error) {
 				if item.decompressor, err = seg.NewDecompressor(fPath); err != nil {
 					_, fName := filepath.Split(fPath)
 					if errors.Is(err, &seg.ErrCompressedFileCorrupted{}) {
-						d.logger.Debug("[agg] Domain.openFiles", "err", err, "f", fName)
+						d.logger.Debug("[agg] Domain.openDirtyFiles", "err", err, "f", fName)
 					} else {
-						d.logger.Warn("[agg] Domain.openFiles", "err", err, "f", fName)
+						d.logger.Warn("[agg] Domain.openDirtyFiles", "err", err, "f", fName)
 					}
 					invalidFileItemsLock.Lock()
 					invalidFileItems = append(invalidFileItems, item)
@@ -368,12 +360,12 @@ func (d *Domain) openFiles() (err error) {
 				exists, err := dir.FileExist(fPath)
 				if err != nil {
 					_, fName := filepath.Split(fPath)
-					d.logger.Warn("[agg] Domain.openFiles", "err", err, "f", fName)
+					d.logger.Warn("[agg] Domain.openDirtyFiles", "err", err, "f", fName)
 				}
 				if exists {
 					if item.index, err = recsplit.OpenIndex(fPath); err != nil {
 						_, fName := filepath.Split(fPath)
-						d.logger.Warn("[agg] Domain.openFiles", "err", err, "f", fName)
+						d.logger.Warn("[agg] Domain.openDirtyFiles", "err", err, "f", fName)
 						// don't interrupt on error. other files may be good
 					}
 				}
@@ -383,12 +375,12 @@ func (d *Domain) openFiles() (err error) {
 				exists, err := dir.FileExist(fPath)
 				if err != nil {
 					_, fName := filepath.Split(fPath)
-					d.logger.Warn("[agg] Domain.openFiles", "err", err, "f", fName)
+					d.logger.Warn("[agg] Domain.openDirtyFiles", "err", err, "f", fName)
 				}
 				if exists {
 					if item.bindex, err = OpenBtreeIndexWithDecompressor(fPath, DefaultBtreeM, item.decompressor, d.compression); err != nil {
 						_, fName := filepath.Split(fPath)
-						d.logger.Warn("[agg] Domain.openFiles", "err", err, "f", fName)
+						d.logger.Warn("[agg] Domain.openDirtyFiles", "err", err, "f", fName)
 						// don't interrupt on error. other files may be good
 					}
 				}
@@ -398,12 +390,12 @@ func (d *Domain) openFiles() (err error) {
 				exists, err := dir.FileExist(fPath)
 				if err != nil {
 					_, fName := filepath.Split(fPath)
-					d.logger.Warn("[agg] Domain.openFiles", "err", err, "f", fName)
+					d.logger.Warn("[agg] Domain.openDirtyFiles", "err", err, "f", fName)
 				}
 				if exists {
 					if item.existence, err = OpenExistenceFilter(fPath); err != nil {
 						_, fName := filepath.Split(fPath)
-						d.logger.Warn("[agg] Domain.openFiles", "err", err, "f", fName)
+						d.logger.Warn("[agg] Domain.openDirtyFiles", "err", err, "f", fName)
 						// don't interrupt on error. other files may be good
 					}
 				}
@@ -446,6 +438,9 @@ func (d *Domain) reCalcVisibleFiles() {
 }
 
 func (d *Domain) Close() {
+	if d == nil {
+		return
+	}
 	d.History.Close()
 	d.closeWhatNotInList([]string{})
 }
@@ -453,7 +448,7 @@ func (d *Domain) Close() {
 func (w *domainBufferedWriter) PutWithPrev(key1, key2, val, preval []byte, prevStep uint64) error {
 	// This call to update needs to happen before d.tx.Put() later, because otherwise the content of `preval`` slice is invalidated
 	if tracePutWithPrev != "" && tracePutWithPrev == w.h.ii.filenameBase {
-		fmt.Printf("PutWithPrev(%s, tx %d, key[%x][%x] value[%x] preval[%x])\n", w.h.ii.filenameBase, w.h.ii.txNum, key1, key2, val, preval)
+		fmt.Printf("PutWithPrev(%s, txn %d, key[%x][%x] value[%x] preval[%x])\n", w.h.ii.filenameBase, w.h.ii.txNum, key1, key2, val, preval)
 	}
 	if err := w.h.AddPrevValue(key1, key2, preval, prevStep); err != nil {
 		return err
@@ -467,7 +462,7 @@ func (w *domainBufferedWriter) PutWithPrev(key1, key2, val, preval []byte, prevS
 func (w *domainBufferedWriter) DeleteWithPrev(key1, key2, prev []byte, prevStep uint64) (err error) {
 	// This call to update needs to happen before d.tx.Delete() later, because otherwise the content of `original`` slice is invalidated
 	if tracePutWithPrev != "" && tracePutWithPrev == w.h.ii.filenameBase {
-		fmt.Printf("DeleteWithPrev(%s, tx %d, key[%x][%x] preval[%x])\n", w.h.ii.filenameBase, w.h.ii.txNum, key1, key2, prev)
+		fmt.Printf("DeleteWithPrev(%s, txn %d, key[%x][%x] preval[%x])\n", w.h.ii.filenameBase, w.h.ii.txNum, key1, key2, prev)
 	}
 	if err := w.h.AddPrevValue(key1, key2, prev, prevStep); err != nil {
 		return err
@@ -725,7 +720,7 @@ func (dt *DomainRoTx) DebugEFKey(k []byte) error {
 				exists, err := dir.FileExist(fPath)
 				if err != nil {
 					_, fName := filepath.Split(fPath)
-					dt.d.logger.Warn("[agg] InvertedIndex.openFiles", "err", err, "f", fName)
+					dt.d.logger.Warn("[agg] InvertedIndex.openDirtyFiles", "err", err, "f", fName)
 					continue
 				}
 				if exists {
@@ -733,7 +728,7 @@ func (dt *DomainRoTx) DebugEFKey(k []byte) error {
 					accessor, err = recsplit.OpenIndex(fPath)
 					if err != nil {
 						_, fName := filepath.Split(fPath)
-						dt.d.logger.Warn("[agg] InvertedIndex.openFiles", "err", err, "f", fName)
+						dt.d.logger.Warn("[agg] InvertedIndex.openDirtyFiles", "err", err, "f", fName)
 						continue
 					}
 					defer accessor.Close()
@@ -1258,7 +1253,7 @@ func (dt *DomainRoTx) Unwind(ctx context.Context, rwTx kv.RwTx, step, txNumUnwin
 		key, value, prevStepBytes := domainDiffs[i].Key, domainDiffs[i].Value, domainDiffs[i].PrevStepBytes
 		// First, we need to evict from the keysCursor all keys that have a too high step
 		fullKey := key[:len(key)-8]
-		// so stepBytes is ^step so we need to iterate from the begining down until we find the stepBytes
+		// so stepBytes is ^step so we need to iterate from the beginning down until we find the stepBytes
 		for k, v, err := keysCursor.SeekExact(fullKey); k != nil; k, v, err = keysCursor.NextDup() {
 			if err != nil {
 				return fmt.Errorf("iterate over %s domain keys: %w", d.filenameBase, err)
@@ -1554,7 +1549,7 @@ func (dt *DomainRoTx) GetLatestFromFiles(key []byte) (v []byte, found bool, file
 	return dt.getFromFiles(key)
 }
 
-func (dt *DomainRoTx) DomainRange(tx kv.Tx, fromKey, toKey []byte, ts uint64, asc order.By, limit int) (it iter.KV, err error) {
+func (dt *DomainRoTx) DomainRange(ctx context.Context, tx kv.Tx, fromKey, toKey []byte, ts uint64, asc order.By, limit int) (it iter.KV, err error) {
 	if !asc {
 		panic("implement me")
 	}
@@ -1566,7 +1561,7 @@ func (dt *DomainRoTx) DomainRange(tx kv.Tx, fromKey, toKey []byte, ts uint64, as
 	//if err != nil {
 	//	return nil, err
 	//}
-	histStateIt, err := dt.ht.WalkAsOf(ts, fromKey, toKey, tx, limit)
+	histStateIt, err := dt.ht.WalkAsOf(ctx, ts, fromKey, toKey, tx, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -1693,7 +1688,10 @@ func (dc *DomainPruneStat) String() (kvstr string) {
 		kvstr = fmt.Sprintf("kv: %d from steps %d-%d", dc.Values, dc.MinStep, dc.MaxStep)
 	}
 	if dc.History != nil {
-		kvstr += ", " + dc.History.String()
+		if kvstr != "" {
+			kvstr += ", "
+		}
+		kvstr += dc.History.String()
 	}
 	return kvstr
 }
@@ -1862,7 +1860,7 @@ func (hi *DomainLatestIterFile) init(dc *DomainRoTx) error {
 	//     File endTxNum  = last txNum of file step
 	//     DB endTxNum    = first txNum of step in db
 	//     RAM endTxNum   = current txnum
-	//  Example: stepSize=8, file=0-2.kv, db has key of step 2, current tx num is 17
+	//  Example: stepSize=8, file=0-2.kv, db has key of step 2, current txn num is 17
 	//     File endTxNum  = 15, because `0-2.kv` has steps 0 and 1, last txNum of step 1 is 15
 	//     DB endTxNum    = 16, because db has step 2, and first txNum of step 2 is 16.
 	//     RAM endTxNum   = 17, because current tcurrent txNum is 17

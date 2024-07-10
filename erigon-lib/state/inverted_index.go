@@ -1,18 +1,18 @@
-/*
-   Copyright 2022 Erigon contributors
-
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-*/
+// Copyright 2022 The Erigon Authors
+// This file is part of Erigon.
+//
+// Erigon is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Erigon is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Erigon. If not, see <http://www.gnu.org/licenses/>.
 
 package state
 
@@ -158,24 +158,24 @@ func (ii *InvertedIndex) fileNamesOnDisk() (idx, hist, domain []string, err erro
 	return
 }
 
-func (ii *InvertedIndex) OpenList(fNames []string) error {
+func (ii *InvertedIndex) openList(fNames []string) error {
 	ii.closeWhatNotInList(fNames)
-	ii.scanStateFiles(fNames)
-	if err := ii.openFiles(); err != nil {
-		return fmt.Errorf("NewHistory.openFiles: %w, %s", err, ii.filenameBase)
+	ii.scanDirtyFiles(fNames)
+	if err := ii.openDirtyFiles(); err != nil {
+		return fmt.Errorf("InvertedIndex(%s).openDirtyFiles: %w", ii.filenameBase, err)
 	}
 	return nil
 }
 
-func (ii *InvertedIndex) OpenFolder() error {
+func (ii *InvertedIndex) openFolder() error {
 	idxFiles, _, _, err := ii.fileNamesOnDisk()
 	if err != nil {
 		return err
 	}
-	return ii.OpenList(idxFiles)
+	return ii.openList(idxFiles)
 }
 
-func (ii *InvertedIndex) scanStateFiles(fileNames []string) (garbageFiles []*filesItem) {
+func (ii *InvertedIndex) scanDirtyFiles(fileNames []string) (garbageFiles []*filesItem) {
 	re := regexp.MustCompile("^v([0-9]+)-" + ii.filenameBase + ".([0-9]+)-([0-9]+).ef$")
 	var err error
 	for _, name := range fileNames {
@@ -266,7 +266,7 @@ func (ii *InvertedIndex) BuildMissedAccessors(ctx context.Context, g *errgroup.G
 
 }
 
-func (ii *InvertedIndex) openFiles() error {
+func (ii *InvertedIndex) openDirtyFiles() error {
 	var invalidFileItems []*filesItem
 	invalidFileItemsLock := sync.Mutex{}
 	ii.dirtyFiles.Walk(func(items []*filesItem) bool {
@@ -278,7 +278,7 @@ func (ii *InvertedIndex) openFiles() error {
 				exists, err := dir.FileExist(fPath)
 				if err != nil {
 					_, fName := filepath.Split(fPath)
-					ii.logger.Debug("[agg] InvertedIndex.openFiles: FileExists error", "f", fName, "err", err)
+					ii.logger.Debug("[agg] InvertedIndex.openDirtyFiles: FileExists error", "f", fName, "err", err)
 					invalidFileItemsLock.Lock()
 					invalidFileItems = append(invalidFileItems, item)
 					invalidFileItemsLock.Unlock()
@@ -286,7 +286,7 @@ func (ii *InvertedIndex) openFiles() error {
 				}
 				if !exists {
 					_, fName := filepath.Split(fPath)
-					ii.logger.Debug("[agg] InvertedIndex.openFiles: file does not exists", "f", fName)
+					ii.logger.Debug("[agg] InvertedIndex.openDirtyFiles: file does not exists", "f", fName)
 					invalidFileItemsLock.Lock()
 					invalidFileItems = append(invalidFileItems, item)
 					invalidFileItemsLock.Unlock()
@@ -296,9 +296,9 @@ func (ii *InvertedIndex) openFiles() error {
 				if item.decompressor, err = seg.NewDecompressor(fPath); err != nil {
 					_, fName := filepath.Split(fPath)
 					if errors.Is(err, &seg.ErrCompressedFileCorrupted{}) {
-						ii.logger.Debug("[agg] InvertedIndex.openFiles", "err", err, "f", fName)
+						ii.logger.Debug("[agg] InvertedIndex.openDirtyFiles", "err", err, "f", fName)
 					} else {
-						ii.logger.Warn("[agg] InvertedIndex.openFiles", "err", err, "f", fName)
+						ii.logger.Warn("[agg] InvertedIndex.openDirtyFiles", "err", err, "f", fName)
 					}
 					invalidFileItemsLock.Lock()
 					invalidFileItems = append(invalidFileItems, item)
@@ -313,13 +313,13 @@ func (ii *InvertedIndex) openFiles() error {
 				exists, err := dir.FileExist(fPath)
 				if err != nil {
 					_, fName := filepath.Split(fPath)
-					ii.logger.Warn("[agg] InvertedIndex.openFiles", "err", err, "f", fName)
+					ii.logger.Warn("[agg] InvertedIndex.openDirtyFiles", "err", err, "f", fName)
 					// don't interrupt on error. other files may be good
 				}
 				if exists {
 					if item.index, err = recsplit.OpenIndex(fPath); err != nil {
 						_, fName := filepath.Split(fPath)
-						ii.logger.Warn("[agg] InvertedIndex.openFiles", "err", err, "f", fName)
+						ii.logger.Warn("[agg] InvertedIndex.openDirtyFiles", "err", err, "f", fName)
 						// don't interrupt on error. other files may be good
 					}
 				}
@@ -357,6 +357,9 @@ func (ii *InvertedIndex) closeWhatNotInList(fNames []string) {
 }
 
 func (ii *InvertedIndex) Close() {
+	if ii == nil {
+		return
+	}
 	ii.closeWhatNotInList([]string{})
 }
 
@@ -511,7 +514,14 @@ type MergeRange struct {
 }
 
 func (mr *MergeRange) String(prefix string, aggStep uint64) string {
-	return fmt.Sprintf("%s=%d-%d", prefix, mr.from/aggStep, mr.to/aggStep)
+	if prefix != "" {
+		prefix += "="
+	}
+	return fmt.Sprintf("%s%d-%d", prefix, mr.from/aggStep, mr.to/aggStep)
+}
+
+func (mr *MergeRange) Equal(other *MergeRange) bool {
+	return mr.from == other.from && mr.to == other.to
 }
 
 type InvertedIndexRoTx struct {
@@ -784,7 +794,7 @@ func (iit *InvertedIndexRoTx) Prune(ctx context.Context, rwTx kv.RwTx, txFrom, t
 	defer mxPruneInProgress.Dec()
 	defer func(t time.Time) { mxPruneTookIndex.ObserveDuration(t) }(time.Now())
 
-	if limit == 0 { // limits amount of Tx to be pruned
+	if limit == 0 { // limits amount of txn to be pruned
 		limit = math.MaxUint64
 	}
 
@@ -953,7 +963,7 @@ func (iit *InvertedIndexRoTx) DebugEFAllValuesAreInRange(ctx context.Context, fa
 	return nil
 }
 
-// FrozenInvertedIdxIter allows iteration over range of tx numbers
+// FrozenInvertedIdxIter allows iteration over range of txn numbers
 // Iteration is not implmented via callback function, because there is often
 // a requirement for interators to be composable (for example, to implement AND and OR for indices)
 // FrozenInvertedIdxIter must be closed after use to prevent leaking of resources like cursor
@@ -1084,7 +1094,7 @@ func (it *FrozenInvertedIdxIter) advanceInFiles() {
 	}
 }
 
-// RecentInvertedIdxIter allows iteration over range of tx numbers
+// RecentInvertedIdxIter allows iteration over range of txn numbers
 // Iteration is not implmented via callback function, because there is often
 // a requirement for interators to be composable (for example, to implement AND and OR for indices)
 type RecentInvertedIdxIter struct {

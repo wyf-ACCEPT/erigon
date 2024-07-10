@@ -1,18 +1,18 @@
-/*
-   Copyright 2022 Erigon contributors
-
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-*/
+// Copyright 2022 The Erigon Authors
+// This file is part of Erigon.
+//
+// Erigon is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Erigon is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Erigon. If not, see <http://www.gnu.org/licenses/>.
 
 package state
 
@@ -971,7 +971,7 @@ func TestHistoryScanFiles(t *testing.T) {
 		hc := h.BeginFilesRo()
 		defer hc.Close()
 		// Recreate domain and re-scan the files
-		require.NoError(h.OpenFolder(false))
+		require.NoError(h.openFolder())
 		// Check the history
 		checkHistoryHistory(t, h, txs)
 	}
@@ -1380,12 +1380,12 @@ func TestScanStaticFilesH(t *testing.T) {
 		"v1-test.3-4.v",
 		"v1-test.4-5.v",
 	}
-	h.scanStateFiles(files)
+	h.scanDirtyFiles(files)
 	require.Equal(t, 6, h.dirtyFiles.Len())
 
 	h.dirtyFiles.Clear()
 	h.integrityCheck = func(fromStep, toStep uint64) bool { return false }
-	h.scanStateFiles(files)
+	h.scanDirtyFiles(files)
 	require.Equal(t, 0, h.dirtyFiles.Len())
 
 }
@@ -1524,7 +1524,7 @@ func TestHistory_OpenFolder(t *testing.T) {
 	err = os.WriteFile(fn, make([]byte, 33), 0644)
 	require.NoError(t, err)
 
-	err = h.OpenFolder(true)
+	err = h.openFolder()
 	require.NoError(t, err)
 	h.Close()
 }
