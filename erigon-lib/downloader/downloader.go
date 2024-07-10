@@ -2321,7 +2321,8 @@ func getWebseedsRatesForlogs(weebseedPeersOfThisFile []*torrent.Peer, fName stri
 					}
 					seeds = append(seeds, seed)
 				}
-				webseedRates = append(webseedRates, strings.TrimSuffix(shortUrl, "/"), fmt.Sprintf("%s/s", common.ByteCount(rate)))
+				status := peer.StatusFlags()
+				webseedRates = append(webseedRates, strings.TrimSuffix(shortUrl, "/"), fmt.Sprintf("(%s)%s/s", status, common.ByteCount(rate)))
 			}
 		}
 	}
