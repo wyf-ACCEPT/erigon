@@ -28,10 +28,9 @@ import (
 	"unsafe"
 
 	"github.com/ledgerwatch/erigon-lib/common/assert"
-
-	"github.com/c2h5oh/datasize"
 	"github.com/ledgerwatch/log/v3"
 
+	"github.com/c2h5oh/datasize"
 	"github.com/ledgerwatch/erigon-lib/common/dbg"
 	"github.com/ledgerwatch/erigon-lib/mmap"
 )
@@ -467,6 +466,7 @@ func (d *Decompressor) WithReadAhead(f func() error) error {
 	if d == nil || d.mmapHandle1 == nil {
 		return nil
 	}
+
 	_ = mmap.MadviseSequential(d.mmapHandle1)
 	//_ = mmap.MadviseWillNeed(d.mmapHandle1)
 	defer mmap.MadviseRandom(d.mmapHandle1)
@@ -476,6 +476,11 @@ func (d *Decompressor) WithReadAhead(f func() error) error {
 // DisableReadAhead - usage: `defer d.EnableReadAhead().DisableReadAhead()`. Please don't use this funcs without `defer` to avoid leak.
 func (d *Decompressor) DisableReadAhead() {
 	if d == nil || d.mmapHandle1 == nil {
+		return
+	}
+
+	if !dbg.SnapshotMadvRnd { // all files
+		_ = mmap.MadviseNormal(d.mmapHandle1)
 		return
 	}
 	_ = mmap.MadviseRandom(d.mmapHandle1)

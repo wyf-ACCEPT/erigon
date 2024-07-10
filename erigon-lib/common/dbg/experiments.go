@@ -29,6 +29,7 @@ import (
 var (
 	// force skipping of any non-Erigon2 .torrent files
 	DownloaderOnlyBlocks = EnvBool("DOWNLOADER_ONLY_BLOCKS", false)
+	SnapshotMadvRnd      = EnvBool("SNAPSHOT_MADV_RND", true)
 )
 
 var StagesOnlyBlocks = EnvBool("STAGES_ONLY_BLOCKS", false)
