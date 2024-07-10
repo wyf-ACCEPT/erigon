@@ -380,6 +380,9 @@ func BlockPostValidation(gasUsed, blobGasUsed uint64, checkReceipts bool, receip
 			blobGasUsed, *h.BlobGasUsed, h.Number.Uint64(), h.Hash())
 	}
 	if checkReceipts {
+		for _, r := range receipts {
+			r.Bloom = types.CreateBloom(types.Receipts{r})
+		}
 		receiptHash := types.DeriveSha(receipts)
 		if receiptHash != h.ReceiptHash {
 			return fmt.Errorf("receiptHash mismatch: %x != %x, headerNum=%d, %x",
