@@ -223,10 +223,10 @@ func (api *BaseAPI) blockWithSenders(ctx context.Context, tx kv.Tx, hash common.
 	}
 	if api.blocksLRU != nil {
 		// calc fields before put to cache
-		for _, txn := range block.Transactions() {
-			txn.Hash()
-		}
-		block.Hash()
+		//for _, txn := range block.Transactions() {
+		//	txn.Hash()
+		//}
+		//block.Hash()
 		api.blocksLRU.Add(hash, block)
 	}
 	return block, nil
