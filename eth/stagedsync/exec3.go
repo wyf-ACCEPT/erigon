@@ -800,38 +800,14 @@ Loop:
 				if txTask.Final {
 					checkReceipts := !cfg.vmConfig.StatelessExec && chainConfig.IsByzantium(txTask.BlockNum) && !cfg.vmConfig.NoReceipts
 					if txTask.BlockNum > 0 && !skipPostEvaluation { //Disable check for genesis. Maybe need somehow improve it in future - to satisfy TestExecutionSpec
-						if err := core.BlockPostValidation(usedGas, blobGasUsed, checkReceipts, types.DeriveSha(receipts), txTask.Header); err != nil {
+						if err := core.BlockPostValidation(usedGas, blobGasUsed, checkReceipts, receipts, txTask.Header); err != nil {
 							return fmt.Errorf("%w, txnIdx=%d, %v", consensus.ErrInvalidBlock, txTask.TxIndex, err) //same as in stage_exec.go
 						}
 					}
 					usedGas, blobGasUsed = 0, 0
 					receipts = receipts[:0]
-				} else {
-					if txTask.TxIndex >= 0 {
-						// by the tx.
-						receipt := &types.Receipt{
-							BlockNumber:       header.Number,
-							TransactionIndex:  uint(txTask.TxIndex),
-							Type:              txTask.Tx.Type(),
-							CumulativeGasUsed: usedGas,
-							GasUsed:           txTask.UsedGas,
-							TxHash:            txTask.Tx.Hash(),
-							Logs:              txTask.Logs,
-						}
-						receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
-						if txTask.Failed {
-							receipt.Status = types.ReceiptStatusFailed
-						} else {
-							receipt.Status = types.ReceiptStatusSuccessful
-						}
-						// if the transaction created a contract, store the creation address in the receipt.
-						//if msg.To() == nil {
-						//	receipt.ContractAddress = crypto.CreateAddress(evm.Origin, tx.GetNonce())
-						//}
-						// Set the receipt logs and create a bloom for filtering
-						//receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
-						receipts = append(receipts, receipt)
-					}
+				} else if txTask.TxIndex >= 0 {
+					receipts = append(receipts, txTask.CreateReceipt(usedGas))
 				}
 				return nil
 			}(); err != nil {
@@ -862,9 +838,6 @@ Loop:
 				return err
 			}
 
-			if a := rs.CommitTxNum(txTask.Sender, txTask.TxNum, in); a > 0 {
-				fmt.Printf("a: %d\n", a)
-			}
 			outputTxNum.Add(1)
 
 			stageProgress = blockNum
