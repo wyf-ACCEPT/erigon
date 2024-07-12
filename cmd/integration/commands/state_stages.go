@@ -1,3 +1,19 @@
+// Copyright 2024 The Erigon Authors
+// This file is part of Erigon.
+//
+// Erigon is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Erigon is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with Erigon. If not, see <http://www.gnu.org/licenses/>.
+
 package commands
 
 import (
@@ -7,10 +23,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"sort"
 	"time"
 
-	"github.com/ledgerwatch/erigon-lib/kv/dbutils"
 	"github.com/ledgerwatch/erigon-lib/wrap"
 
 	"github.com/c2h5oh/datasize"
@@ -21,16 +35,11 @@ import (
 	chain2 "github.com/ledgerwatch/erigon-lib/chain"
 	common2 "github.com/ledgerwatch/erigon-lib/common"
 	"github.com/ledgerwatch/erigon-lib/common/datadir"
-	"github.com/ledgerwatch/erigon-lib/common/hexutility"
 	"github.com/ledgerwatch/erigon-lib/kv"
-	"github.com/ledgerwatch/erigon-lib/kv/bitmapdb"
-	"github.com/ledgerwatch/erigon-lib/kv/temporal/historyv2"
-
 	"github.com/ledgerwatch/erigon/cmd/hack/tool/fromdb"
 	"github.com/ledgerwatch/erigon/cmd/utils"
 	"github.com/ledgerwatch/erigon/common/debugprint"
 	"github.com/ledgerwatch/erigon/core"
-	"github.com/ledgerwatch/erigon/core/state"
 	"github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/erigon/eth/stagedsync"
@@ -161,27 +170,6 @@ func syncBySmallSteps(db kv.RwDB, miningConfig params.MiningConfig, ctx context.
 	var batchSize datasize.ByteSize
 	must(batchSize.UnmarshalText([]byte(batchSizeStr)))
 
-	expectedAccountChanges := make(map[uint64]*historyv2.ChangeSet)
-	expectedStorageChanges := make(map[uint64]*historyv2.ChangeSet)
-	changeSetHook := func(blockNum uint64, csw *state.ChangeSetWriter) {
-		if csw == nil {
-			return
-		}
-		accountChanges, err := csw.GetAccountChanges()
-		if err != nil {
-			panic(err)
-		}
-		expectedAccountChanges[blockNum] = accountChanges
-
-		storageChanges, err := csw.GetStorageChanges()
-		if err != nil {
-			panic(err)
-		}
-		if storageChanges.Len() > 0 {
-			expectedStorageChanges[blockNum] = storageChanges
-		}
-	}
-
 	stateStages.DisableStages(stages.Snapshots, stages.Headers, stages.BlockHashes, stages.Bodies, stages.Senders)
 	changesAcc := shards.NewAccumulator()
 
@@ -191,8 +179,7 @@ func syncBySmallSteps(db kv.RwDB, miningConfig params.MiningConfig, ctx context.
 	syncCfg.ReconWorkerCount = int(reconWorkers)
 
 	br, _ := blocksIO(db, logger1)
-	execCfg := stagedsync.StageExecuteBlocksCfg(db, pm, batchSize, changeSetHook, chainConfig, engine, vmConfig, changesAcc, false, true, dirs,
-		br, nil, genesis, syncCfg, agg, nil)
+	execCfg := stagedsync.StageExecuteBlocksCfg(db, pm, batchSize, chainConfig, engine, vmConfig, changesAcc, false, true, dirs, br, nil, genesis, syncCfg, agg, nil)
 
 	execUntilFunc := func(execToBlock uint64) stagedsync.ExecFunc {
 		return func(badBlockUnwind bool, s *stagedsync.StageState, unwinder stagedsync.Unwinder, txc wrap.TxContainer, logger log.Logger) error {
@@ -287,11 +274,6 @@ func syncBySmallSteps(db kv.RwDB, miningConfig params.MiningConfig, ctx context.
 			return err
 		}
 
-		if integrityFast {
-			if err := checkChanges(expectedAccountChanges, tx, expectedStorageChanges, execAtBlock, pm.History.PruneTo(execToBlock)); err != nil {
-				return err
-			}
-		}
 		//receiptsInDB := rawdb.ReadReceiptsByNumber(tx, progress(tx, stages.Execution)+1)
 
 		if err := tx.Commit(); err != nil {
@@ -381,31 +363,6 @@ func syncBySmallSteps(db kv.RwDB, miningConfig params.MiningConfig, ctx context.
 	return nil
 }
 
-func checkChanges(expectedAccountChanges map[uint64]*historyv2.ChangeSet, tx kv.Tx, expectedStorageChanges map[uint64]*historyv2.ChangeSet, execAtBlock, prunedTo uint64) error {
-	checkHistoryFrom := execAtBlock
-	if prunedTo > checkHistoryFrom {
-		checkHistoryFrom = prunedTo
-	}
-	for blockN := range expectedAccountChanges {
-		if blockN <= checkHistoryFrom {
-			continue
-		}
-		if err := checkChangeSet(tx, blockN, expectedAccountChanges[blockN], expectedStorageChanges[blockN]); err != nil {
-			return err
-		}
-		delete(expectedAccountChanges, blockN)
-		delete(expectedStorageChanges, blockN)
-	}
-
-	if err := checkHistory(tx, kv.AccountChangeSet, checkHistoryFrom); err != nil {
-		return err
-	}
-	if err := checkHistory(tx, kv.StorageChangeSet, checkHistoryFrom); err != nil {
-		return err
-	}
-	return nil
-}
-
 func checkMinedBlock(b1, b2 *types.Block, chainConfig *chain2.Config) {
 	if b1.Root() != b2.Root() ||
 		(chainConfig.IsByzantium(b1.NumberU64()) && b1.ReceiptHash() != b2.ReceiptHash()) ||
@@ -453,9 +410,7 @@ func loopExec(db kv.RwDB, ctx context.Context, unwind uint64, logger log.Logger)
 
 	initialCycle := false
 	br, _ := blocksIO(db, logger)
-	cfg := stagedsync.StageExecuteBlocksCfg(db, pm, batchSize, nil, chainConfig, engine, vmConfig, nil,
-		/*stateStream=*/ false,
-		/*badBlockHalt=*/ true, dirs, br, nil, genesis, syncCfg, agg, nil)
+	cfg := stagedsync.StageExecuteBlocksCfg(db, pm, batchSize, chainConfig, engine, vmConfig, nil, false, true, dirs, br, nil, genesis, syncCfg, agg, nil)
 
 	// set block limit of execute stage
 	sync.MockExecFunc(stages.Execution, func(badBlockUnwind bool, stageState *stagedsync.StageState, unwinder stagedsync.Unwinder, txc wrap.TxContainer, logger log.Logger) error {
@@ -485,81 +440,4 @@ func loopExec(db kv.RwDB, ctx context.Context, unwind uint64, logger log.Logger)
 		}
 		defer tx.Rollback()
 	}
-}
-
-func checkChangeSet(db kv.Tx, blockNum uint64, expectedAccountChanges *historyv2.ChangeSet, expectedStorageChanges *historyv2.ChangeSet) error {
-	i := 0
-	sort.Sort(expectedAccountChanges)
-	err := historyv2.ForPrefix(db, kv.AccountChangeSet, hexutility.EncodeTs(blockNum), func(blockN uint64, k, v []byte) error {
-		c := expectedAccountChanges.Changes[i]
-		i++
-		if bytes.Equal(c.Key, k) && bytes.Equal(c.Value, v) {
-			return nil
-		}
-
-		fmt.Printf("Unexpected account changes in block %d\n", blockNum)
-		fmt.Printf("In the database: ======================\n")
-		fmt.Printf("0x%x: %x\n", k, v)
-		fmt.Printf("Expected: ==========================\n")
-		fmt.Printf("0x%x %x\n", c.Key, c.Value)
-		return fmt.Errorf("check change set failed")
-	})
-	if err != nil {
-		return err
-	}
-	if expectedAccountChanges.Len() != i {
-		return fmt.Errorf("db has less changesets")
-	}
-	if expectedStorageChanges == nil {
-		expectedStorageChanges = historyv2.NewChangeSet()
-	}
-
-	i = 0
-	sort.Sort(expectedStorageChanges)
-	err = historyv2.ForPrefix(db, kv.StorageChangeSet, hexutility.EncodeTs(blockNum), func(blockN uint64, k, v []byte) error {
-		c := expectedStorageChanges.Changes[i]
-		i++
-		if bytes.Equal(c.Key, k) && bytes.Equal(c.Value, v) {
-			return nil
-		}
-
-		fmt.Printf("Unexpected storage changes in block %d\n", blockNum)
-		fmt.Printf("In the database: ======================\n")
-		fmt.Printf("0x%x: %x\n", k, v)
-		fmt.Printf("Expected: ==========================\n")
-		fmt.Printf("0x%x %x\n", c.Key, c.Value)
-		return fmt.Errorf("check change set failed")
-	})
-	if err != nil {
-		return err
-	}
-	if expectedStorageChanges.Len() != i {
-		return fmt.Errorf("db has less changesets")
-	}
-
-	return nil
-}
-
-func checkHistory(tx kv.Tx, changeSetBucket string, blockNum uint64) error {
-	indexBucket := historyv2.Mapper[changeSetBucket].IndexBucket
-	blockNumBytes := hexutility.EncodeTs(blockNum)
-	if err := historyv2.ForEach(tx, changeSetBucket, blockNumBytes, func(blockN uint64, address, v []byte) error {
-		k := dbutils.CompositeKeyWithoutIncarnation(address)
-		from := blockN
-		if from > 0 {
-			from--
-		}
-		bm, innerErr := bitmapdb.Get64(tx, indexBucket, k, from, blockN+1)
-		if innerErr != nil {
-			return innerErr
-		}
-		if !bm.Contains(blockN) {
-			return fmt.Errorf("checkHistory failed: bucket=%s,block=%d,addr=%x", changeSetBucket, blockN, k)
-		}
-		return nil
-	}); err != nil {
-		return err
-	}
-
-	return nil
 }
