@@ -2,6 +2,8 @@ package receipts
 
 import (
 	"context"
+	"fmt"
+
 	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/ledgerwatch/erigon-lib/chain"
 	"github.com/ledgerwatch/erigon-lib/common"
@@ -32,14 +34,20 @@ func NewGenerator(receiptsCache *lru.Cache[common.Hash, []*types.Receipt], block
 	}
 }
 
+var yes, no int
+
 func (g *Generator) GetReceipts(ctx context.Context, cfg *chain.Config, tx kv.Tx, block *types.Block, senders []common.Address) (types.Receipts, error) {
 	if receipts, ok := g.receiptsCache.Get(block.Hash()); ok {
+		yes++
 		return receipts, nil
 	}
-
+	no++
 	if receipts := rawdb.ReadReceipts(tx, block, senders); receipts != nil {
 		g.receiptsCache.Add(block.Hash(), receipts)
 		return receipts, nil
+	}
+	if no%10 == 0 {
+		fmt.Printf("receipts_generator.go:47: %d/%d\n", no, yes)
 	}
 
 	engine := g.engine

@@ -22,6 +22,8 @@ package eth
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/ledgerwatch/erigon-lib/chain"
 	libcommon "github.com/ledgerwatch/erigon-lib/common"
 	"github.com/ledgerwatch/erigon-lib/kv"
@@ -164,6 +166,7 @@ type ReceiptsGetter interface {
 }
 
 func AnswerGetReceiptsQuery(ctx context.Context, cfg *chain.Config, receiptsGetter ReceiptsGetter, br services.FullBlockReader, db kv.Tx, query GetReceiptsPacket) ([]rlp.RawValue, error) { //nolint:unparam
+	defer func(t time.Time) { fmt.Printf("handlers.go:169: %s\n", time.Since(t)) }(time.Now())
 	// Gather state data until the fetch or network limits is reached
 	var (
 		bytes    int
@@ -179,6 +182,7 @@ func AnswerGetReceiptsQuery(ctx context.Context, cfg *chain.Config, receiptsGett
 		if number == nil {
 			return nil, nil
 		}
+
 		// Retrieve the requested block's receipts
 		b, s, err := br.BlockWithSenders(context.Background(), db, hash, *number)
 		if err != nil {
