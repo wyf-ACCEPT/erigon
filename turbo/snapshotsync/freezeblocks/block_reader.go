@@ -741,6 +741,9 @@ func (r *BlockReader) blockWithSenders(ctx context.Context, tx kv.Getter, hash c
 		return block, senders, nil // no senders is fine - will recover them on the fly
 	}
 	block.SendersToTxs(senders)
+	if dbgLogs {
+		log.Info(dbgPrefix + fmt.Sprintf("found_in_files=%t", block != nil))
+	}
 	return block, senders, nil
 }
 
