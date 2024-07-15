@@ -345,6 +345,7 @@ func (a *Antiquary) antiquateBlobs() error {
 	if to <= currentBlobsProgress || to-currentBlobsProgress < snaptype.Erigon2MergeLimit {
 		return nil
 	}
+	to = (currentBlobsProgress/snaptype.Erigon2MergeLimit + 1) * snaptype.Erigon2MergeLimit
 	roTx.Rollback()
 	a.logger.Info("[Antiquary] Antiquating blobs", "from", currentBlobsProgress, "to", to)
 	// now, we need to retire the blobs
@@ -368,7 +369,7 @@ func (a *Antiquary) antiquateBlobs() error {
 	if _, err := a.downloader.Add(a.ctx, &proto_downloader.AddRequest{Items: downloadItems}); err != nil {
 		log.Warn("[Antiquary] Failed to add items to bittorent", "err", err)
 	}
-
+	panic("A")
 	roTx, err = a.mainDB.BeginRo(a.ctx)
 	if err != nil {
 		return err
