@@ -252,15 +252,15 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx = context.WithValue(ctx, "remote", r.RemoteAddr)
-	ctx = context.WithValue(ctx, "scheme", r.Proto)
-	ctx = context.WithValue(ctx, "local", r.Host)
-	if ua := r.Header.Get("User-Agent"); ua != "" {
-		ctx = context.WithValue(ctx, "User-Agent", ua)
-	}
-	if origin := r.Header.Get("Origin"); origin != "" {
-		ctx = context.WithValue(ctx, "Origin", origin)
-	}
+	//ctx = context.WithValue(ctx, "remote", r.RemoteAddr)
+	//ctx = context.WithValue(ctx, "scheme", r.Proto)
+	//ctx = context.WithValue(ctx, "local", r.Host)
+	//if ua := r.Header.Get("User-Agent"); ua != "" {
+	//	ctx = context.WithValue(ctx, "User-Agent", ua)
+	//}
+	//if origin := r.Header.Get("Origin"); origin != "" {
+	//	ctx = context.WithValue(ctx, "Origin", origin)
+	//}
 	if s.debugSingleRequest {
 		if v := r.Header.Get(dbg.HTTPHeader); v == "true" {
 			ctx = dbg.ContextWithDebug(ctx, true)
