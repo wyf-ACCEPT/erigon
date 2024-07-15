@@ -247,7 +247,7 @@ func (tm *testMatcher) runTestFile(t *testing.T, path, name string, runTest inte
 			name := name + "/" + key
 			testName := key
 			if len(testName) > 100 {
-				testName = fmt.Sprint("%d", i)
+				testName = fmt.Sprintf("%d", i)
 			}
 			t.Run(key, func(t *testing.T) {
 				if r, _ := tm.findSkip(name); r != "" {
