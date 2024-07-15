@@ -5,6 +5,10 @@ name: Release
 # permissions:
 #   contents: write
 
+env:
+  ACTIONS_RUNNER_DEBUG: true
+  ACTIONS_STEP_DEBUG: true
+
 on:
   push:
     branches-ignore:
@@ -56,7 +60,10 @@ jobs:
 
       - name: Run GoReleaser
         run: |
+          df -h
+          set
           make release
+          echo "DONE: make release"
           docker images
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
