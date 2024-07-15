@@ -43,6 +43,8 @@ func NewPeerStats(peerLimit int) *PeerStats {
 }
 
 func (p *PeerStats) AddOrUpdatePeer(peerID string, peerInfo PeerStatisticMsgUpdate) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
 	if value, ok := p.peersInfo.Load(peerID); ok {
 		p.updatePeer(peerID, peerInfo, value)
 	} else {

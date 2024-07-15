@@ -76,7 +76,7 @@ func (d *DiagnosticClient) runSnapshotListener(rootCtx context.Context) {
 				downloadTimeLeft := CalculateTime(remainingBytes, info.DownloadRate)
 				totalDownloadTimeString := time.Duration(info.TotalTime) * time.Second
 
-				d.updateSnapshotStageStats(SyncStageStats{
+				d.UpdateSnapshotStageStats(SyncStageStats{
 					TimeElapsed: totalDownloadTimeString.String(),
 					TimeLeft:    downloadTimeLeft,
 					Progress:    downloadedPercent,
@@ -105,7 +105,7 @@ func GetShanpshotsPercentDownloaded(downloaded uint64, total uint64, torrentMeta
 	return fmt.Sprintf("%.2f%%", percent)
 }
 
-func (d *DiagnosticClient) updateSnapshotStageStats(stats SyncStageStats, subStageInfo string) {
+func (d *DiagnosticClient) UpdateSnapshotStageStats(stats SyncStageStats, subStageInfo string) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	idxs := d.GetCurrentSyncIdxs()
@@ -239,7 +239,7 @@ func (d *DiagnosticClient) updateIndexingStatus() {
 
 	totalProgress := totalProgressPercent / len(d.syncStats.SnapshotIndexing.Segments)
 
-	d.updateSnapshotStageStats(SyncStageStats{
+	d.UpdateSnapshotStageStats(SyncStageStats{
 		TimeElapsed: SecondsToHHMMString(uint64(d.syncStats.SnapshotIndexing.TimeElapsed)),
 		TimeLeft:    "unknown",
 		Progress:    fmt.Sprintf("%d%%", totalProgress),
@@ -399,7 +399,7 @@ func (d *DiagnosticClient) runFillDBListener(rootCtx context.Context) {
 
 				totalTimeString := time.Duration(info.TimeElapsed) * time.Second
 
-				d.updateSnapshotStageStats(SyncStageStats{
+				d.UpdateSnapshotStageStats(SyncStageStats{
 					TimeElapsed: totalTimeString.String(),
 					TimeLeft:    "unknown",
 					Progress:    fmt.Sprintf("%d%%", (info.Stage.Current*100)/info.Stage.Total),
