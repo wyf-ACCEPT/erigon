@@ -267,6 +267,9 @@ func (m *milestone) IsFutureMilestoneCompatible(chain []*types.Header) bool {
 }
 
 func (m *milestone) ProcessFutureMilestone(num uint64, hash common.Hash) {
+	m.finality.Lock()
+	defer m.finality.Unlock()
+
 	if len(m.FutureMilestoneOrder) < m.MaxCapacity {
 		m.enqueueFutureMilestone(num, hash)
 	}
