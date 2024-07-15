@@ -278,11 +278,9 @@ func (m *milestone) ProcessFutureMilestone(num uint64, hash common.Hash) {
 		return
 	}
 
-	m.finality.Lock()
-	defer m.finality.Unlock()
+	m.Locked = false
 	m.purgeMilestoneIDsList()
 	purgedMilestoneIDs := map[string]struct{}{}
-	m.Locked = false
 	err := rawdb.WriteLockField(m.db, m.Locked, m.LockedMilestoneNumber, m.LockedMilestoneHash, purgedMilestoneIDs)
 
 	if err != nil {
