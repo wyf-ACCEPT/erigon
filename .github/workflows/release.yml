@@ -56,8 +56,21 @@ jobs:
 
       - name: Run GoReleaser
         run: |
-          make release
+          echo "DEBUG : Checking make version"
+          make --version
+          echo "-- end --"
+          echo "DEBUG : checking content of current directory"
+          ls -lao .
+          echo "-- end --"
+          echo "DEBUG : run make release-dry-run"
+          make release-dry-run
+          echo "-- end --"
+          echo "DEBUG : print recursive list of files"
+          find . -type f -ls
+          echo "-- end --"
+          echo "DEBUG : print list of local docker images"
           docker images
+          echo "-- end --"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ steps.prepare.outputs.tag_name }}
