@@ -15,6 +15,7 @@ LABEL org.label-schema.build-date=$BUILD_DATE \
       org.label-schema.vendor="Torquem" \
       org.label-schema.version=$VERSION
 
+COPY erigon /usr/local/bin/erigon
 #COPY app/build/bin/devnet /usr/local/bin/devnet
 #COPY app/build/bin/downloader /usr/local/bin/downloader
 #COPY app/build/bin/erigon /usr/local/bin/erigon

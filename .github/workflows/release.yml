@@ -62,6 +62,9 @@ jobs:
           echo "DEBUG : checking content of current directory"
           ls -lao .
           echo "-- end --"
+          echo "DEBUG : checking docker daemon configuration"
+          cat /etc/docker/daemon.json
+          echo "-- end --"
           echo "DEBUG : run make release-dry-run"
           make release-dry-run
           echo "-- end --"
