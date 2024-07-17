@@ -6,9 +6,42 @@ release:
   prerelease: auto
 
 builds:
-  - id: darwin-amd64
+  - id: darwin-amd64-erigon
     main: ./cmd/erigon
     binary: erigon
+    goos: [ darwin ]
+    goarch: [ amd64 ]
+    env:
+      - CC=o64-clang
+      - CXX=o64-clang++
+    tags: [ nosqlite, noboltdb, nosilkworm ]
+    ldflags: -s -w
+
+  - id: darwin-amd64-devnet
+    main: ./cmd/devnet
+    binary: devnet
+    goos: [ darwin ]
+    goarch: [ amd64 ]
+    env:
+      - CC=o64-clang
+      - CXX=o64-clang++
+    tags: [ nosqlite, noboltdb, nosilkworm ]
+    ldflags: -s -w
+
+  - id: darwin-amd64-downloader
+    main: ./cmd/downloader
+    binary: downloader
+    goos: [ darwin ]
+    goarch: [ amd64 ]
+    env:
+      - CC=o64-clang
+      - CXX=o64-clang++
+    tags: [ nosqlite, noboltdb, nosilkworm ]
+    ldflags: -s -w
+
+  - id: darwin-amd64-evm
+    main: ./cmd/evm
+    binary: evm
     goos: [ darwin ]
     goarch: [ amd64 ]
     env:

@@ -66,11 +66,18 @@ jobs:
           make release-dry-run
           echo "-- end --"
           echo "DEBUG : print recursive list of files"
-          find . -type f -ls
+          find ./dist -type f -ls
           echo "-- end --"
           echo "DEBUG : print list of local docker images"
           docker images
           echo "-- end --"
+          echo "DEBUG : docker image amd64"
+          docker image inspect thorax/erigon:2.59.1-amd64 || true
+          echo "-- end --"
+          echo "DEBUG : docker image arm64"
+          docker image inspect thorax/erigon:2.59.1-arm64 || true
+          echo "-- end --"
+
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ steps.prepare.outputs.tag_name }}
