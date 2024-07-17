@@ -278,6 +278,7 @@ install:
 
 PACKAGE_NAME          := github.com/ledgerwatch/erigon
 GOLANG_CROSS_VERSION  ?= v1.21.6
+GORELEASER_VERSION	  ?= v2.1.0
 
 .PHONY: release-dry-run
 release-dry-run: git-submodules
@@ -291,8 +292,8 @@ release-dry-run: git-submodules
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-v `pwd`:/go/src/$(PACKAGE_NAME) \
 		-w /go/src/$(PACKAGE_NAME) \
-		ghcr.io/goreleaser/goreleaser-cross:${GOLANG_CROSS_VERSION} \
-		--clean --skip-validate --skip-publish
+		ghcr.io/goreleaser/goreleaser:${GORELEASER_VERSION} \
+		--clean --skip=validate --skip=publish --verbose
 
 .PHONY: release
 release: git-submodules
