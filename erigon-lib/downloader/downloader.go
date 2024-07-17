@@ -290,6 +290,14 @@ func New(ctx context.Context, cfg *downloadercfg.Cfg, logger log.Logger, verbosi
 
 	cfg.ClientConfig.WebTransport = requestHandler
 
+	var downloaderDirWasNotExistButSnapsExisted bool
+	_, err := os.Stat(cfg.Dirs.Downloader)
+	if err != nil && !os.IsNotExist(err) {
+		if snaps, err := dir.ReadDir(cfg.Dirs.Snap); err == nil && len(snaps) > 0 {
+			downloaderDirWasNotExistButSnapsExisted = true
+		}
+	}
+
 	db, c, m, torrentClient, err := openClient(ctx, cfg.Dirs.Downloader, cfg.Dirs.Snap, cfg.ClientConfig, cfg.MdbxWriteMap, logger)
 	if err != nil {
 		return nil, fmt.Errorf("openClient: %w", err)
@@ -352,6 +360,7 @@ func New(ctx context.Context, cfg *downloadercfg.Cfg, logger log.Logger, verbosi
 
 	if cfg.AddTorrentsFromDisk {
 		for _, download := range snapLock.Downloads {
+			// if downloader dir has been deleted, storage will be empty so
 			if info, err := d.torrentInfo(download.Name); err == nil {
 				if info.Completed != nil {
 					if hash := hex.EncodeToString(info.Hash); download.Hash != hash {
@@ -364,8 +373,7 @@ func New(ctx context.Context, cfg *downloadercfg.Cfg, logger log.Logger, verbosi
 
 						// this is lazy as it can be expensive for large files
 						fileHashBytes, err := fileHashBytes(d.ctx, fileInfo, &d.stats, d.lock)
-
-						if errors.Is(err, os.ErrNotExist) {
+						if os.IsNotExist(err) {
 							hashBytes, _ := hex.DecodeString(download.Hash)
 							if err := d.db.Update(d.ctx, torrentInfoReset(download.Name, hashBytes, 0)); err != nil {
 								d.logger.Debug("[snapshots] Can't update torrent info", "file", download.Name, "hash", download.Hash, "err", err)
@@ -391,6 +399,11 @@ func New(ctx context.Context, cfg *downloadercfg.Cfg, logger log.Logger, verbosi
 
 		if err := d.addTorrentFilesFromDisk(false); err != nil {
 			return nil, err
+		}
+	}
+	if downloaderDirWasNotExistButSnapsExisted {
+		if err = d.VerifyData(context.Background(), nil, false); err != nil {
+			d.logger.Warn("[downloader] VerifyData failed", "err", err)
 		}
 	}
 
@@ -2737,7 +2750,6 @@ func openClient(ctx context.Context, dbDir, snapDir string, cfg *torrent.ClientC
 	if err != nil {
 		return nil, nil, nil, nil, fmt.Errorf("torrentcfg.openClient: %w", err)
 	}
-	//c, err = NewMdbxPieceCompletion(db)
 	c, err = NewMdbxPieceCompletion(db, logger)
 	if err != nil {
 		return nil, nil, nil, nil, fmt.Errorf("torrentcfg.NewMdbxPieceCompletion: %w", err)
