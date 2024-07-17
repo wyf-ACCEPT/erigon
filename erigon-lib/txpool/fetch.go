@@ -184,6 +184,9 @@ func (f *Fetch) receiveMessage(ctx context.Context, sentryClient sentry.SentryCl
 			}
 			return fmt.Errorf("txpool.receiveMessage: %w", err)
 		}
+		if req == nil {
+			return nil
+		}
 		if err = f.handleInboundMessage(streamCtx, req, sentryClient); err != nil {
 			if grpcutil.IsRetryLater(err) || grpcutil.IsEndOfStream(err) {
 				time.Sleep(3 * time.Second)
