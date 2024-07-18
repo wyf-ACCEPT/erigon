@@ -5,6 +5,9 @@ release:
   draft: true
   prerelease: auto
 
+env:
+  - DeploymentSuffix="-DEV"
+
 builds:
 
 ## Darwin AMD64:
@@ -302,8 +305,8 @@ snapshot:
 
 dockers:
   - image_templates:
-      - thorax/{{ .ProjectName }}:{{ .Version }}-amd64
-      - ghcr.io/ledgerwatch/{{ .ProjectName }}:{{ .Version }}-amd64
+      - thorax/{{ .ProjectName }}{{ .DeploymentSuffix }}:{{ .Version }}-amd64
+      - ghcr.io/ledgerwatch/{{ .ProjectName }}{{ .DeploymentSuffix }}:{{ .Version }}-amd64
     dockerfile: Dockerfile.NEW
     use: buildx
     skip_push: true
@@ -314,8 +317,8 @@ dockers:
       - --platform=linux/amd64
 
   - image_templates:
-      - thorax/{{ .ProjectName }}:{{ .Version }}-arm64
-      - ghcr.io/ledgerwatch/{{ .ProjectName }}:{{ .Version }}-arm64
+      - thorax/{{ .ProjectName }}{{ .DeploymentSuffix }}:{{ .Version }}-arm64
+      - ghcr.io/ledgerwatch/{{ .ProjectName }}{{ .DeploymentSuffix }}:{{ .Version }}-arm64
     dockerfile: Dockerfile.NEW
     skip_push: true
     use: buildx
@@ -326,29 +329,29 @@ dockers:
       - --platform=linux/arm64/v8
 
 docker_manifests:
-  - name_template: thorax/{{ .ProjectName }}:{{ .Version }}
+  - name_template: thorax/{{ .ProjectName }}{{ .DeploymentSuffix }}:{{ .Version }}
     skip_push: true
     image_templates:
       - thorax/{{ .ProjectName }}:{{ .Version }}-amd64
       - thorax/{{ .ProjectName }}:{{ .Version }}-arm64
 
-  - name_template: ghcr.io/ledgerwatch/{{ .ProjectName }}:{{ .Version }}
+  - name_template: ghcr.io/ledgerwatch/{{ .ProjectName }}{{ .DeploymentSuffix }}:{{ .Version }}
     skip_push: true
     image_templates:
-      - ghcr.io/ledgerwatch/{{ .ProjectName }}:{{ .Version }}-amd64
-      - ghcr.io/ledgerwatch/{{ .ProjectName }}:{{ .Version }}-arm64
+      - ghcr.io/ledgerwatch/{{ .ProjectName }}{{ .DeploymentSuffix }}:{{ .Version }}-amd64
+      - ghcr.io/ledgerwatch/{{ .ProjectName }}{{ .DeploymentSuffix }}:{{ .Version }}-arm64
 
-  - name_template: thorax/{{ .ProjectName }}:latest
+  - name_template: thorax/{{ .ProjectName }}{{ .DeploymentSuffix }}:latest
     skip_push: true
     image_templates:
-      - thorax/{{ .ProjectName }}:{{ .Version }}-amd64
-      - thorax/{{ .ProjectName }}:{{ .Version }}-arm64
+      - thorax/{{ .ProjectName }}{{ .DeploymentSuffix }}:{{ .Version }}-amd64
+      - thorax/{{ .ProjectName }}{{ .DeploymentSuffix }}:{{ .Version }}-arm64
 
-  - name_template: ghcr.io/ledgerwatch/{{ .ProjectName }}:latest
+  - name_template: ghcr.io/ledgerwatch/{{ .ProjectName }}{{ .DeploymentSuffix }}:latest
     skip_push: true
     image_templates:
-      - ghcr.io/ledgerwatch/{{ .ProjectName }}:{{ .Version }}-amd64
-      - ghcr.io/ledgerwatch/{{ .ProjectName }}:{{ .Version }}-arm64
+      - ghcr.io/ledgerwatch/{{ .ProjectName }}{{ .DeploymentSuffix }}:{{ .Version }}-amd64
+      - ghcr.io/ledgerwatch/{{ .ProjectName }}{{ .DeploymentSuffix }}:{{ .Version }}-arm64
 
 announce:
   slack:

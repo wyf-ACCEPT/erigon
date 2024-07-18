@@ -293,7 +293,7 @@ release-dry-run: git-submodules
 		-v `pwd`:/go/src/$(PACKAGE_NAME) \
 		-w /go/src/$(PACKAGE_NAME) \
 		ghcr.io/goreleaser/goreleaser-cross:${GORELEASER_VERSION} \
-		--clean --skip=validate --skip=publish --verbose
+		--clean --skip=validate --draft --verbose
 
 .PHONY: release
 release: git-submodules
