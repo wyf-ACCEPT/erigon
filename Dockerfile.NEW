@@ -16,6 +16,11 @@ LABEL org.label-schema.build-date=$BUILD_DATE \
       org.label-schema.version=$VERSION
 
 COPY erigon /usr/local/bin/erigon
+COPY devnet /usr/local/bin/devnet
+COPY downloader /usr/local/bin/downloader
+COPY evm /usr/local/bin/evm
+COPY caplin /usr/local/bin/caplin
+
 #COPY app/build/bin/devnet /usr/local/bin/devnet
 #COPY app/build/bin/downloader /usr/local/bin/downloader
 #COPY app/build/bin/erigon /usr/local/bin/erigon
