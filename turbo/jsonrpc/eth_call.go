@@ -23,7 +23,9 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/c2h5oh/datasize"
 	"github.com/holiman/uint256"
+	"github.com/ledgerwatch/erigon-lib/wrap"
 	"google.golang.org/grpc"
 
 	libcommon "github.com/ledgerwatch/erigon-lib/common"
@@ -33,19 +35,25 @@ import (
 	txpool_proto "github.com/ledgerwatch/erigon-lib/gointerfaces/txpoolproto"
 	"github.com/ledgerwatch/erigon-lib/kv"
 	"github.com/ledgerwatch/erigon-lib/log/v3"
+	libstate "github.com/ledgerwatch/erigon-lib/state"
 	types2 "github.com/ledgerwatch/erigon-lib/types"
 
+	"github.com/ledgerwatch/erigon-lib/config3"
 	"github.com/ledgerwatch/erigon-lib/kv/membatchwithdb"
 	"github.com/ledgerwatch/erigon/consensus"
 	"github.com/ledgerwatch/erigon/core"
+	"github.com/ledgerwatch/erigon/core/rawdb"
 	"github.com/ledgerwatch/erigon/core/state"
 	"github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/core/types/accounts"
 	"github.com/ledgerwatch/erigon/core/vm"
 	"github.com/ledgerwatch/erigon/core/vm/evmtypes"
 	"github.com/ledgerwatch/erigon/crypto"
+	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/erigon/eth/stagedsync"
+	"github.com/ledgerwatch/erigon/eth/stagedsync/stages"
 	"github.com/ledgerwatch/erigon/eth/tracers/logger"
+	"github.com/ledgerwatch/erigon/ethdb/prune"
 	"github.com/ledgerwatch/erigon/params"
 	"github.com/ledgerwatch/erigon/rpc"
 	ethapi2 "github.com/ledgerwatch/erigon/turbo/adapter/ethapi"
@@ -523,6 +531,48 @@ func (api *BaseAPI) getWitness(ctx context.Context, db kv.RoDB, blockNrOrHash rp
 	tx = batch
 
 	store, err := stagedsync.PrepareForWitness(tx, block, prevHeader.Root, rl, &cfg, ctx, logger)
+	if err != nil {
+		return nil, err
+	}
+
+	txc := wrap.TxContainer{Tx: batch}
+	batchSizeStr := "512M"
+	var batchSize datasize.ByteSize
+	err = batchSize.UnmarshalText([]byte(batchSizeStr))
+	if err != nil {
+		return nil, err
+	}
+
+	pruneMode := prune.Mode{
+		Initialised: false,
+	}
+	vmConfig := &vm.Config{}
+	syncCfg := ethconfig.Defaults.Sync
+	cr := rawdb.NewCanonicalReader()
+	agg, err := libstate.NewAggregator(ctx, api.dirs, config3.HistoryV3AggregationStep, db, cr, logger)
+	if err != nil {
+		return nil, err
+	}
+	rwDb, ok := db.(kv.RwDB)
+	if !ok {
+		return nil, errors.New("could not type convert from kv.RoDB to kv.RwDB")
+	}
+	execCfg := stagedsync.StageExecuteBlocksCfg(rwDb, pruneMode, batchSize, chainConfig, engine, vmConfig, nil,
+		/*stateStream=*/ false,
+		/*badBlockHalt=*/ true, api.dirs, api._blockReader, nil, nil, syncCfg, agg, nil)
+
+	stateSyncStages := stagedsync.DefaultStages(ctx, stagedsync.SnapshotsCfg{}, stagedsync.HeadersCfg{}, stagedsync.BorHeimdallCfg{}, stagedsync.BlockHashesCfg{}, stagedsync.BodiesCfg{}, stagedsync.SendersCfg{}, stagedsync.ExecuteBlockCfg{}, stagedsync.TxLookupCfg{}, stagedsync.FinishCfg{}, true)
+	stateSync := stagedsync.New(
+		ethconfig.Defaults.Sync,
+		stateSyncStages,
+		stagedsync.DefaultUnwindOrder,
+		stagedsync.DefaultPruneOrder,
+		logger,
+	)
+	stageState := &stagedsync.StageState{ID: stages.Execution, BlockNumber: blockNr}
+	// Re-execute block
+	err = stagedsync.ExecBlockV3(stageState, stateSync, txc, stageState.BlockNumber, ctx, execCfg, false, logger)
+
 	if err != nil {
 		return nil, err
 	}
