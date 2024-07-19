@@ -928,6 +928,7 @@ Loop:
 					if err != nil {
 						return err
 					}
+					doms.SetTx(applyTx)
 				}
 
 				if ok, err := flushAndCheckCommitmentV3(ctx, b.HeaderNoCopy(), applyTx, doms, cfg, execStage, stageProgress, parallel, logger, u, inMemExec); err != nil {
