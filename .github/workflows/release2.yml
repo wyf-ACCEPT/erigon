@@ -4,6 +4,7 @@ env:
   DOCKER_REG_ADDRESS: "this"
   DOCKER_REG_USERNAME: "user"
   DOCKER_REG_PASSWORD: "password"
+  GORELEASER_CROSS_VERSION: "v1.22.4"
 
 on:
   push:
@@ -29,9 +30,6 @@ jobs:
           remove-haskell: 'true'
           remove-codeql: 'true'
 
-      - name: Available diskspace before checkout
-        run: df -h
-
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -42,8 +40,23 @@ jobs:
 
       - name: Debug output
         run: |
-          echo ${{ github.event }}
-          echo ${{ steps.prepare }}
-          echo "Debug SET output"
-          set
+          echo {GITHUB_REF#refs/tags/} > _local_GITHUB_TAG
           docker images
+          docker rmi $(docker images 'node' -a -q)
+          docker images
+
+      - name: Run goreleaser container
+        run: |
+          docker run \
+            --rm \
+            --privileged \
+            -e CGO_ENABLED=1 \
+            -e GITHUB_TOKEN \
+            -e DOCKER_USERNAME \
+            -e DOCKER_PASSWORD \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v `pwd`:/go/src/$(PACKAGE_NAME) \
+            -w /go/src/$(PACKAGE_NAME) \
+            ghcr.io/goreleaser/goreleaser-cross:${GORELEASER_CROSS_VERSION} \
+            build --clean --skip=validate --verbose
+          find ./dist -ls
