@@ -72,6 +72,19 @@ var execRepeats = metrics.NewCounter(`exec_repeats`)     //nolint
 var execTriggers = metrics.NewCounter(`exec_triggers`)   //nolint
 const changesetBlockRange = 1_000                        // Generate changeset only if execution of blocks <= changesetBlockRange
 
+func shuffleCommitCacheMdbx(ctx context.Context, db kv.RwDB) error {
+	if db == nil {
+		return nil
+	}
+	for i := 0; i < 10; i++ {
+		// random byte to force `put` commit
+		if err := db.Update(ctx, func(tx kv.RwTx) error {
+			return tx.Put(kv.DatabaseInfo, []byte("tmp"), []byte{byte(rand.Intn(256))})
+		}); err != nil {
+			return err
+		}
+	}
+}
 func NewProgress(prevOutputBlockNum, commitThreshold uint64, workersCount int, logPrefix string, logger log.Logger) *Progress {
 	return &Progress{prevTime: time.Now(), prevOutputBlockNum: prevOutputBlockNum, commitThreshold: commitThreshold, workersCount: workersCount, logPrefix: logPrefix, logger: logger}
 }
@@ -904,6 +917,19 @@ Loop:
 
 				t1 = time.Since(tt) + ts
 
+				if !useExternalTx {
+					if err = applyTx.Commit(); err != nil {
+						return err
+					}
+					if err = shuffleCommitCacheMdbx(ctx, cfg.db); err != nil {
+						return err
+					}
+					applyTx, err = cfg.db.BeginRw(context.Background()) //nolint
+					if err != nil {
+						return err
+					}
+				}
+
 				tt = time.Now()
 				if _, err := aggregatorRo.PruneSmallBatches(ctx, 10*time.Hour, applyTx); err != nil {
 					return err
@@ -923,13 +949,7 @@ Loop:
 						if err = applyTx.Commit(); err != nil {
 							return err
 						}
-						for i := 0; i < 10; i++ {
-							cfg.db.Update(ctx, func(tx kv.RwTx) error {
-								// random byte to force commit
-								tx.Put(kv.DatabaseInfo, []byte("tmp"), []byte{byte(rand.Intn(256))})
-								return nil
-							})
-						}
+
 						t2 = time.Since(tt)
 						agg.BuildFilesInBackground(outputTxNum.Load())
 
