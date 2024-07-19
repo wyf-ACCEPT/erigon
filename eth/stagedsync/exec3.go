@@ -900,8 +900,8 @@ Loop:
 				//	}
 				//}
 				// If we skip post evaluation, then we should compute root hash ASAP for fail-fast
-				aggregatorRo := applyTx.(state2.HasAggTx).AggTx().(*state2.AggregatorRoTx)
-				if !skipPostEvaluation && (rs.SizeEstimate() < commitThreshold || inMemExec) && !aggregatorRo.CanPrune(applyTx, outputTxNum.Load()) {
+				if !skipPostEvaluation && (rs.SizeEstimate() < commitThreshold || inMemExec) &&
+					!applyTx.(state2.HasAggTx).AggTx().(*state2.AggregatorRoTx).CanPrune(applyTx, outputTxNum.Load()) {
 					break
 				}
 				var (
@@ -933,7 +933,7 @@ Loop:
 				}
 
 				tt = time.Now()
-				if _, err := aggregatorRo.PruneSmallBatches(ctx, 10*time.Hour, applyTx); err != nil {
+				if _, err := applyTx.(state2.HasAggTx).AggTx().(*state2.AggregatorRoTx).PruneSmallBatches(ctx, 10*time.Hour, applyTx); err != nil {
 					return err
 				}
 				t3 = time.Since(tt)
