@@ -9,8 +9,8 @@ on:
   push:
     branches:
       - 'feature/issue-7893'
-    branches-ignore:
-      - '**'
+    #branches-ignore:
+    #  - '**'
     tags:
       ## only trigger on release tags:
       #- 'v*.*.*'
