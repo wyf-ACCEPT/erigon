@@ -1,17 +1,18 @@
 name: Release2
 
 env:
+  APPLICATION: "erigon"
   DOCKER_REG_ADDRESS: "this"
   DOCKER_REG_USERNAME: "user"
   DOCKER_REG_PASSWORD: "password"
   GORELEASER_CROSS_VERSION: "v1.22.4"
+  VERSION="2.65.4"
+  VERSION_TMP=
 
 on:
   push:
-    branches:
-      - 'feature/issue-7893'
-    #branches-ignore:
-    #  - '**'
+    branches-ignore:
+      - '**'
     tags:
       ## only trigger on release tags:
       #- 'v*.*.*'
@@ -38,12 +39,16 @@ jobs:
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
-      - name: Debug output
+      - name: Debug output 1
         run: |
           echo {GITHUB_REF#refs/tags/} > _local_GITHUB_TAG
           docker images
           docker rmi $(docker images 'node' -a -q)
           docker images
+
+      - name: Get version from Github tag
+        id: GetVersion
+        run: echo ver=${{ github.ref_name }} >> $GITHUB_OUTPUT
 
       - name: Run goreleaser container
         run: |
@@ -59,4 +64,14 @@ jobs:
             -w /go/src/$(PACKAGE_NAME) \
             ghcr.io/goreleaser/goreleaser-cross:${GORELEASER_CROSS_VERSION} \
             build --clean --skip=validate --verbose
+
+      - name: Debug output 2
+        run: |
           find ./dist -ls
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          platforms: linux/amd64,linux/arm64
+          push: false
+          tags: ${{ vars.DOCKER_REG_ADDRESS }}/${{ vars.APPLICATION }}:${{ steps.GetVersion.outputs.ver }}
