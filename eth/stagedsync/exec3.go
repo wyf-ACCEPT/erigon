@@ -917,14 +917,6 @@ Loop:
 				}
 				t3 = time.Since(tt)
 
-				if ok, err := flushAndCheckCommitmentV3(ctx, b.HeaderNoCopy(), applyTx, doms, cfg, execStage, stageProgress, parallel, logger, u, inMemExec); err != nil {
-					return err
-				} else if !ok {
-					break Loop
-				}
-
-				t1 = time.Since(tt) + ts
-
 				if !useExternalTx {
 					if err = applyTx.Commit(); err != nil {
 						return err
@@ -937,6 +929,14 @@ Loop:
 						return err
 					}
 				}
+
+				if ok, err := flushAndCheckCommitmentV3(ctx, b.HeaderNoCopy(), applyTx, doms, cfg, execStage, stageProgress, parallel, logger, u, inMemExec); err != nil {
+					return err
+				} else if !ok {
+					break Loop
+				}
+
+				t1 = time.Since(tt) + ts
 
 				if !useExternalTx {
 					if err = applyTx.Commit(); err != nil {
