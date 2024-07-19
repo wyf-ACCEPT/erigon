@@ -21,6 +21,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+
+	"github.com/erigontech/erigon-lib/common/dbg"
 )
 
 var bytesT = reflect.TypeOf(Bytes(nil))
@@ -36,7 +38,7 @@ func (b Bytes) MarshalText() ([]byte, error) {
 	result := make([]byte, len(b)*2+2)
 	copy(result, hexPrefix)
 	hex.Encode(result[2:], b)
-	fmt.Printf("[dbg] MarshalText: %s, %x\n", result, []byte(b))
+	fmt.Printf("[dbg] MarshalText: %s, %x, %s\n", result, []byte(b), dbg.Stack())
 	return result, nil
 }
 
