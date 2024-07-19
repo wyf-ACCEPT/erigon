@@ -33,6 +33,7 @@ import (
 
 	"github.com/c2h5oh/datasize"
 	"github.com/erigontech/mdbx-go/mdbx"
+	"golang.org/x/exp/rand"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/erigontech/erigon-lib/log/v3"
@@ -923,6 +924,8 @@ Loop:
 						}
 						for i := 0; i < 10; i++ {
 							cfg.db.Update(ctx, func(tx kv.RwTx) error {
+								// random byte to force commit
+								tx.Put(kv.DatabaseInfo, []byte("tmp"), []byte{byte(rand.Intn(256))})
 								return nil
 							})
 						}
