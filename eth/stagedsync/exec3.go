@@ -921,7 +921,9 @@ Loop:
 						if err = applyTx.Commit(); err != nil {
 							return err
 						}
-
+						for i := 0; i < 10; i++ {
+							cfg.db.Update(ctx, func(tx kv.RwTx) error { return nil })
+						}
 						t2 = time.Since(tt)
 						agg.BuildFilesInBackground(outputTxNum.Load())
 
