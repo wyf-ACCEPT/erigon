@@ -19,6 +19,7 @@ package hexutility
 import (
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"reflect"
 )
 
@@ -35,6 +36,7 @@ func (b Bytes) MarshalText() ([]byte, error) {
 	result := make([]byte, len(b)*2+2)
 	copy(result, hexPrefix)
 	hex.Encode(result[2:], b)
+	fmt.Printf("[dbg] MarshalText: %s, %x\n", result, b)
 	return result, nil
 }
 
@@ -62,5 +64,7 @@ func (b *Bytes) UnmarshalText(input []byte) error {
 
 // String returns the hex encoding of b.
 func (b Bytes) String() string {
-	return Encode(b)
+	result := Encode(b)
+	fmt.Printf("[dbg] MarshalText: %s, %x\n", result, b)
+	return result
 }
