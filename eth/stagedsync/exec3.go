@@ -84,7 +84,9 @@ func shuffleCommitCacheMdbx(ctx context.Context, db kv.RwDB) error {
 			return err
 		}
 	}
+	return nil
 }
+
 func NewProgress(prevOutputBlockNum, commitThreshold uint64, workersCount int, logPrefix string, logger log.Logger) *Progress {
 	return &Progress{prevTime: time.Now(), prevOutputBlockNum: prevOutputBlockNum, commitThreshold: commitThreshold, workersCount: workersCount, logPrefix: logPrefix, logger: logger}
 }
