@@ -911,6 +911,12 @@ Loop:
 					t1, t2, t3 time.Duration
 				)
 
+				tt = time.Now()
+				if _, err := applyTx.(state2.HasAggTx).AggTx().(*state2.AggregatorRoTx).PruneSmallBatches(ctx, 10*time.Hour, applyTx); err != nil {
+					return err
+				}
+				t3 = time.Since(tt)
+
 				if ok, err := flushAndCheckCommitmentV3(ctx, b.HeaderNoCopy(), applyTx, doms, cfg, execStage, stageProgress, parallel, logger, u, inMemExec); err != nil {
 					return err
 				} else if !ok {
@@ -931,12 +937,6 @@ Loop:
 						return err
 					}
 				}
-
-				tt = time.Now()
-				if _, err := applyTx.(state2.HasAggTx).AggTx().(*state2.AggregatorRoTx).PruneSmallBatches(ctx, 10*time.Hour, applyTx); err != nil {
-					return err
-				}
-				t3 = time.Since(tt)
 
 				if !useExternalTx {
 					if err = applyTx.Commit(); err != nil {
