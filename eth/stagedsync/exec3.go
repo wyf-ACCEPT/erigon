@@ -938,6 +938,19 @@ Loop:
 				}
 				t3 = time.Since(tt)
 
+				if !useExternalTx {
+					if err = applyTx.Commit(); err != nil {
+						return err
+					}
+					if err = shuffleCommitCacheMdbx(ctx, cfg.db); err != nil {
+						return err
+					}
+					applyTx, err = cfg.db.BeginRw(ctx) //nolint
+					if err != nil {
+						return err
+					}
+				}
+
 				if err := func() error {
 					doms.Close()
 					if err = execStage.Update(applyTx, outputBlockNum.GetValueUint64()); err != nil {
