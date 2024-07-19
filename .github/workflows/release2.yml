@@ -7,6 +7,8 @@ env:
 
 on:
   push:
+    branches:
+      - 'feature/issue-7893'
     branches-ignore:
       - '**'
     tags:
