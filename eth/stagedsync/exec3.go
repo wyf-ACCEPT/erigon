@@ -930,7 +930,8 @@ Loop:
 					}
 					doms.SetTx(applyTx)
 				}
-
+				fmt.Println("commitment", time.Since(commitStart), "prune", t3)
+				time.Sleep(1 * time.Minute)
 				if ok, err := flushAndCheckCommitmentV3(ctx, b.HeaderNoCopy(), applyTx, doms, cfg, execStage, stageProgress, parallel, logger, u, inMemExec); err != nil {
 					return err
 				} else if !ok {
