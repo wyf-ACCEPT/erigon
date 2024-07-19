@@ -926,7 +926,7 @@ Loop:
 					if err = shuffleCommitCacheMdbx(ctx, cfg.db); err != nil {
 						return err
 					}
-					applyTx, err = cfg.db.BeginRw(context.Background()) //nolint
+					applyTx, err = cfg.db.BeginRw(ctx) //nolint
 					if err != nil {
 						return err
 					}
