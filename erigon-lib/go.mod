@@ -5,7 +5,7 @@ go 1.21.0
 toolchain go1.22.4
 
 require (
-	github.com/erigontech/mdbx-go v0.39.0-alpha.0.20240712125001-a014903b60ec
+	github.com/erigontech/mdbx-go v0.39.0-alpha.0.20240720041457-0740b51a781b
 	github.com/ledgerwatch/erigon-snapshot v1.3.1-0.20240705135436-5d6d882b41f7
 	github.com/ledgerwatch/interfaces v0.0.0-20240621204041-2092c22b6ef6
 	github.com/ledgerwatch/secp256k1 v1.0.0
