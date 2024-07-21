@@ -17,7 +17,7 @@
 package config3
 
 // AggregationStep number of transactions in smallest static file
-const HistoryV3AggregationStep = 312500.0 // = 100M / 64. Dividers: 2, 10, 20, 50, 100, 500
+const HistoryV3AggregationStep = 78125.0 // = 100M / 64. Dividers: 2, 10, 20, 50, 100, 500
 //const HistoryV3AggregationStep = 1_562_500 / 10
 
 const EnableHistoryV4InTest = true
