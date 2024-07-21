@@ -322,7 +322,7 @@ func ExecV3(ctx context.Context,
 			"from", blockNum, "to", maxBlockNum, "fromTxNum", doms.TxNum(), "offsetFromBlockBeginning", offsetFromBlockBeginning, "initialCycle", initialCycle, "useExternalTx", useExternalTx)
 	}
 
-	agg.BuildFilesInBackground(outputTxNum.Load())
+	//agg.BuildFilesInBackground(outputTxNum.Load())
 
 	var outputBlockNum = stages.SyncMetrics[stages.Execution]
 	inputBlockNum := &atomic.Uint64{}
@@ -924,7 +924,7 @@ Loop:
 						}
 
 						t2 = time.Since(tt)
-						agg.BuildFilesInBackground(outputTxNum.Load())
+						//agg.BuildFilesInBackground(outputTxNum.Load())
 
 						applyTx, err = cfg.db.BeginRw(context.Background()) //nolint
 						if err != nil {
@@ -954,7 +954,7 @@ Loop:
 		}
 
 		if parallel { // sequential exec - does aggregate right after commit
-			agg.BuildFilesInBackground(outputTxNum.Load())
+			//agg.BuildFilesInBackground(outputTxNum.Load())
 		}
 		select {
 		case <-ctx.Done():
@@ -992,7 +992,7 @@ Loop:
 		}
 	}
 
-	agg.BuildFilesInBackground(outputTxNum.Load())
+	//agg.BuildFilesInBackground(outputTxNum.Load())
 
 	return nil
 }
