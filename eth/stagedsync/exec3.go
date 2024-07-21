@@ -904,9 +904,9 @@ Loop:
 				t1 = time.Since(tt) + ts
 
 				tt = time.Now()
-				if _, err := aggregatorRo.PruneSmallBatches(ctx, 10*time.Hour, applyTx); err != nil {
-					return err
-				}
+				// if _, err := aggregatorRo.PruneSmallBatches(ctx, 10*time.Hour, applyTx); err != nil {
+				// 	return err
+				// }
 				t3 = time.Since(tt)
 
 				if err := func() error {
