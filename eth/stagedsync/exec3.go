@@ -322,7 +322,7 @@ func ExecV3(ctx context.Context,
 			"from", blockNum, "to", maxBlockNum, "fromTxNum", doms.TxNum(), "offsetFromBlockBeginning", offsetFromBlockBeginning, "initialCycle", initialCycle, "useExternalTx", useExternalTx)
 	}
 
-	//agg.BuildFilesInBackground(outputTxNum.Load())
+	agg.BuildFilesInBackground(outputTxNum.Load())
 
 	var outputBlockNum = stages.SyncMetrics[stages.Execution]
 	inputBlockNum := &atomic.Uint64{}
@@ -884,8 +884,8 @@ Loop:
 				//	}
 				//}
 				// If we skip post evaluation, then we should compute root hash ASAP for fail-fast
-				//aggregatorRo := applyTx.(state2.HasAggTx).AggTx().(*state2.AggregatorRoTx)
-				if !skipPostEvaluation && (rs.SizeEstimate() < commitThreshold || inMemExec) {
+				aggregatorRo := applyTx.(state2.HasAggTx).AggTx().(*state2.AggregatorRoTx)
+				if !skipPostEvaluation && (rs.SizeEstimate() < commitThreshold || inMemExec) && !aggregatorRo.CanPrune(applyTx, outputTxNum.Load()) {
 					break
 				}
 				var (
@@ -904,9 +904,9 @@ Loop:
 				t1 = time.Since(tt) + ts
 
 				tt = time.Now()
-				// if _, err := aggregatorRo.PruneSmallBatches(ctx, 10*time.Hour, applyTx); err != nil {
-				// 	return err
-				// }
+				if _, err := aggregatorRo.PruneSmallBatches(ctx, 10*time.Hour, applyTx); err != nil {
+					return err
+				}
 				t3 = time.Since(tt)
 
 				if err := func() error {
@@ -924,7 +924,7 @@ Loop:
 						}
 
 						t2 = time.Since(tt)
-						//agg.BuildFilesInBackground(outputTxNum.Load())
+						agg.BuildFilesInBackground(outputTxNum.Load())
 
 						applyTx, err = cfg.db.BeginRw(context.Background()) //nolint
 						if err != nil {
@@ -954,7 +954,7 @@ Loop:
 		}
 
 		if parallel { // sequential exec - does aggregate right after commit
-			//agg.BuildFilesInBackground(outputTxNum.Load())
+			agg.BuildFilesInBackground(outputTxNum.Load())
 		}
 		select {
 		case <-ctx.Done():
@@ -992,7 +992,7 @@ Loop:
 		}
 	}
 
-	//agg.BuildFilesInBackground(outputTxNum.Load())
+	agg.BuildFilesInBackground(outputTxNum.Load())
 
 	return nil
 }
