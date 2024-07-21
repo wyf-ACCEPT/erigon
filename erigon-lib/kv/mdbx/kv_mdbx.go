@@ -75,7 +75,7 @@ type MdbxOpts struct {
 	inMem           bool
 }
 
-const DefaultMapSize = 2 * datasize.TB
+const DefaultMapSize = 250 * datasize.GB
 const DefaultGrowthStep = 1 * datasize.GB
 
 func NewMDBX(log log.Logger) MdbxOpts {
