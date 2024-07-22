@@ -54,20 +54,20 @@ jobs:
         id: GetVersion
         run: echo ver=$( echo ${{ github.ref_name }} | sed -e 's,.*\/,,g' ) >> $GITHUB_OUTPUT
 
-      - name: Run goreleaser container
-        run: |
-          docker run \
-            --rm \
-            --privileged \
-            -e CGO_ENABLED=1 \
-            -e GITHUB_TOKEN \
-            -e DOCKER_USERNAME \
-            -e DOCKER_PASSWORD \
-            -v /var/run/docker.sock:/var/run/docker.sock \
-            -v `pwd`:/go/src/${PACKAGE_NAME} \
-            -w /go/src/${PACKAGE_NAME} \
-            ghcr.io/goreleaser/goreleaser-cross:${GORELEASER_CROSS_VERSION} \
-            build --clean --skip=validate --verbose
+#      - name: Run goreleaser container
+#        run: |
+#          docker run \
+#            --rm \
+#            --privileged \
+#            -e CGO_ENABLED=1 \
+#            -e GITHUB_TOKEN \
+#            -e DOCKER_USERNAME \
+#            -e DOCKER_PASSWORD \
+#            -v /var/run/docker.sock:/var/run/docker.sock \
+#            -v `pwd`:/go/src/${PACKAGE_NAME} \
+#            -w /go/src/${PACKAGE_NAME} \
+#            ghcr.io/goreleaser/goreleaser-cross:${GORELEASER_CROSS_VERSION} \
+#            build --clean --skip=validate --verbose
 
       - name: Debug output 2
         run: |
@@ -75,10 +75,11 @@ jobs:
           echo "Content of dist/artifacts.json"
           cat dist/artifacts.json
           echo "-- end of content --"
+          docker buildx ls
 
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          platforms: linux/amd64,linux/arm64
-          push: false
-          tags: ${{ env.DOCKER_REG_ADDRESS }}/${{ env.APPLICATION }}:${{ steps.GetVersion.outputs.ver }}
+#      - name: Build and push
+#        uses: docker/build-push-action@v6
+#        with:
+#          platforms: linux/amd64,linux/arm64
+#          push: false
+#          tags: ${{ env.DOCKER_REG_ADDRESS }}/${{ env.APPLICATION }}:${{ steps.GetVersion.outputs.ver }}
