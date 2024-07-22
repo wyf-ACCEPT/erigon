@@ -71,10 +71,13 @@ jobs:
       - name: Debug output 2
         run: |
           find ./dist -ls
+          echo "Content of dist/artifacts.json"
+          cat dist/artifacts.json
+          echo "-- end of content --"
 
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
           platforms: linux/amd64,linux/arm64
           push: false
-          tags: ${{ vars.DOCKER_REG_ADDRESS }}/${{ vars.APPLICATION }}:${{ steps.GetVersion.outputs.ver }}
+          tags: ${{ env.DOCKER_REG_ADDRESS }}/${{ env.APPLICATION }}:${{ steps.GetVersion.outputs.ver }}
