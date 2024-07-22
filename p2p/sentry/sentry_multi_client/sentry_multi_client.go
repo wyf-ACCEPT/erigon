@@ -715,49 +715,49 @@ func (cs *MultiClient) getBlockBodies66(ctx context.Context, inreq *proto_sentry
 }
 
 func (cs *MultiClient) getReceipts66(ctx context.Context, inreq *proto_sentry.InboundMessage, sentryClient direct.SentryClient) error {
-	err := cs.getReceiptsActiveGoroutineNumber.Acquire(ctx, 1)
-	if err != nil {
-		return err
-	}
-	defer cs.getReceiptsActiveGoroutineNumber.Release(1)
-	var query eth.GetReceiptsPacket66
-	if err := rlp.DecodeBytes(inreq.Data, &query); err != nil {
-		return fmt.Errorf("decoding getReceipts66: %w, data: %x", err, inreq.Data)
-	}
-
-	tx, err := cs.db.BeginRo(ctx)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-
-	receiptsList, err := eth.AnswerGetReceiptsQuery(ctx, cs.ChainConfig, cs.ethApiWrapper, cs.blockReader, tx, query.GetReceiptsPacket)
-	if err != nil {
-		return err
-	}
-	b, err := rlp.EncodeToBytes(&eth.ReceiptsRLPPacket66{
-		RequestId:         query.RequestId,
-		ReceiptsRLPPacket: receiptsList,
-	})
-	if err != nil {
-		return fmt.Errorf("encode header response: %w", err)
-	}
-	outreq := proto_sentry.SendMessageByIdRequest{
-		PeerId: inreq.PeerId,
-		Data: &proto_sentry.OutboundMessageData{
-			Id:   proto_sentry.MessageId_RECEIPTS_66,
-			Data: b,
-		},
-	}
-	_, err = sentryClient.SendMessageById(ctx, &outreq, &grpc.OnFinishCallOption{})
-	if err != nil {
-		if isPeerNotFoundErr(err) {
-			return nil
-		}
-		return fmt.Errorf("send receipts response: %w", err)
-	}
-	//println(fmt.Sprintf("[%s] GetReceipts responseLen %d", sentry.ConvertH512ToPeerID(inreq.PeerId), len(b)))
 	return nil
+	//err := cs.getReceiptsActiveGoroutineNumber.Acquire(ctx, 1)
+	//if err != nil {
+	//	return err
+	//}
+	//defer cs.getReceiptsActiveGoroutineNumber.Release(1)
+	//var query eth.GetReceiptsPacket66
+	//if err := rlp.DecodeBytes(inreq.Data, &query); err != nil {
+	//	return fmt.Errorf("decoding getReceipts66: %w, data: %x", err, inreq.Data)
+	//}
+	//
+	//tx, err := cs.db.BeginRo(ctx)
+	//if err != nil {
+	//	return err
+	//}
+	//defer tx.Rollback()
+	//
+	//receiptsList, err := eth.AnswerGetReceiptsQuery(ctx, cs.ChainConfig, cs.ethApiWrapper, cs.blockReader, tx, query.GetReceiptsPacket)
+	//if err != nil {
+	//	return err
+	//}
+	//b, err := rlp.EncodeToBytes(&eth.ReceiptsRLPPacket66{
+	//	RequestId:         query.RequestId,
+	//	ReceiptsRLPPacket: receiptsList,
+	//})
+	//if err != nil {
+	//	return fmt.Errorf("encode header response: %w", err)
+	//}
+	//outreq := proto_sentry.SendMessageByIdRequest{
+	//	PeerId: inreq.PeerId,
+	//	Data: &proto_sentry.OutboundMessageData{
+	//		Id:   proto_sentry.MessageId_RECEIPTS_66,
+	//		Data: b,
+	//	},
+	//}
+	//_, err = sentryClient.SendMessageById(ctx, &outreq, &grpc.OnFinishCallOption{})
+	//if err != nil {
+	//	if isPeerNotFoundErr(err) {
+	//		return nil
+	//	}
+	//	return fmt.Errorf("send receipts response: %w", err)
+	//}
+	//return nil
 }
 
 func MakeInboundMessage() *proto_sentry.InboundMessage {
