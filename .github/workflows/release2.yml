@@ -3,6 +3,7 @@ run-name: "TEST: testing new release workflow"
 
 env:
   APPLICATION: "erigon"
+  PACKAGE_NAME: "github.com/erigontech/erigon"
   DOCKER_REG_ADDRESS: "this"
   DOCKER_REG_USERNAME: "user"
   DOCKER_REG_PASSWORD: "password"
@@ -51,7 +52,7 @@ jobs:
 
       - name: Get version from Github tag
         id: GetVersion
-        run: echo ver=${{ github.ref_name }} >> $GITHUB_OUTPUT
+        run: echo ver=$( echo ${{ github.ref_name }} | sed -e 's,.*\/,,g' ) >> $GITHUB_OUTPUT
 
       - name: Run goreleaser container
         run: |
@@ -63,8 +64,8 @@ jobs:
             -e DOCKER_USERNAME \
             -e DOCKER_PASSWORD \
             -v /var/run/docker.sock:/var/run/docker.sock \
-            -v `pwd`:/go/src/$(PACKAGE_NAME) \
-            -w /go/src/$(PACKAGE_NAME) \
+            -v `pwd`:/go/src/${PACKAGE_NAME} \
+            -w /go/src/${PACKAGE_NAME} \
             ghcr.io/goreleaser/goreleaser-cross:${GORELEASER_CROSS_VERSION} \
             build --clean --skip=validate --verbose
 
