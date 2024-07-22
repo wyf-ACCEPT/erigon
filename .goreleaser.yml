@@ -310,7 +310,7 @@ archives:
     - windows-amd64-evm
     - windows-amd64-caplin
     wrap_in_directory: true
-    strip_binary_parent_dir: true
+    strip_binary_directory: true
     files:
       - COPYING
       - README.md
@@ -324,7 +324,7 @@ archives:
     - linux-arm64-evm
     - linux-arm64-caplin
     wrap_in_directory: true
-    strip_binary_parent_dir: true
+    strip_binary_directory: true
     files:
       - COPYING
       - README.md
@@ -338,7 +338,7 @@ archives:
     - linux-amd64-evm
     - linux-amd64-caplin
     wrap_in_directory: true
-    strip_binary_parent_dir: true
+    strip_binary_directory: true
     files:
       - COPYING
       - README.md
