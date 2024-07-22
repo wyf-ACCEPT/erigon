@@ -1,4 +1,5 @@
 name: Release2
+run-name: "TEST: testing new release workflow"
 
 env:
   APPLICATION: "erigon"
@@ -11,8 +12,10 @@ env:
 
 on:
   push:
-    branches-ignore:
-      - '**'
+    #branches-ignore:
+    #  - '**'
+    branches:
+      - 'feature/issue-7893'
     tags:
       ## only trigger on release tags:
       #- 'v*.*.*'
