@@ -71,9 +71,9 @@ jobs:
 
       - name: Debug output 2
         run: |
-          find ./dist -ls
+          find ./dist -ls && true
           echo "Content of dist/artifacts.json"
-          cat dist/artifacts.json
+          cat dist/artifacts.json && true
           echo "-- end of content --"
           docker buildx ls
 
