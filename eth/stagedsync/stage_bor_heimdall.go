@@ -297,7 +297,6 @@ func BorHeimdallForward(
 		snapStart := time.Now()
 
 		if cfg.blockReader.BorSnapshots().SegmentsMin() == 0 {
-			panic("uploader part!")
 			snapTime = snapTime + time.Since(snapStart)
 			// SegmentsMin is only set if running as an uploader process (check SnapshotsCfg.snapshotUploader and
 			// UploadLocationFlag) when we remove snapshots based on FrozenBlockLimit and number of uploaded snapshots
