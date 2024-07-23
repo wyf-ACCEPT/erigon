@@ -7,19 +7,15 @@ name: Release
 
 on:
   push:
-    branches-ignore:
-      - '**'
-    tags:
-      - 'v*.*.*'
-      # to be used by fork patch-releases ^^
-      - 'v*.*.*-*'
+    branches:
+      - "release_version3"
   workflow_call:
     inputs:
       publish_artifacts:
         description: 'Publish Artifacts (not dry-run)'
         required: true
         type: boolean
-        default: true
+        default: false
   workflow_dispatch:
     inputs:
       publish_artifacts:
