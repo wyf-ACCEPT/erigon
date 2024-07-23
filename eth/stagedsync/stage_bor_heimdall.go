@@ -244,6 +244,7 @@ func BorHeimdallForward(
 
 	var nextEventRecord *heimdall.EventRecordWithTime
 
+	log.Warn("[dbg] stage_bor_heimdall1", "blockNum", blockNum, "headNumber", headNumber)
 	for blockNum = lastBlockNum + 1; blockNum <= headNumber; blockNum++ {
 		select {
 		default:
@@ -435,6 +436,7 @@ func BorHeimdallForward(
 			break
 		}
 	}
+	log.Warn("[dbg] stage_bor_heimdall2", "blockNum", blockNum, "headNumber", headNumber)
 
 	if err = s.Update(tx, headNumber); err != nil {
 		return err
