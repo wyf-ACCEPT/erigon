@@ -46,6 +46,7 @@ jobs:
         run: |
           echo {GITHUB_REF#refs/tags/} > _local_GITHUB_TAG
           docker images
+          echo "Removing docker images related to node in order to clean some space"
           docker rmi $(docker images 'node' -a -q)
           docker images
 
@@ -72,10 +73,10 @@ jobs:
         run: |
           find ./dist -ls && true
           echo "Content of dist/artifacts.json"
-          cat dist/artifacts.json && true
+          jq . dist/artifacts.json && true
           echo "-- end of content --"
           docker buildx ls
-          docker buildx build --platform linux/amd64 -t ${{ env.DOCKER_REG_ADDRESS }}/${{ env.APPLICATION }}:${{ steps.GetVersion.outputs.ver }}
+          echo docker buildx build --platform linux/amd64 -t ${{ env.DOCKER_REG_ADDRESS }}/${{ env.APPLICATION }}:${{ steps.GetVersion.outputs.ver }}
 
 #      - name: Build and push
 #        uses: docker/build-push-action@v6
