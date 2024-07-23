@@ -4,7 +4,7 @@ run-name: "TEST: testing new release workflow"
 env:
   APPLICATION: "erigon"
   PACKAGE_NAME: "github.com/erigontech/erigon"
-  DOCKER_REG_ADDRESS: "this"
+  DOCKERHUB_REPOSITORY: "erigontech/dev-erigon"
   DOCKER_REG_USERNAME: "user"
   DOCKER_REG_PASSWORD: "password"
   GORELEASER_CROSS_VERSION: "v1.22.4"
@@ -93,4 +93,4 @@ jobs:
           file: Dockerfile.NEW
           platforms: linux/amd64,linux/arm64
           push: false
-          tags: ${{ env.DOCKER_REG_ADDRESS }}/${{ env.APPLICATION }}:${{ steps.GetVersion.outputs.ver }}
+          tags: ${{ env.DOCKERHUB_REPOSITORY }}/${{ env.APPLICATION }}:${{ steps.GetVersion.outputs.ver }}
