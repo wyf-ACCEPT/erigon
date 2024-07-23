@@ -350,6 +350,8 @@ func BorHeimdallForward(
 			); err != nil {
 				return fmt.Errorf("can't persist validator sets: %w", err)
 			}
+		} else {
+			panic("support --prune.mode=minimal for bor")
 		}
 
 		snapTime = snapTime + time.Since(snapStart)
