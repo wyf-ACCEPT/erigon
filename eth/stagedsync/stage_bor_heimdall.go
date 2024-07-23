@@ -588,6 +588,7 @@ func persistValidatorSets(
 	}
 
 	if len(headers) > 0 {
+		log.Warn("[dbg] persistValidatorSets", "len(headers)", len(headers), "num", headers[0].Number.Uint64())
 		var err error
 		if snap, err = snap.Apply(parent, headers, logger); err != nil {
 			if snap != nil {
