@@ -146,6 +146,7 @@ func BorHeimdallForward(
 	if err != nil {
 		return err
 	}
+	log.Warn("[dbg] headNumber1", "headNumber", headNumber, "s.BlockNumber", s.BlockNumber)
 
 	whitelistService := whitelist.GetWhitelistingService()
 	if unwindPointPtr := finality.BorMilestoneRewind.Load(); unwindPointPtr != nil && *unwindPointPtr != 0 {
