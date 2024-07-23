@@ -237,7 +237,7 @@ func BorHeimdallForward(
 	}
 
 	chain := NewChainReaderImpl(cfg.chainConfig, tx, cfg.blockReader, logger)
-	logTimer := time.NewTicker(logInterval)
+	logTimer := time.NewTicker(2 * time.Second)
 	defer logTimer.Stop()
 
 	logger.Info(fmt.Sprintf("[%s] Processing sync events...", s.LogPrefix()), "from", lastBlockNum+1, "to", headNumber)
