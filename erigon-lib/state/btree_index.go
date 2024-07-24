@@ -239,9 +239,9 @@ func (a *btAlloc) traverseDfs() {
 		}
 		a.nodes[0] = append(a.nodes[0], node{d: a.K})
 		a.N = a.K
-		if a.trace {
-			fmt.Printf("ncount=%d ∂%.5f\n", a.N, float64(a.N-a.K)/float64(a.N))
-		}
+		//if a.trace {
+		//	fmt.Printf("ncount=%d ∂%.5f\n", a.N, float64(a.N-a.K)/float64(a.N))
+		//}
 		return
 	}
 
