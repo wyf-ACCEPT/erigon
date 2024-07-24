@@ -1,0 +1,54 @@
+ARG ALPINE_BASE_IMAGE_VERSION=${ALPINE_BASE_IMAGE_VERSION}
+
+FROM alpine:${ALPINE_BASE_IMAGE_VERSION}
+
+# https://github.com/opencontainers/image-spec/blob/main/annotations.md
+ARG BUILD_DATE \
+    VCS_REF \
+    VERSION
+
+LABEL org.label-schema.build-date=$BUILD_DATE \
+      org.label-schema.description="Erigon Ethereum Client" \
+      org.label-schema.name="Erigon" \
+      org.label-schema.schema-version="1.0" \
+      org.label-schema.url="https://torquem.ch" \
+      org.label-schema.vcs-ref=$VCS_REF \
+      org.label-schema.vcs-url="https://github.com/ledgerwatch/erigon.git" \
+      org.label-schema.vendor="Torquem" \
+      org.label-schema.version=$VERSION
+
+#COPY ./dist/linux-amd64-erigon_linux_amd64_v1/erigon /usr/local/bin/erigon
+#COPY ./dist/linux-amd64-devnet_linux_amd64_v1/devnet /usr/local/bin/devnet
+#COPY ./dist/linux-amd64-downloader_linux_amd64_v1/downloader /usr/local/bin/downloader
+#COPY ./dist/linux-amd64-evm_linux_amd64_v1/evm /usr/local/bin/evm
+#COPY ./dist/linux-amd64-caplin_linux_amd64_v1/caplin /usr/local/bin/caplin
+
+#COPY app/build/bin/devnet /usr/local/bin/devnet
+#COPY app/build/bin/downloader /usr/local/bin/downloader
+#COPY app/build/bin/erigon /usr/local/bin/erigon
+#COPY app/build/bin/evm /usr/local/bin/evm
+#COPY app/build/bin/hack /usr/local/bin/hack
+#COPY app/build/bin/integration /usr/local/bin/integration
+#COPY app/build/bin/observer /usr/local/bin/observer
+#COPY app/build/bin/pics /usr/local/bin/pics
+#COPY app/build/bin/rpcdaemon /usr/local/bin/rpcdaemon
+#COPY app/build/bin/rpctest /usr/local/bin/rpctest
+#COPY app/build/bin/sentinel /usr/local/bin/sentinel
+#COPY app/build/bin/sentry /usr/local/bin/sentry
+#COPY app/build/bin/state /usr/local/bin/state
+#COPY app/build/bin/txpool /usr/local/bin/txpool
+#COPY app/build/bin/verkle /usr/local/bin/verkle
+#COPY app/build/bin/caplin /usr/local/bin/caplin
+
+EXPOSE 8545 \
+       8551 \
+       8546 \
+       30303 \
+       30303/udp \
+       42069 \
+       42069/udp \
+       8080 \
+       9090 \
+       6060
+
+ENTRYPOINT ["erigon"]
