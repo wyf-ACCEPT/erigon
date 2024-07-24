@@ -8,6 +8,7 @@ env:
   DOCKER_REG_USERNAME: "user"
   DOCKER_REG_PASSWORD: "password"
   GORELEASER_CROSS_VERSION: "v1.22.4"
+  ALPINE_BASE_IMAGE_VERSION: "3.20.1"
   VERSION: "2.65.4"
   VERSION_TMP: ".."
 
@@ -90,7 +91,14 @@ jobs:
       - name: Build and push docker image
         uses: docker/build-push-action@v6
         with:
-          file: Dockerfile.NEW
-          platforms: linux/amd64,linux/arm64
+          file: ./docker/Dockerfile.linux-amd64
+          platforms: linux/amd64
+          build-args:
+            - ALPINE_BASE_IMAGE_VERSION=${ALPINE_BASE_IMAGE_VERSION}
           push: false
           tags: ${{ env.DOCKERHUB_REPOSITORY }}/${{ env.APPLICATION }}:${{ steps.GetVersion.outputs.ver }}
+
+      - name: Debug output 3
+        run: |
+          echo List of docker image architecture and tags
+          docker image inspect   --format "{{.Architecture}} {{.RepoTags}}"   $(docker image ls -q)
