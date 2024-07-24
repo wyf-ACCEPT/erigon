@@ -45,7 +45,7 @@ type keyCmpFunc func(k []byte, di uint64, g ArchiveGetter) (int, []byte, error)
 
 // M limits amount of child for tree node.
 func NewBpsTree(kv ArchiveGetter, offt *eliasfano32.EliasFano, M uint64, dataLookup dataLookupFunc, keyCmp keyCmpFunc) *BpsTree {
-	bt := &BpsTree{M: M, offt: offt, dataLookupFunc: dataLookup, keyCmpFunc: keyCmp}
+	bt := &BpsTree{M: M, offt: offt, dataLookupFunc: dataLookup, keyCmpFunc: keyCmp, trace: true}
 	if err := bt.WarmUp(kv); err != nil {
 		panic(err)
 	}
@@ -168,13 +168,13 @@ func (b *BpsTree) WarmUp(kv ArchiveGetter) error {
 	}
 	b.traverse(kv, mx, k, 0, 0)
 
-	//if b.trace {
-	//	for i := 0; i < len(mx); i++ {
-	//		for j := 0; j < len(mx[i]); j++ {
-	//			fmt.Printf("mx[%d][%d] %x %d %d\n", i, j, mx[i][j].prefix, mx[i][j].off, mx[i][j].di)
-	//		}
-	//	}
-	//}
+	if b.trace {
+		for i := 0; i < len(mx); i++ {
+			for j := 0; j < len(mx[i]); j++ {
+				fmt.Printf("mx[%d][%d] %x %d %d\n", i, j, mx[i][j].prefix, mx[i][j].off, mx[i][j].di)
+			}
+		}
+	}
 	b.mx = mx
 	return nil
 }
