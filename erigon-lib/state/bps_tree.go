@@ -183,9 +183,10 @@ func (b *BpsTree) bs(x []byte) (n Node, dl, dr uint64) {
 			m = (l + r) >> 1
 			n = row[m]
 
-			if b.trace {
-				fmt.Printf("bs[%d][%d] i=%d %x\n", d, m, n.di, n.prefix)
-			}
+			_ = d
+			//if b.trace {
+			//	fmt.Printf("bs[%d][%d] i=%d %x\n", d, m, n.di, n.prefix)
+			//}
 			switch bytes.Compare(n.prefix, x) {
 			case 0:
 				return n, n.di, n.di
