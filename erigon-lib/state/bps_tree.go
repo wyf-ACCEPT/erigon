@@ -237,7 +237,6 @@ func (b *BpsTree) Seek(g ArchiveGetter, key []byte) (skey []byte, di uint64, fou
 	n, dl, dr := b.bs(key)
 	_ = n
 	//if b.trace {
-	fmt.Printf("M %d\n", b.M)
 	fmt.Printf("pivot %d n %x [%d %d]\n", n.di, n.prefix, dl, dr)
 	//}
 	l, r = dl, dr
