@@ -311,7 +311,12 @@ func TestBpsTree_Seek(t *testing.T) {
 
 	ir := NewMockIndexReader(efi)
 	bp := NewBpsTree(g, efi, uint64(M), ir.dataLookup, ir.keyCmp)
-	bp.trace = false
+	//bp.trace = false
+
+	sk := keys[3]
+	fmt.Printf("key: %d\n", sk)
+	bp.Get(g, sk)
+	panic(1)
 
 	for i := 0; i < len(keys); i++ {
 		sk := keys[i]
