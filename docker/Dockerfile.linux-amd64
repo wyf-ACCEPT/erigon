@@ -17,11 +17,11 @@ LABEL org.label-schema.build-date=$BUILD_DATE \
       org.label-schema.vendor="Torquem" \
       org.label-schema.version=$VERSION
 
-COPY ./dist/linux-amd64-erigon_linux_amd64_v1/erigon /usr/local/bin/erigon
-COPY ./dist/linux-amd64-devnet_linux_amd64_v1/devnet /usr/local/bin/devnet
-COPY ./dist/linux-amd64-downloader_linux_amd64_v1/downloader /usr/local/bin/downloader
-COPY ./dist/linux-amd64-evm_linux_amd64_v1/evm /usr/local/bin/evm
-COPY ./dist/linux-amd64-caplin_linux_amd64_v1/caplin /usr/local/bin/caplin
+#COPY ./dist/linux-amd64-erigon_linux_amd64_v1/erigon /usr/local/bin/erigon
+#COPY ./dist/linux-amd64-devnet_linux_amd64_v1/devnet /usr/local/bin/devnet
+#COPY ./dist/linux-amd64-downloader_linux_amd64_v1/downloader /usr/local/bin/downloader
+#COPY ./dist/linux-amd64-evm_linux_amd64_v1/evm /usr/local/bin/evm
+#COPY ./dist/linux-amd64-caplin_linux_amd64_v1/caplin /usr/local/bin/caplin
 
 #COPY app/build/bin/devnet /usr/local/bin/devnet
 #COPY app/build/bin/downloader /usr/local/bin/downloader
