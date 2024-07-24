@@ -292,9 +292,9 @@ func (b *BpsTree) Get(g ArchiveGetter, key []byte) ([]byte, bool, uint64, error)
 
 	n, dl, dr := b.bs(key)
 	_ = n
-	//if b.trace {
-	//	fmt.Printf("pivot %d n %x [%d %d]\n", n.di, n.prefix, dl, dr)
-	//}
+	if b.trace {
+		fmt.Printf("pivot %d n %x [%d %d]\n", n.di, n.prefix, dl, dr)
+	}
 	l, r = dl, dr
 	var m uint64
 	for l < r {
@@ -303,9 +303,9 @@ func (b *BpsTree) Get(g ArchiveGetter, key []byte) ([]byte, bool, uint64, error)
 		if err != nil {
 			return nil, false, 0, err
 		}
-		if b.trace {
-			fmt.Printf("lr [%d %d]\n", l, r)
-		}
+		//if b.trace {
+		//	fmt.Printf("lr [%d %d]\n", l, r)
+		//}
 
 		switch cmp {
 		case 0:
