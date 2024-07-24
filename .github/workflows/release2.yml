@@ -93,8 +93,8 @@ jobs:
         with:
           file: ./docker/Dockerfile.linux-amd64
           platforms: linux/amd64
-          build-args:
-            - "ALPINE_BASE_IMAGE_VERSION=${ALPINE_BASE_IMAGE_VERSION}"
+          build-args: |
+            ALPINE_BASE_IMAGE_VERSION=${ALPINE_BASE_IMAGE_VERSION}
           push: false
           tags: ${{ env.DOCKERHUB_REPOSITORY }}/${{ env.APPLICATION }}:${{ steps.GetVersion.outputs.ver }}
 
