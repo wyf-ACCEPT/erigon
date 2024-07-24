@@ -910,7 +910,11 @@ Loop:
 				t1 = time.Since(tt) + ts
 
 				tt = time.Now()
-				if _, err := aggregatorRo.PruneSmallBatches(ctx, 10*time.Hour, applyTx); err != nil {
+				pruneTime := 10 * time.Hour
+				if !execStage.CurrentSyncCycle.IsInitialCycle {
+					pruneTime = 10 * time.Second
+				}
+				if _, err := aggregatorRo.PruneSmallBatches(ctx, pruneTime, applyTx); err != nil {
 					return err
 				}
 				t3 = time.Since(tt)
