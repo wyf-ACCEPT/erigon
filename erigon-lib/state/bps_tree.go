@@ -176,7 +176,6 @@ func (b *BpsTree) bs(x []byte) (n Node, dl, dr uint64) {
 		m = (l + r) >> 1
 		n = b.mx[m]
 
-		_ = d
 		//if b.trace {
 		//	fmt.Printf("bsdi:%d k:%x\n", n.di, n.key)
 		//}
