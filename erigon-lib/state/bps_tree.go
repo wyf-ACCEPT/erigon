@@ -49,6 +49,9 @@ func NewBpsTree(kv ArchiveGetter, offt *eliasfano32.EliasFano, M uint64, dataLoo
 	if err := bt.WarmUp(kv); err != nil {
 		panic(err)
 	}
+	if kv.FileName() == "v1-storage.0-2048.kv" {
+		bt.trace = true
+	}
 	return bt
 }
 
@@ -165,18 +168,19 @@ func (b *BpsTree) WarmUp(kv ArchiveGetter) error {
 	}
 	b.traverse(kv, mx, k, 0, 0)
 
-	if b.trace {
-		for i := 0; i < len(mx); i++ {
-			for j := 0; j < len(mx[i]); j++ {
-				fmt.Printf("mx[%d][%d] %x %d %d\n", i, j, mx[i][j].prefix, mx[i][j].off, mx[i][j].di)
-			}
-		}
-	}
+	//if b.trace {
+	//	for i := 0; i < len(mx); i++ {
+	//		for j := 0; j < len(mx[i]); j++ {
+	//			fmt.Printf("mx[%d][%d] %x %d %d\n", i, j, mx[i][j].prefix, mx[i][j].off, mx[i][j].di)
+	//		}
+	//	}
+	//}
 	b.mx = mx
 	return nil
 }
 
 func (b *BpsTree) bs(x []byte) (n Node, dl, dr uint64) {
+
 	dr = b.offt.Count()
 	for d, row := range b.mx {
 		m, l, r := 0, 0, len(row) //nolint
@@ -184,9 +188,10 @@ func (b *BpsTree) bs(x []byte) (n Node, dl, dr uint64) {
 			m = (l + r) >> 1
 			n = row[m]
 
-			if b.trace {
-				fmt.Printf("bs[%d][%d] i=%d %x\n", d, m, n.di, n.prefix)
-			}
+			_ = d
+			//if b.trace {
+			//	fmt.Printf("bs[%d][%d] i=%d %x\n", d, m, n.di, n.prefix)
+			//}
 			switch bytes.Compare(n.prefix, x) {
 			case 0:
 				return n, n.di, n.di
@@ -282,14 +287,14 @@ func (b *BpsTree) Get(g ArchiveGetter, key []byte) ([]byte, bool, uint64, error)
 	}
 
 	l, r := uint64(0), b.offt.Count()
-	if b.trace {
-		fmt.Printf("seek %x [%d %d]\n", key, l, r)
-	}
-	defer func() {
-		if b.trace {
-			fmt.Printf("found %x [%d %d]\n", key, l, r)
-		}
-	}()
+	//if b.trace {
+	//	fmt.Printf("seek %x [%d %d]\n", key, l, r)
+	//}
+	//defer func() {
+	//	if b.trace {
+	//		fmt.Printf("found %x [%d %d]\n", key, l, r)
+	//	}
+	//}()
 
 	n, dl, dr := b.bs(key)
 	if b.trace {
@@ -303,9 +308,9 @@ func (b *BpsTree) Get(g ArchiveGetter, key []byte) ([]byte, bool, uint64, error)
 		if err != nil {
 			return nil, false, 0, err
 		}
-		if b.trace {
-			fmt.Printf("lr [%d %d]\n", l, r)
-		}
+		//if b.trace {
+		//	fmt.Printf("lr [%d %d]\n", l, r)
+		//}
 
 		switch cmp {
 		case 0:

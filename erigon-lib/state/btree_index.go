@@ -951,22 +951,14 @@ func (b *BtIndex) Close() {
 
 // Get - exact match of key. `k == nil` - means not found
 func (b *BtIndex) Get(lookup []byte, gr ArchiveGetter) (k, v []byte, found bool, err error) {
-	// TODO: optimize by "push-down" - instead of using seek+compare, alloc can have method Get which will return nil if key doesn't exists
-	// alternativaly: can allocate cursor on-stack
-	// 	it := Iter{} // allocation on stack
-	//  it.Initialize(file)
-
 	if b.Empty() {
 		return k, v, false, nil
 	}
 
 	var index uint64
-	// defer func() {
-	// 	fmt.Printf("[Bindex][%s] Get (%t) '%x' -> '%x' di=%d err %v\n", b.FileName(), found, lookup, v, index, err)
-	// }()
 	if UseBpsTree {
 		if b.bplus == nil {
-			panic(fmt.Errorf("Get: `b.bplus` is nil: %s", gr.FileName()))
+			panic(fmt.Errorf("get: `b.bplus` is nil: %s", gr.FileName()))
 		}
 		// v is actual value, not offset.
 
@@ -988,10 +980,6 @@ func (b *BtIndex) Get(lookup []byte, gr ArchiveGetter) (k, v []byte, found bool,
 		return nil, nil, false, err
 	}
 
-	// this comparation should be done by index get method, and in case of mismatch, key is not found
-	//if !bytes.Equal(k, lookup) {
-	//	return k, v, false, nil
-	//}
 	k, v, err = b.dataLookup(index, gr)
 	if err != nil {
 		if errors.Is(err, ErrBtIndexLookupBounds) {
