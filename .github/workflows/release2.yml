@@ -107,5 +107,8 @@ jobs:
 
       - name: Debug output 3
         run: |
+          echo "Pulling docker images for two platforms:"
+          docker pull --platform linux/amd64 docker.io/erigontech/dev-erigon:issue-7893
+          docker pull --platform linux/arm64 docker.io/erigontech/dev-erigon:issue-7893
           echo List of docker image architecture and tags
           docker image inspect --format "{{.Architecture}} {{.RepoTags}}" $(docker image ls -q)
