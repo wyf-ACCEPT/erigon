@@ -888,6 +888,9 @@ func (b *BtIndex) keyCmp(k []byte, di uint64, g ArchiveGetter) (int, []byte, err
 	}
 
 	offset := b.ef.Get(di)
+	if b.bplus.trace {
+		fmt.Printf("offset: %d -> %d\n", di, offset)
+	}
 	g.Reset(offset)
 	if !g.HasNext() {
 		return 0, nil, fmt.Errorf("key at %d/%d not found, file: %s", di, b.ef.Count(), b.FileName())

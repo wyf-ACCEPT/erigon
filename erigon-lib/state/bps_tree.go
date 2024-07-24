@@ -322,6 +322,9 @@ func (b *BpsTree) Get(g ArchiveGetter, key []byte) ([]byte, bool, uint64, error)
 			l = m + 1
 		}
 	}
+	if b.trace {
+		fmt.Printf("end pivot %d n %x [%d %d]\n", n.di, n.prefix, dl, dr)
+	}
 
 	cmp, k, err := b.keyCmpFunc(key, l, g)
 	if err != nil || cmp != 0 {
