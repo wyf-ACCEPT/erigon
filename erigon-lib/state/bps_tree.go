@@ -50,6 +50,9 @@ func NewBpsTree(kv ArchiveGetter, offt *eliasfano32.EliasFano, M uint64, dataLoo
 	if err := bt.WarmUp(kv); err != nil {
 		panic(err)
 	}
+	if kv.FileName() == "v1-storage.0-2048.kv" {
+		bt.trace = true
+	}
 	return bt
 }
 
@@ -216,14 +219,14 @@ func (b *BpsTree) Seek(g ArchiveGetter, key []byte) (skey []byte, di uint64, fou
 	}
 
 	l, r := uint64(0), b.offt.Count()
-	if b.trace {
-		fmt.Printf("seek %x [%d %d]\n", key, l, r)
-	}
-	defer func() {
-		if b.trace {
-			fmt.Printf("found %x [%d %d]\n", key, l, r)
-		}
-	}()
+	//if b.trace {
+	//	fmt.Printf("seek %x [%d %d]\n", key, l, r)
+	//}
+	//defer func() {
+	//	if b.trace {
+	//		fmt.Printf("found %x [%d %d]\n", key, l, r)
+	//	}
+	//}()
 
 	n, dl, dr := b.bs(key)
 	if b.trace {
@@ -239,9 +242,9 @@ func (b *BpsTree) Seek(g ArchiveGetter, key []byte) (skey []byte, di uint64, fou
 		if err != nil {
 			return nil, 0, false, err
 		}
-		if b.trace {
-			fmt.Printf("lr %x [%d %d]\n", skey, l, r)
-		}
+		//if b.trace {
+		//	fmt.Printf("lr %x [%d %d]\n", skey, l, r)
+		//}
 
 		switch cmp {
 		case 0:
@@ -278,19 +281,20 @@ func (b *BpsTree) Get(g ArchiveGetter, key []byte) ([]byte, bool, uint64, error)
 	}
 
 	l, r := uint64(0), b.offt.Count()
-	if b.trace {
-		fmt.Printf("seek %x [%d %d]\n", key, l, r)
-	}
-	defer func() {
-		if b.trace {
-			fmt.Printf("found %x [%d %d]\n", key, l, r)
-		}
-	}()
+	//if b.trace {
+	//	fmt.Printf("seek %x [%d %d]\n", key, l, r)
+	//}
+	//defer func() {
+	//	if b.trace {
+	//		fmt.Printf("found %x [%d %d]\n", key, l, r)
+	//	}
+	//}()
 
 	n, dl, dr := b.bs(key)
-	if b.trace {
-		fmt.Printf("pivot %d n %x [%d %d]\n", n.di, n.prefix, dl, dr)
-	}
+	_ = n
+	//if b.trace {
+	//	fmt.Printf("pivot %d n %x [%d %d]\n", n.di, n.prefix, dl, dr)
+	//}
 	l, r = dl, dr
 	var m uint64
 	for l < r {
