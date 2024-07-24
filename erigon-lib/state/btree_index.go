@@ -889,7 +889,7 @@ func (b *BtIndex) keyCmp(k []byte, di uint64, g ArchiveGetter) (int, []byte, err
 
 	offset := b.ef.Get(di)
 	if b.bplus != nil && b.bplus.trace {
-		fmt.Printf("b.ef.Get(%d) -> %dkb\n", di, offset/1024)
+		fmt.Printf("b.ef.Get(%dk) -> %dkb\n", di/1000, offset/1024)
 	}
 	g.Reset(offset)
 	if !g.HasNext() {
