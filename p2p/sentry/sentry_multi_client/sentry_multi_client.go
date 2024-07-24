@@ -28,8 +28,6 @@ import (
 	"time"
 
 	lru "github.com/hashicorp/golang-lru/v2"
-	"github.com/ledgerwatch/erigon-lib/common"
-	"github.com/ledgerwatch/erigon/turbo/jsonrpc/receipts"
 	"golang.org/x/sync/semaphore"
 
 	"github.com/c2h5oh/datasize"
