@@ -7,6 +7,8 @@ ARG BUILD_DATE \
     VCS_REF \
     VERSION
 
+RUN apk upgrade && apk add git && apk cache clean
+
 LABEL org.label-schema.build-date=$BUILD_DATE \
       org.label-schema.description="Erigon Ethereum Client" \
       org.label-schema.name="Erigon" \
