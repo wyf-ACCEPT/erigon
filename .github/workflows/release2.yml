@@ -3,6 +3,8 @@ run-name: "TEST: testing new release workflow"
 
 env:
   APPLICATION: "erigon"
+  GOLANG_BUILDER_VERSION: "1.22-bullseye"
+  TARGET_BASE_VERSION: "bullseye-20240701"
   PACKAGE_NAME: "github.com/erigontech/erigon"
   DOCKERHUB_REPOSITORY: "erigontech/dev-erigon"
   DOCKER_REG_USERNAME: "user"
@@ -45,6 +47,8 @@ jobs:
 
       - name: Debug output 1
         run: |
+          pwd
+          ls -lao .
           echo {GITHUB_REF#refs/tags/} > _local_GITHUB_TAG
           docker images
 
@@ -58,28 +62,24 @@ jobs:
         id: GetVersion
         run: echo ver=$( echo ${{ github.ref_name }} | sed -e 's,.*\/,,g' ) >> $GITHUB_OUTPUT
 
-      - name: Run goreleaser container
-        run: |
-          docker run \
-            --rm \
-            --privileged \
-            -e CGO_ENABLED=1 \
-            -v /var/run/docker.sock:/var/run/docker.sock \
-            -v `pwd`:/go/src/${PACKAGE_NAME} \
-            -w /go/src/${PACKAGE_NAME} \
-            ghcr.io/goreleaser/goreleaser-cross:${GORELEASER_CROSS_VERSION} \
-            release --clean --skip=announce,publish,validate --verbose
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: Debug output 2
-        run: |
-          find ./dist -ls && true
-          echo "Content of dist/artifacts.json"
-          jq . dist/artifacts.json && true
-          echo "-- end of content --"
-          docker buildx ls
-          echo docker buildx build --platform linux/amd64 -t ${{ env.DOCKER_REG_ADDRESS }}/${{ env.APPLICATION }}:${{ steps.GetVersion.outputs.ver }}
+      - name: Build and push docker image for linux/amd64 and linux/arm64
+        uses: docker/build-push-action@v6
+        with:
+          file: ./Dockerfile.NEW
+          platforms: linux/amd64,linux/arm64
+          build-args: |
+            GOLANG_BUILDER_VERSION=${{ env.GOLANG_BUILDER_VERSION }}
+            TARGET_BASE_VERSION=${{ env.TARGET_BASE_VERSION }}
+          push: true
+          tags: ${{ env.DOCKERHUB_REPOSITORY }}:${{ steps.GetVersion.outputs.ver }}
 
       - name: Debug output 3
         run: |
           echo "Pulling docker images for two platforms:"
+          docker pull --platform linux/amd64 ${{ env.DOCKERHUB_REPOSITORY }}:${{ steps.GetVersion.outputs.ver }}
+          docker pull --platform linux/arm64 ${{ env.DOCKERHUB_REPOSITORY }}:${{ steps.GetVersion.outputs.ver }}
+          echo List of docker image architecture and tags
           docker image inspect --format "{{.Architecture}} {{.RepoTags}}" $(docker image ls -q)
