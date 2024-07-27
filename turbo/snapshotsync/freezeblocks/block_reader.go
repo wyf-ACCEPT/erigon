@@ -393,6 +393,10 @@ func (r *BlockReader) HeaderByNumber(ctx context.Context, tx kv.Getter, blockHei
 					log.Info(dbgPrefix + "not found in db")
 				}
 			}
+		} else {
+			if dbgLogs {
+				log.Info(dbgPrefix + "canonical hash is empty")
+			}
 		}
 	} else {
 		if dbgLogs {
