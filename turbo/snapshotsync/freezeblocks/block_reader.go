@@ -394,6 +394,10 @@ func (r *BlockReader) HeaderByNumber(ctx context.Context, tx kv.Getter, blockHei
 				}
 			}
 		}
+	} else {
+		if dbgLogs {
+			log.Info(dbgPrefix + "tx is nil")
+		}
 	}
 
 	seg, ok, release := r.sn.ViewSingleFile(coresnaptype.Headers, blockHeight)
