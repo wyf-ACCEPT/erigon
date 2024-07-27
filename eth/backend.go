@@ -1451,17 +1451,11 @@ func setUpBlockReader(ctx context.Context, db kv.RwDB, dirs datadir.Dirs, snConf
 	if isBor {
 		allBorSnapshots = freezeblocks.NewBorRoSnapshots(snConfig.Snapshot, dirs.Snap, minFrozenBlock, logger)
 	}
-	cr := rawdb.NewCanonicalReader()
-	agg, err := libstate.NewAggregator(ctx, dirs, config3.HistoryV3AggregationStep, db, cr, logger)
-	if err != nil {
-		return nil, nil, nil, nil, nil, err
-	}
 
-	agg.SetProduceMod(snConfig.Snapshot.ProduceE3)
+	allSnapshots.OptimisticalyReopenFolder()
 
 	g := &errgroup.Group{}
 	g.Go(func() error {
-		allSnapshots.OptimisticalyReopenFolder()
 		return nil
 	})
 	g.Go(func() error {
@@ -1470,9 +1464,19 @@ func setUpBlockReader(ctx context.Context, db kv.RwDB, dirs datadir.Dirs, snConf
 		}
 		return nil
 	})
+
+	cr := rawdb.NewCanonicalReader()
+	agg, err := libstate.NewAggregator(ctx, dirs, config3.HistoryV3AggregationStep, db, cr, logger)
+	if err != nil {
+		return nil, nil, nil, nil, nil, err
+	}
+
+	agg.SetProduceMod(snConfig.Snapshot.ProduceE3)
+
 	g.Go(func() error {
 		return agg.OpenFolder()
 	})
+
 	if err = g.Wait(); err != nil {
 		return nil, nil, nil, nil, nil, err
 	}
