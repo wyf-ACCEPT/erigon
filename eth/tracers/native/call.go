@@ -254,13 +254,8 @@ func (t *callTracer) CaptureExit(output []byte, gasUsed uint64, err error) {
 		return
 	}
 	precompilesLastIdx := len(t.precompiles) - 1
-	if precompilesLastIdx < 0 {
-		return
-	}
-	// pop precompile
-	precompile := t.precompiles[precompilesLastIdx]
-	t.precompiles = t.precompiles[:precompilesLastIdx]
-	if precompile && !t.config.IncludePrecompiles {
+	if !t.config.IncludePrecompiles && precompilesLastIdx > -1 && t.precompiles[precompilesLastIdx] {
+		t.precompiles = t.precompiles[:precompilesLastIdx]
 		return
 	}
 	// pop call
