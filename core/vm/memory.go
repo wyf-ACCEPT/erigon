@@ -95,6 +95,9 @@ func (m *Memory) GetCopy(offset, size int64) (cpy []byte) {
 		if offset > size {
 			log.Warn("[dbg] alex", "offset", offset, "size", size)
 		}
+		if int(offset) > len(m.store) {
+			log.Warn("[dbg] alex2", "offset", offset, "len(m.store)", len(m.store), "size", size)
+		}
 		cpy = make([]byte, size)
 		copy(cpy, m.store[offset:])
 
