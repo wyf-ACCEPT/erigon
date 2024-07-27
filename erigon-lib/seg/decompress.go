@@ -550,6 +550,8 @@ type Getter struct {
 func (g *Getter) Trace(t bool)     { g.trace = t }
 func (g *Getter) FileName() string { return g.fName }
 
+func (g *Getter) touch() { _ = uint16(g.data[g.dataP]) }
+
 func (g *Getter) nextPos(clean bool) (pos uint64) {
 	if clean && g.dataBit > 0 {
 		g.dataP++
@@ -560,6 +562,7 @@ func (g *Getter) nextPos(clean bool) (pos uint64) {
 		return table.pos[0]
 	}
 	for l := byte(0); l == 0; {
+		g.touch()
 		code := uint16(g.data[g.dataP]) >> g.dataBit
 		if 8-g.dataBit < table.bitLen && int(g.dataP)+1 < len(g.data) {
 			code |= uint16(g.data[g.dataP+1]) << (8 - g.dataBit)
@@ -665,11 +668,6 @@ func (g *Getter) HasNext() bool {
 // and appends it to the given buf, returning the result of appending
 // After extracting next word, it moves to the beginning of the next one
 func (g *Getter) Next(buf []byte) ([]byte, uint64) {
-	defer func() {
-		if rec := recover(); rec != nil {
-			panic(fmt.Sprintf("file: %s, %s, %s", g.fName, rec, dbg.Stack()))
-		}
-	}()
 	savePos := g.dataP
 	wordLen := g.nextPos(true)
 	wordLen-- // because when create huffman tree we do ++ , because 0 is terminator
@@ -736,11 +734,6 @@ func (g *Getter) Next(buf []byte) ([]byte, uint64) {
 }
 
 func (g *Getter) NextUncompressed() ([]byte, uint64) {
-	defer func() {
-		if rec := recover(); rec != nil {
-			panic(fmt.Sprintf("file: %s, %s, %s", g.fName, rec, dbg.Stack()))
-		}
-	}()
 	wordLen := g.nextPos(true)
 	wordLen-- // because when create huffman tree we do ++ , because 0 is terminator
 	if wordLen == 0 {
@@ -1160,12 +1153,6 @@ func (g *Getter) MatchPrefixUncompressed(prefix []byte) int {
 // It is important to allocate enough buf size. Could throw an error if word in file is larger then the buf size.
 // After extracting next word, it moves to the beginning of the next one
 func (g *Getter) FastNext(buf []byte) ([]byte, uint64) {
-	defer func() {
-		if rec := recover(); rec != nil {
-			panic(fmt.Sprintf("file: %s, %s, %s", g.fName, rec, dbg.Stack()))
-		}
-	}()
-
 	savePos := g.dataP
 	wordLen := g.nextPos(true)
 	wordLen-- // because when create huffman tree we do ++ , because 0 is terminator
