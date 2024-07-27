@@ -20,6 +20,7 @@
 package vm
 
 import (
+	"github.com/erigontech/erigon-lib/log/v3"
 	"github.com/holiman/uint256"
 )
 
@@ -91,6 +92,9 @@ func (m *Memory) GetCopy(offset, size int64) (cpy []byte) {
 	}
 
 	if len(m.store) > int(offset) {
+		if offset > size {
+			log.Warn("[dbg] alex", "offset", offset, "size", size)
+		}
 		cpy = make([]byte, size)
 		copy(cpy, m.store[offset:])
 
