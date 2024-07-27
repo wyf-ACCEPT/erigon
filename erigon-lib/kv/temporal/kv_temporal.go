@@ -78,7 +78,7 @@ func (db *DB) BeginTemporalRo(ctx context.Context) (kv.TemporalTx, error) {
 	}
 	tx := &Tx{MdbxTx: kvTx.(*mdbx.MdbxTx), db: db, ctx: ctx}
 
-	//tx.filesTx = db.agg.BeginFilesRo()
+	tx.filesTx = db.agg.BeginFilesRo()
 	return tx, nil
 }
 func (db *DB) ViewTemporal(ctx context.Context, f func(tx kv.TemporalTx) error) error {
@@ -183,7 +183,7 @@ func (tx *Tx) autoClose() {
 	for _, closer := range tx.resourcesToClose {
 		closer.Close()
 	}
-	//tx.filesTx.Close()
+	tx.filesTx.Close()
 }
 func (tx *Tx) Commit() error {
 	tx.autoClose()
