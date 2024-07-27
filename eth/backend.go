@@ -1451,34 +1451,33 @@ func setUpBlockReader(ctx context.Context, db kv.RwDB, dirs datadir.Dirs, snConf
 	if isBor {
 		allBorSnapshots = freezeblocks.NewBorRoSnapshots(snConfig.Snapshot, dirs.Snap, minFrozenBlock, logger)
 	}
-
-	log.Warn("[dbg] here1")
-	allSnapshots.OptimisticalyReopenFolder()
-	log.Warn("[dbg] here2")
-
-	g := &errgroup.Group{}
-	g.Go(func() error {
-		return nil
-	})
-	g.Go(func() error {
-		if isBor {
-			allBorSnapshots.OptimisticalyReopenFolder()
-		}
-		return nil
-	})
-
 	cr := rawdb.NewCanonicalReader()
-	log.Warn("[dbg] here3")
 	agg, err := libstate.NewAggregator(ctx, dirs, config3.HistoryV3AggregationStep, db, cr, logger)
 	if err != nil {
 		return nil, nil, nil, nil, nil, err
 	}
-	log.Warn("[dbg] here4")
 
 	agg.SetProduceMod(snConfig.Snapshot.ProduceE3)
 
+	g := &errgroup.Group{}
 	g.Go(func() error {
-		log.Warn("[dbg] here5")
+		log.Warn("[dbg] open blocks start")
+		allSnapshots.OptimisticalyReopenFolder()
+		log.Warn("[dbg] open blocks end")
+		return nil
+	})
+	g.Go(func() error {
+		if isBor {
+			log.Warn("[dbg] open bor start")
+			allBorSnapshots.OptimisticalyReopenFolder()
+			log.Warn("[dbg] open bor end")
+		}
+		return nil
+	})
+	g.Go(func() error {
+		log.Warn("[dbg] open agg start")
+		defer log.Warn("[dbg] open agg end")
+
 		return agg.OpenFolder()
 	})
 
@@ -1566,6 +1565,7 @@ func (s *Ethereum) Start() error {
 		go stages2.StageLoop(s.sentryCtx, s.chainDB, s.stagedSync, s.sentriesClient.Hd, s.waitForStageLoopStop, s.config.Sync.LoopThrottle, s.logger, s.blockReader, hook)
 	}
 
+	log.Warn("[dbg] here10 bor.Start")
 	if s.chainConfig.Bor != nil {
 		s.engine.(*bor.Bor).Start(s.chainDB)
 	}
