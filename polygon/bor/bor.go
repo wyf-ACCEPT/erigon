@@ -1446,6 +1446,9 @@ func ComputeHeadersRootHash(blockHeaders []*types.Header) ([]byte, error) {
 	headers := make([][32]byte, NextPowerOfTwo(uint64(len(blockHeaders))))
 	for i := 0; i < len(blockHeaders); i++ {
 		blockHeader := blockHeaders[i]
+		if blockHeader == nil {
+			panic(i)
+		}
 		header := crypto.Keccak256(AppendBytes32(
 			blockHeader.Number.Bytes(),
 			new(big.Int).SetUint64(blockHeader.Time).Bytes(),
