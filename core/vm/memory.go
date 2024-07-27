@@ -92,6 +92,13 @@ func (m *Memory) GetCopy(offset, size int64) (cpy []byte) {
 	}
 
 	if len(m.store) > int(offset) {
+		defer func() {
+			rec := recover()
+			if rec != nil {
+				log.Warn("[dbg] alex3", "offset", offset, "size", size, "len(m.store)", len(m.store))
+				panic(rec)
+			}
+		}()
 		if offset > size {
 			log.Warn("[dbg] alex", "offset", offset, "size", size)
 		}
