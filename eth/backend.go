@@ -1452,7 +1452,9 @@ func setUpBlockReader(ctx context.Context, db kv.RwDB, dirs datadir.Dirs, snConf
 		allBorSnapshots = freezeblocks.NewBorRoSnapshots(snConfig.Snapshot, dirs.Snap, minFrozenBlock, logger)
 	}
 
+	log.Warn("[dbg] here1")
 	allSnapshots.OptimisticalyReopenFolder()
+	log.Warn("[dbg] here2")
 
 	g := &errgroup.Group{}
 	g.Go(func() error {
@@ -1466,14 +1468,17 @@ func setUpBlockReader(ctx context.Context, db kv.RwDB, dirs datadir.Dirs, snConf
 	})
 
 	cr := rawdb.NewCanonicalReader()
+	log.Warn("[dbg] here3")
 	agg, err := libstate.NewAggregator(ctx, dirs, config3.HistoryV3AggregationStep, db, cr, logger)
 	if err != nil {
 		return nil, nil, nil, nil, nil, err
 	}
+	log.Warn("[dbg] here4")
 
 	agg.SetProduceMod(snConfig.Snapshot.ProduceE3)
 
 	g.Go(func() error {
+		log.Warn("[dbg] here5")
 		return agg.OpenFolder()
 	})
 
