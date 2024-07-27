@@ -50,7 +50,8 @@ func TestGeneratedDebugApi(t *testing.T) {
 	var buf bytes.Buffer
 	stream := jsoniter.NewStream(jsoniter.ConfigDefault, &buf, 4096)
 	callTracer := "callTracer"
-	err := api.TraceBlockByNumber(context.Background(), rpc.BlockNumber(1), &tracersConfig.TraceConfig{Tracer: &callTracer}, stream)
+	subCfg := json.RawMessage(`{"onlyTopCall":false,"withLog":true}`)
+	err := api.TraceBlockByNumber(context.Background(), rpc.BlockNumber(1), &tracersConfig.TraceConfig{Tracer: &callTracer, TracerConfig: &subCfg}, stream)
 	if err != nil {
 		t.Errorf("debug_traceBlock %d: %v", 0, err)
 	}
