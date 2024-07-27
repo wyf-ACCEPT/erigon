@@ -404,8 +404,6 @@ func (h *handler) handleCallMsg(ctx *callProc, msg *jsonrpcMessage, stream *json
 		h.handleCall(ctx, msg, stream)
 		if h.traceRequests {
 			h.logger.Info("[rpc] served", "t", time.Since(start), "method", msg.Method, "params", string(msg.Params))
-		} else {
-			h.logger.Trace("[rpc] served", "t", time.Since(start), "method", msg.Method, "params", string(msg.Params))
 		}
 		return nil
 	case msg.isCall():
@@ -440,8 +438,6 @@ func (h *handler) handleCallMsg(ctx *callProc, msg *jsonrpcMessage, stream *json
 		}
 		if h.traceRequests {
 			h.logger.Info("Served", "t", time.Since(start), "method", msg.Method, "reqid", idForLog(msg.ID), "params", string(msg.Params))
-		} else {
-			h.logger.Trace("Served", "t", time.Since(start), "method", msg.Method, "reqid", idForLog(msg.ID), "params", string(msg.Params))
 		}
 
 		return resp
