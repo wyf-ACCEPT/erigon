@@ -25,6 +25,7 @@ import (
 	"math/big"
 	"sync/atomic"
 
+	log2 "github.com/erigontech/erigon-lib/log/v3"
 	"github.com/holiman/uint256"
 
 	libcommon "github.com/erigontech/erigon-lib/common"
@@ -189,6 +190,7 @@ func (t *callTracer) CaptureState(pc uint64, op vm.OpCode, gas, cost uint64, sco
 			topic := stackData[dataStart-i]
 			topics[i] = libcommon.Hash(topic.Bytes32())
 		}
+		log2.Warn("[dbg] CaptureState", "op", op, "mSize", mSize)
 
 		data := scope.Memory.GetCopy(int64(mStart.Uint64()), int64(mSize.Uint64()))
 		log := callLog{Address: scope.Contract.Address(), Topics: topics, Data: hexutility.Bytes(data), Index: t.logIndex}
