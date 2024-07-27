@@ -1427,9 +1427,17 @@ func (c *Bor) GetRootHash(ctx context.Context, tx kv.Tx, start, end uint64) (str
 	if start > end || end > currentHeaderNumber {
 		return "", &valset.InvalidStartEndBlockError{Start: start, End: end, CurrentHeader: currentHeaderNumber}
 	}
+	log.Warn("[dbg] alex", "start", start, "end", end)
 	blockHeaders := make([]*types.Header, length)
 	for number := start; number <= end; number++ {
-		blockHeaders[number-start], _ = c.getHeaderByNumber(ctx, tx, number)
+		var err error
+		blockHeaders[number-start], err = c.getHeaderByNumber(ctx, tx, number)
+		if err != nil {
+			panic(err)
+		}
+		if blockHeaders[number-start] == nil {
+			panic(number - start)
+		}
 	}
 
 	hash, err := ComputeHeadersRootHash(blockHeaders)
