@@ -1996,7 +1996,6 @@ type AggregatorRoTx struct {
 }
 
 func (a *Aggregator) BeginFilesRo() *AggregatorRoTx {
-	defer func(t time.Time) { fmt.Printf("aggregator.go:1999: %s\n", time.Since(t)) }(time.Now())
 	ac := &AggregatorRoTx{
 		a:       a,
 		id:      a.ctxAutoIncrement.Add(1),
