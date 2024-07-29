@@ -1,35 +1,41 @@
-ARG GOLANG_BUILDER_VERSION=1.22-bullseye \
-    TARGET_BASE_VERSION=bullseye-20240701
+ARG GOLANG_BUILDER_VERSION \
+    TARGET_BASE_VERSION \
+    BUILD_TIMESTAMP
 
 FROM golang:${GOLANG_BUILDER_VERSION} as builder
 WORKDIR /erigon
 COPY . .
 RUN cd /erigon && \
+    ls -lao && \
     make
 
 FROM debian:${TARGET_BASE_VERSION}
 
+ARG USER=erigon \
+    GROUP=erigon
+
 LABEL BUILDER_IMAGE_INFO=golang:${GOLANG_BUILDER_VERSION} \
-    BUILD_DATETIME=${BUILD_TIMESTAMP} \
-    VCS_REF=${VCS_REF} \
-    VERSION=${VERSION} \
-    org.label-schema.build-date=$BUILD_DATE \
+    MAINTAINER="https://github.com/erigontech/erigon" \
+    org.label-schema.build-date=$BUILD_TIMESTAMP \
     org.label-schema.description="Erigon Ethereum Client" \
     org.label-schema.name="Erigon" \
     org.label-schema.schema-version="1.0" \
     org.label-schema.url="https://torquem.ch" \
     org.label-schema.vcs-ref=$VCS_REF \
-    org.label-schema.vcs-url="https://github.com/ledgerwatch/erigon.git" \
+    org.label-schema.vcs-url="https://github.com/erigontech/erigon.git" \
     org.label-schema.vendor="Torquem" \
     org.label-schema.version=$VERSION
 
 COPY --from=builder /erigon/build/bin/* /usr/local/bin/
 
-RUN install -o nobody -g nogroup -d /erigon
+RUN groupadd ${GROUP} && \
+    useradd -d /home/${USER} -g ${GROUP} -m ${USER} && \
+    install -o nobody -g nogroup -d /erigon
 
-WORKDIR /erigon
+VOLUME [ "/home/${USER}" ]
+WORKDIR /home/${USER}
 
-USER nobody
+USER ${USER}
 
 EXPOSE 8545 \
        8551 \

@@ -42,6 +42,10 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Get current timestamp
+        id: current_ts
+        run: echo "date=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
@@ -73,6 +77,10 @@ jobs:
           build-args: |
             GOLANG_BUILDER_VERSION=${{ env.GOLANG_BUILDER_VERSION }}
             TARGET_BASE_VERSION=${{ env.TARGET_BASE_VERSION }}
+            BUILD_TAGS=nosqlite,noboltdb,nosilkworm
+            BUILD_TIMESTAMP=${{ steps.current_ts.outputs.date }}
+            VCS_REF=$GITHUB_SHA
+            VERSION=${{ steps.GetVersion.outputs.ver }}
           push: true
           tags: ${{ env.DOCKERHUB_REPOSITORY }}:${{ steps.GetVersion.outputs.ver }}
 
