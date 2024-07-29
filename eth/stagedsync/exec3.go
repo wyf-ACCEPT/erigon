@@ -179,13 +179,29 @@ func ExecV3(ctx context.Context,
 	engine := cfg.engine
 	chainConfig, genesis := cfg.chainConfig, cfg.genesis
 
-	applyTx := txc.Tx
+	tmpDb, err := kv2.NewTemporaryMdbx(ctx, cfg.dirs.Tmp)
+	if err != nil {
+		logger.Warn("[EngineBlockDownloader] Could create temporary mdbx", "err", err)
+		return err
+	}
+	defer tmpDb.Close()
+	tmpTx, err := tmpDb.BeginRw(ctx)
+	if err != nil {
+		logger.Warn("[EngineBlockDownloader] Could create temporary mdbx", "err", err)
+		return err
+	}
+	defer tmpTx.Rollback()
+
+	//memoryMutation := membatchwithdb.NewMemoryBatchWithCustomDB(txc.Tx, tmpDb, tmpTx, cfg.dirs.Tmp)
+	//defer memoryMutation.Rollback()
+
+	//applyTx := txc.Tx
+	applyTx := tmpTx
 	useExternalTx := applyTx != nil
 	if !useExternalTx {
 		if !parallel {
-			var err error
 			fmt.Printf("exec3 - open db\n")
-			applyTx, err = chainDb.BeginRwNosync(ctx) //nolint
+			applyTx, err = chainDb.BeginRw(ctx) //nolint
 			if err != nil {
 				return err
 			}
@@ -206,7 +222,7 @@ func ExecV3(ctx context.Context,
 
 	pruneNonEssentials := cfg.prune.History.Enabled() && cfg.prune.History.PruneTo(execStage.BlockNumber) == execStage.BlockNumber
 
-	var err error
+	//var err error
 	inMemExec := txc.Doms != nil
 	var doms *state2.SharedDomains
 	if inMemExec {
