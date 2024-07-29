@@ -622,6 +622,8 @@ func pruneBlockSnapshots(ctx context.Context, cfg SnapshotsCfg, logger log.Logge
 
 	// Keep at least 2 block snapshots as we do not want FrozenBlocks to be 0
 	pruneTo := cfg.prune.Blocks.PruneTo(headNumber)
+	fmt.Printf("[dbg] alex: %d, %d\n", headNumber, pruneTo)
+	panic(1)
 
 	if pruneTo > executionProgress {
 		return false, nil

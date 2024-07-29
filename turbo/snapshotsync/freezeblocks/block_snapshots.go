@@ -2274,8 +2274,10 @@ func (s *RoSnapshots) ViewSingleFile(t snaptype.Type, blockNum uint64) (segment 
 	var released = false
 	for _, seg := range segs.segments {
 		if !(blockNum >= seg.from && blockNum < seg.to) {
+			log.Warn("[dbg] continue", "t", t.Enum().String(), "blockNum", blockNum, "seg.from", seg.from, "set.to", seg.to, "n", seg.FileName())
 			continue
 		}
+		log.Warn("[dbg] found!", "t", t.Enum().String(), "blockNum", blockNum, "seg", seg.FileName())
 		return seg, true, func() {
 			if released {
 				return
