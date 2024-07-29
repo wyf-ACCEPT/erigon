@@ -26,6 +26,14 @@ on:
 jobs:
   build-and-deploy-release:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - arch: linux/amd64/v2
+            os: linux
+          - arch: linux/arm64
+            os: linux
+
     steps:
       - name: Maximize build space
         uses: AdityaGarg8/remove-unwanted-software@v1
@@ -75,11 +83,11 @@ jobs:
         with:
           context: .
           file: ./Dockerfile.NEW
-          platforms: linux/amd64/v2,linux/arm64
+          platforms: ${{ matrix.buildargs }}
           build-args: |
-            GOLANG_BUILDER_VERSION=$GOLANG_BUILDER_VERSION
-            TARGET_BASE_VERSION=$TARGET_BASE_VERSION
-            BUILD_TAGS=$BUILD_TAGS
+            GOLANG_BUILDER_VERSION=${{ env.GOLANG_BUILDER_VERSION }}
+            TARGET_BASE_VERSION=${{ env.TARGET_BASE_VERSION }}
+            BUILD_TAGS=${{ env.BUILD_TAGS }}
             BUILD_TIMESTAMP=${{ steps.current_ts.outputs.date }}
             VCS_REF_SHORT=${{ steps.GetShortCommitId.outputs.short_commit_id }}
             VCS_REF_LONG=${{ github.ref }}
