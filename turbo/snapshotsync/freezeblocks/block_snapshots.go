@@ -406,6 +406,9 @@ func (s *RoSnapshots) idxAvailability() uint64 {
 		return true
 	})
 
+	for _, t := range s.types {
+		fmt.Printf("[dbg] see %s\n", t.Enum().String())
+	}
 	maximums := make([]uint64, amount)
 	var i int
 	s.segments.Scan(func(segtype snaptype.Enum, value *segments) bool {
@@ -428,6 +431,8 @@ func (s *RoSnapshots) idxAvailability() uint64 {
 	if len(maximums) == 0 {
 		return 0
 	}
+	fmt.Printf("[dbg] maximums: %d\n", maximums)
+
 	return slices.Min(maximums)
 }
 
