@@ -1,6 +1,10 @@
-ARG GOLANG_BUILDER_VERSION \
-    TARGET_BASE_VERSION \
-    BUILD_TIMESTAMP
+# Input arguments with some defaults:
+ARG GOLANG_BUILDER_VERSION=1.22-bullseye \
+    TARGET_BASE_VERSION=bullseye-20240701 \
+    BUILD_TIMESTAMP \
+    VCS_REF_SHORT \
+    VCS_REF_SHORT \
+    VERSION
 
 FROM golang:${GOLANG_BUILDER_VERSION} as builder
 WORKDIR /erigon
@@ -16,15 +20,15 @@ ARG USER=erigon \
 
 LABEL BUILDER_IMAGE_INFO=golang:${GOLANG_BUILDER_VERSION} \
     MAINTAINER="https://github.com/erigontech/erigon" \
-    org.label-schema.build-date=$BUILD_TIMESTAMP \
+    org.label-schema.build-date=${BUILD_TIMESTAMP} \
     org.label-schema.description="Erigon Ethereum Client" \
     org.label-schema.name="Erigon" \
     org.label-schema.schema-version="1.0" \
     org.label-schema.url="https://torquem.ch" \
-    org.label-schema.vcs-ref=$VCS_REF \
+    org.label-schema.vcs-ref=${VCS_REF} \
     org.label-schema.vcs-url="https://github.com/erigontech/erigon.git" \
     org.label-schema.vendor="Torquem" \
-    org.label-schema.version=$VERSION
+    org.label-schema.version=${VERSION}
 
 COPY --from=builder /erigon/build/bin/* /usr/local/bin/
 
