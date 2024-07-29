@@ -184,7 +184,8 @@ func ExecV3(ctx context.Context,
 	if !useExternalTx {
 		if !parallel {
 			var err error
-			applyTx, err = chainDb.BeginRw(ctx) //nolint
+			fmt.Printf("exec3 - open db\n")
+			applyTx, err = chainDb.BeginRwNosync(ctx) //nolint
 			if err != nil {
 				return err
 			}
