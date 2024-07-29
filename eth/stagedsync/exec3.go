@@ -22,6 +22,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/erigontech/erigon-lib/kv/membatchwithdb"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -192,8 +193,8 @@ func ExecV3(ctx context.Context,
 	}
 	defer tmpTx.Rollback()
 
-	//memoryMutation := membatchwithdb.NewMemoryBatchWithCustomDB(txc.Tx, tmpDb, tmpTx, cfg.dirs.Tmp)
-	//defer memoryMutation.Rollback()
+	memoryMutation := membatchwithdb.NewMemoryBatchWithCustomDB(txc.Tx, tmpDb, tmpTx, cfg.dirs.Tmp)
+	defer memoryMutation.Rollback()
 
 	//applyTx := txc.Tx
 	applyTx := tmpTx
@@ -229,7 +230,7 @@ func ExecV3(ctx context.Context,
 		doms = txc.Doms
 	} else {
 		var err error
-		doms, err = state2.NewSharedDomains(applyTx, log.New())
+		doms, err = state2.NewSharedDomains(memoryMutation, log.New())
 		// if we are behind the commitment, we can't execute anything
 		// this can heppen if progress in domain is higher than progress in blocks
 		if errors.Is(err, state2.ErrBehindCommitment) {
@@ -847,11 +848,11 @@ Loop:
 					return err
 				}
 				if errors.Is(err, consensus.ErrInvalidBlock) {
-					if err := u.UnwindTo(blockNum-1, BadBlock(header.Hash(), err), applyTx); err != nil {
+					if err := u.UnwindTo(blockNum-1, BadBlock(header.Hash(), err), memoryMutation); err != nil {
 						return err
 					}
 				} else {
-					if err := u.UnwindTo(blockNum-1, ExecUnwind, applyTx); err != nil {
+					if err := u.UnwindTo(blockNum-1, ExecUnwind, memoryMutation); err != nil {
 						return err
 					}
 				}
@@ -879,7 +880,7 @@ Loop:
 			aggTx.RestrictSubsetFileDeletions(false)
 			doms.SavePastChangesetAccumulator(b.Hash(), blockNum, changeset)
 			if !inMemExec {
-				if err := state2.WriteDiffSet(applyTx, blockNum, b.Hash(), changeset); err != nil {
+				if err := state2.WriteDiffSet(memoryMutation, blockNum, b.Hash(), changeset); err != nil {
 					return err
 				}
 			}
@@ -899,7 +900,7 @@ Loop:
 
 			select {
 			case <-logEvery.C:
-				stepsInDB := rawdbhelpers.IdxStepsCountV3(applyTx)
+				stepsInDB := rawdbhelpers.IdxStepsCountV3(memoryMutation)
 				progress.Log(rs, in, rws, count, inputBlockNum.Load(), outputBlockNum.GetValueUint64(), outputTxNum.Load(), execRepeats.GetValueUint64(), stepsInDB, shouldGenerateChangesets)
 				//if applyTx.(state2.HasAggTx).AggTx().(*state2.AggregatorRoTx).CanPrune(applyTx, outputTxNum.Load()) {
 				//	//small prune cause MDBX_TXN_FULL
@@ -919,7 +920,7 @@ Loop:
 					t1, t2, t3 time.Duration
 				)
 
-				if ok, err := flushAndCheckCommitmentV3(ctx, b.HeaderNoCopy(), applyTx, doms, cfg, execStage, stageProgress, parallel, logger, u, inMemExec); err != nil {
+				if ok, err := flushAndCheckCommitmentV3(ctx, b.HeaderNoCopy(), memoryMutation, doms, cfg, execStage, stageProgress, parallel, logger, u, inMemExec); err != nil {
 					return err
 				} else if !ok {
 					break Loop
@@ -928,7 +929,7 @@ Loop:
 				t1 = time.Since(tt) + ts
 
 				tt = time.Now()
-				if _, err := aggregatorRo.PruneSmallBatches(ctx, 10*time.Hour, applyTx); err != nil {
+				if _, err := aggregatorRo.PruneSmallBatches(ctx, 10*time.Hour, memoryMutation); err != nil {
 					return err
 				}
 				t3 = time.Since(tt)
