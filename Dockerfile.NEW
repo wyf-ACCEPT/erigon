@@ -1,21 +1,23 @@
 # Input arguments with some defaults:
 ARG GOLANG_BUILDER_VERSION=1.22-bullseye \
-    TARGET_BASE_VERSION=bullseye-20240701 \
-    BUILD_TIMESTAMP \
-    VCS_REF_SHORT \
-    VCS_REF_SHORT \
-    VERSION
+    TARGET_BASE_VERSION=bullseye-20240701
 
-FROM golang:${GOLANG_BUILDER_VERSION} as builder
+
+FROM golang:${GOLANG_BUILDER_VERSION} AS builder
 WORKDIR /erigon
 COPY . .
 RUN cd /erigon && \
     ls -lao && \
     make
 
+
 FROM debian:${TARGET_BASE_VERSION}
 
-ARG USER=erigon \
+ARG BUILD_TIMESTAMP \
+    VCS_REF_SHORT \
+    VCS_REF_SHORT \
+    VERSION \
+    USER=erigon \
     GROUP=erigon
 
 LABEL BUILDER_IMAGE_INFO=golang:${GOLANG_BUILDER_VERSION} \
