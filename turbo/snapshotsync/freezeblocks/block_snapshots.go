@@ -2272,6 +2272,7 @@ func (s *RoSnapshots) ViewSingleFile(t snaptype.Type, blockNum uint64) (segment 
 	}
 
 	segs.lock.RLock()
+	log.Warn("[dbg] continue", "t", t.Enum().String(), "len(segs.segments)", len(segs.segments))
 	var released = false
 	for _, seg := range segs.segments {
 		if !(blockNum >= seg.from && blockNum < seg.to) {
