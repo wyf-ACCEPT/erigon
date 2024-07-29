@@ -1,6 +1,7 @@
 # Input arguments with some defaults:
 ARG GOLANG_BUILDER_VERSION=1.22-bullseye \
-    TARGET_BASE_VERSION=bullseye-20240701
+    TARGET_BASE_VERSION=bullseye-20240701 \
+    BUILD_TAGS=""
 
 
 FROM golang:${GOLANG_BUILDER_VERSION} AS builder
