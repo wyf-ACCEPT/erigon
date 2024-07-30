@@ -88,17 +88,17 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       
-      - name: Build binaries for ${{ matrix.buildargs }} platform
+      - name: Build binaries for ${{ matrix.arch }} platform
         run: |
-          docker run --platform ${{ matrix.buildargs }} --rm -e GOOS=${{ matrix.goos }} -e GOARCH=${{ matrix.goarch }} -e CC=${{ matrix.flags_cc }} -e CXX=${{ matrix.flags_cxx }} -w /erigon -v $(pwd):/erigon -v $(pwd)/${{ matrix.build_dst }}:/erigon/build/bin golang:${{ env.GOLANG_BUILDER_VERSION }} make
+          docker run --platform ${{ matrix.arch }} --rm -e GOOS=${{ matrix.goos }} -e GOARCH=${{ matrix.goarch }} -e CC=${{ matrix.flags_cc }} -e CXX=${{ matrix.flags_cxx }} -w /erigon -v $(pwd):/erigon -v $(pwd)/${{ matrix.build_dst }}:/erigon/build/bin golang:${{ env.GOLANG_BUILDER_VERSION }} make
 
-      - name: Build and push docker image for ${{ matrix.buildargs }} platform
+      - name: Build and push docker image for ${{ matrix.arch }} platform
         id: docker_build
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile.NEW-2
-          platforms: ${{ matrix.buildargs }}
+          platforms: ${{ matrix.arch }}
           build-args: |
             BUILD_DST="./${{ matrix.build_dst }}"
             GOLANG_BUILDER_VERSION=${{ env.GOLANG_BUILDER_VERSION }}
