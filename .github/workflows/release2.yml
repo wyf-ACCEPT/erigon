@@ -58,13 +58,26 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Fix git CVE-2022-24765
+        run: git config --global --add safe.directory $(pwd)
+
       - name: Get current timestamp
         id: current_ts
         run: echo "date=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
 
+      - name: Get version from Github tag
+        id: GetVersion
+        run: echo ver=$( echo ${{ github.ref_name }} | sed -e 's,.*\/,,g' ) >> $GITHUB_OUTPUT
+
+      - name: Get short last commit id
+        id: GetShortCommitId
+        run: echo "short_commit_id=${GITHUB_SHA:0:7}" >> $GITHUB_OUTPUT
+
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v5
+        tags: |
+          type=match,enable=true,priority=800,prefix=,suffix=,pattern=feature(.*),group=0,value=${{ steps.GetShortCommitId.outputs.short_commit_id }}
         with:
           images: ${{ env.DOCKERHUB_REPOSITORY }}
 
@@ -83,14 +96,6 @@ jobs:
         with:
           username: ${{ secrets.ORG_DOCKERHUB_ERIGONTECH_USERNAME }}
           password: ${{ secrets.ORG_DOCKERHUB_ERIGONTECH_TOKEN }}
-
-      - name: Get version from Github tag
-        id: GetVersion
-        run: echo ver=$( echo ${{ github.ref_name }} | sed -e 's,.*\/,,g' ) >> $GITHUB_OUTPUT
-
-      - name: Get short last commit id
-        id: GetShortCommitId
-        run: echo "short_commit_id=${GITHUB_SHA:0:7}" >> $GITHUB_OUTPUT
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -154,6 +159,8 @@ jobs:
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v5
+        tags: |
+          type=match,enable=true,priority=800,prefix=,suffix=,pattern=feature(.*),group=0,value=${{ steps.GetShortCommitId.outputs.short_commit_id }}
         with:
           images: ${{ env.DOCKERHUB_REPOSITORY }}
       
