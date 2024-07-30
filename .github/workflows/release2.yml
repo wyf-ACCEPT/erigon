@@ -171,4 +171,10 @@ jobs:
       
       - name: Inspect image
         run: |
-          docker buildx imagetools inspect ${{ env.DOCKERHUB_REPOSITORY }}
+          echo "buildx imagetools inspect output"
+          docker buildx imagetools inspect ${{ env.DOCKERHUB_REPOSITORY }}:${{ steps.meta.outputs.version }}
+          docker image rm ${{ env.DOCKERHUB_REPOSITORY }}:${{ steps.meta.outputs.version }}
+          echo "Inspecting image with platform linux/amd64"
+          docker pull --platform linux/amd64 ${{ env.DOCKERHUB_REPOSITORY }}:${{ steps.meta.outputs.version }}
+          docker inspect ${{ env.DOCKERHUB_REPOSITORY }}:${{ steps.meta.outputs.version }}
+
