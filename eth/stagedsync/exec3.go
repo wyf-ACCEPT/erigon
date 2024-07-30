@@ -319,6 +319,7 @@ func ExecV3(ctx context.Context,
 	outputTxNum.Store(doms.TxNum())
 
 	shouldGenerateChangesets := maxBlockNum-blockNum <= changesetBlockRange
+	fmt.Printf("[dbg] alex: %t, %d, %d, %d\n", shouldGenerateChangesets, maxBlockNum, blockNum, changesetBlockRange)
 	if blockNum < cfg.blockReader.FrozenBlocks() {
 		shouldGenerateChangesets = false
 	}
