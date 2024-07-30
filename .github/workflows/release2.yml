@@ -62,6 +62,12 @@ jobs:
         id: current_ts
         run: echo "date=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
 
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.DOCKERHUB_REPOSITORY }}
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
