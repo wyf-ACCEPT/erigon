@@ -1680,6 +1680,7 @@ func (dt *DomainRoTx) DomainRangeLatest(roTx kv.Tx, fromKey, toKey []byte, limit
 func (dt *DomainRoTx) CanPruneUntil(tx kv.Tx, untilTx uint64) bool {
 	canDomain, _ := dt.canPruneDomainTables(tx, untilTx)
 	canHistory, _ := dt.ht.canPruneUntil(tx, untilTx)
+	fmt.Printf("[dbg] CanPruneUntil(%s) %t, %t\n", dt.d.filenameBase, canDomain, canHistory)
 	return canHistory || canDomain
 }
 
