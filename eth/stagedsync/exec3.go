@@ -897,7 +897,6 @@ Loop:
 				if !skipPostEvaluation && (rs.SizeEstimate() < commitThreshold || inMemExec) && !aggregatorRo.CanPrune(applyTx, outputTxNum.Load()) {
 					break
 				}
-				fmt.Printf("[dbg] alex2: %d, %d, %t, %t\n", rs.SizeEstimate(), commitThreshold, aggregatorRo.CanPrune(applyTx, outputTxNum.Load()), inMemExec)
 				fmt.Printf("[dbg] alex2.1: %t,  %t, %t\n", skipPostEvaluation, (rs.SizeEstimate() < commitThreshold || inMemExec), !aggregatorRo.CanPrune(applyTx, outputTxNum.Load()))
 				var (
 					commitStart = time.Now()
@@ -1293,7 +1292,7 @@ func reconstituteStep(last bool,
 	}
 	bitmap := scanWorker.Bitmap()
 
-	logEvery := time.NewTicker(logInterval)
+	logEvery := time.NewTicker(logInterval * 4)
 	defer logEvery.Stop()
 
 	logger.Info(fmt.Sprintf("[%s] Ready to replay", s.LogPrefix()), "transactions", bitmap.GetCardinality(), "out of", txNum)
