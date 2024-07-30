@@ -24,7 +24,7 @@ LABEL BUILDER_IMAGE_INFO=golang:${GOLANG_BUILDER_VERSION} \
     org.label-schema.vendor="Torquem" \
     org.label-schema.version=${VERSION}
 
-COPY /erigon/${BUILD_DST}/* /usr/local/bin/
+COPY ${BUILD_DST}/* /usr/local/bin/
 
 RUN groupadd ${GROUP} && \
     useradd -d /home/${USER} -g ${GROUP} -m ${USER}
