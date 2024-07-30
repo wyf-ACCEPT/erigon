@@ -428,13 +428,6 @@ func BorHeimdallForward(
 
 		fetchTime += callTime
 		syncEventTime = syncEventTime + time.Since(syncEventStart)
-
-		if !s.CurrentSyncCycle.IsInitialCycle {
-			if cfg.loopBreakCheck != nil && cfg.loopBreakCheck(int(blockNum-lastBlockNum)) {
-				headNumber = blockNum
-				break
-			}
-		}
 	}
 
 	if err = s.Update(tx, headNumber); err != nil {
