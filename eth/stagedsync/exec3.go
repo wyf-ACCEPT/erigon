@@ -906,9 +906,10 @@ Loop:
 				)
 
 				if ok, err := flushAndCheckCommitmentV3(ctx, b.HeaderNoCopy(), applyTx, doms, cfg, execStage, stageProgress, parallel, logger, u, inMemExec); err != nil {
+					fmt.Printf("[dbg] alex3.1\n")
 					return err
 				} else if !ok {
-					fmt.Printf("[dbg] alex3\n")
+					fmt.Printf("[dbg] alex3.2\n")
 					break Loop
 				}
 
