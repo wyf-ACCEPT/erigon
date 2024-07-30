@@ -195,8 +195,8 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 	in.returnData = nil
 
 	var (
-		op          OpCode // current opcode
-		mem         = pool.Get().(*Memory)
+		op          OpCode        // current opcode
+		mem         = NewMemory() //pool.Get().(*Memory)
 		locStack    = stack.New()
 		callContext = &ScopeContext{
 			Memory:   mem,
@@ -216,7 +216,7 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 		res     []byte // result of the opcode execution function
 	)
 
-	mem.Reset()
+	//mem.Reset()
 
 	contract.Input = input
 
@@ -238,7 +238,7 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 			}
 		}
 		// this function must execute _after_: the `CaptureState` needs the stacks before
-		pool.Put(mem)
+		//pool.Put(mem)
 		stack.ReturnNormalStack(locStack)
 		if restoreReadonly {
 			in.readOnly = false
