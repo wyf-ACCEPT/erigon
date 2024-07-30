@@ -24,19 +24,25 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-and-deploy-release:
+  build-and-push-binaries:
     runs-on: ubuntu-latest
     strategy:
       matrix:
         include:
           - arch: linux/amd64/v2
-            os: linux
+            id: linux-amd64-v2
+            goos: linux
+            goarch: amd64
             flags_cc: x86_64-linux-gnu-gcc
             flags_cxx: x86_64-linux-gnu-g++
+            build_dst: build-linux-amd64
           - arch: linux/arm64
-            os: linux
+            id: linux-arm64
+            goos: linux
+            goarch: arm64
             flags_cc: aarch64-linux-gnu-gcc
             flags_cxx: aarch64-linux-gnu-g++
+            build_dst: build-linux-arm64
 
     steps:
       - name: Maximize build space
@@ -81,16 +87,20 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+      
+      - name: Build binaries for ${{ matrix.buildargs }} platform
+        run: |
+          docker run --platform ${{ matrix.buildargs }} --rm -e GOOS=${{ matrix.goos }} -e GOARCH=${{ matrix.goarch }} -e CC=${{ matrix.flags_cc }} -e CXX=${{ matrix.flags_cxx }} -w /erigon -v $(pwd):/erigon -v $(pwd)/${{ matrix.build_dst }}:/erigon/build/bin golang:${{ env.GOLANG_BUILDER_VERSION }} make
 
-      - name: Build and push docker image for linux/amd64 and linux/arm64
+      - name: Build and push docker image for ${{ matrix.buildargs }} platform
+        id: docker_build
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./Dockerfile.NEW
+          file: ./Dockerfile.NEW-2
           platforms: ${{ matrix.buildargs }}
           build-args: |
-            CC=${{ matrix.flags_cc }}
-            CXX=${{ matrix.flags_cxx }}
+            BUILD_DST="./${{ matrix.build_dst }}"
             GOLANG_BUILDER_VERSION=${{ env.GOLANG_BUILDER_VERSION }}
             TARGET_BASE_VERSION=${{ env.TARGET_BASE_VERSION }}
             BUILD_TAGS=${{ env.BUILD_TAGS }}
@@ -98,14 +108,60 @@ jobs:
             VCS_REF_SHORT=${{ steps.GetShortCommitId.outputs.short_commit_id }}
             VCS_REF_LONG=${{ github.sha }}
             VERSION=${{ steps.GetVersion.outputs.ver }}
-          push: true
-          tags: ${{ env.DOCKERHUB_REPOSITORY }}:${{ steps.GetVersion.outputs.ver }}
+          outputs: type=image,name=${{ env.DOCKERHUB_REPOSITORY }}:${{ steps.GetVersion.outputs.ver }},push-by-digest=true,name-canonical=true,push=true
+          #tags: ${{ env.DOCKERHUB_REPOSITORY }}:${{ steps.GetVersion.outputs.ver }}
 
-      - name: Debug output 3
+      - name: Export digest
         run: |
-          echo "Pulling docker images for two platforms:"
-          docker pull --platform linux/amd64 ${{ env.DOCKERHUB_REPOSITORY }}:${{ steps.GetVersion.outputs.ver }}
-          docker image inspect ${{ env.DOCKERHUB_REPOSITORY }}:${{ steps.GetVersion.outputs.ver }}
-          #docker pull --platform linux/arm64 ${{ env.DOCKERHUB_REPOSITORY }}:${{ steps.GetVersion.outputs.ver }}
-          echo List of docker image architecture and tags
-          docker image inspect --format "{{.Architecture}} {{.RepoTags}}" $(docker image ls -q)
+          mkdir -p /tmp/digests
+          digest="${{ steps.docker_build.outputs.digest }}"
+          touch "/tmp/digests/${digest#sha256:}"          
+      
+      - name: Upload digest
+        uses: actions/upload-artifact@v4
+        with:
+          name: digests-${{ matrix.id }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  merge:
+    runs-on: ubuntu-latest
+    needs:
+      - build-and-push-binaries
+    steps:
+      - name: Download digests
+        uses: actions/download-artifact@v4
+        with:
+          path: /tmp/digests
+          pattern: digests-*
+          merge-multiple: true
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Get version from Github tag
+        id: GetVersion
+        run: echo ver=$( echo ${{ github.ref_name }} | sed -e 's,.*\/,,g' ) >> $GITHUB_OUTPUT
+      
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.DOCKERHUB_REPOSITORY }}:${{ steps.GetVersion.outputs.ver }}
+      
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.ORG_DOCKERHUB_ERIGONTECH_USERNAME }}
+          password: ${{ secrets.ORG_DOCKERHUB_ERIGONTECH_TOKEN }}
+      
+      - name: Create manifest list and push
+        working-directory: /tmp/digests
+        run: |
+          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf '${{ env.REGISTRY_IMAGE }}@sha256:%s ' *)          
+      
+      - name: Inspect image
+        run: |
+          docker buildx imagetools inspect ${{ env.REGISTRY_IMAGE }}:${{ steps.meta.outputs.version }}          
