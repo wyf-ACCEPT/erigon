@@ -22,8 +22,12 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/c2h5oh/datasize"
 	"github.com/holiman/uint256"
 	"google.golang.org/grpc"
+
+	"github.com/erigontech/erigon-lib/chain"
+	"github.com/erigontech/erigon-lib/kv/membatchwithdb"
 
 	libcommon "github.com/erigontech/erigon-lib/common"
 	"github.com/erigontech/erigon-lib/common/hexutil"
@@ -34,6 +38,10 @@ import (
 	"github.com/erigontech/erigon-lib/log/v3"
 	types2 "github.com/erigontech/erigon-lib/types"
 
+	"github.com/erigontech/erigon-lib/wrap"
+	"github.com/erigontech/erigon/eth/stagedsync"
+
+	"github.com/erigontech/erigon/consensus"
 	"github.com/erigontech/erigon/core"
 	"github.com/erigontech/erigon/core/state"
 	"github.com/erigontech/erigon/core/types"
@@ -41,7 +49,10 @@ import (
 	"github.com/erigontech/erigon/core/vm"
 	"github.com/erigontech/erigon/core/vm/evmtypes"
 	"github.com/erigontech/erigon/crypto"
+	"github.com/erigontech/erigon/eth/ethconfig"
+	"github.com/erigontech/erigon/eth/stagedsync/stages"
 	"github.com/erigontech/erigon/eth/tracers/logger"
+	"github.com/erigontech/erigon/ethdb/prune"
 	"github.com/erigontech/erigon/params"
 	"github.com/erigontech/erigon/rpc"
 	ethapi2 "github.com/erigontech/erigon/turbo/adapter/ethapi"
@@ -590,6 +601,124 @@ func (api *APIImpl) CreateAccessList(ctx context.Context, args ethapi2.CallArgs,
 		}
 		prevTracer = tracer
 	}
+}
+
+func (api *APIImpl) GetWitness(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) ([]byte, error) {
+	return api.getWitness(ctx, api.db, blockNrOrHash, api.logger)
+}
+
+func (api *BaseAPI) getWitness(ctx context.Context, db kv.RoDB, blockNrOrHash rpc.BlockNumberOrHash, logger log.Logger) ([]byte, error) {
+	tx, err := db.BeginRo(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	blockNr, hash, _, err := rpchelper.GetCanonicalBlockNumber(blockNrOrHash, tx, api.filters)
+	if err != nil {
+		return nil, err
+	}
+
+	block, err := api.blockWithSenders(ctx, tx, hash, blockNr)
+	if err != nil {
+		return nil, err
+	}
+	if block == nil {
+		return nil, nil
+	}
+
+	latestBlockNr, err := rpchelper.GetLatestBlockNumber(tx)
+	if err != nil {
+		return nil, err
+	}
+
+	if latestBlockNr < blockNr {
+		// shouldn't happen, but check anyway
+		return nil, fmt.Errorf("block number is in the future latest=%d requested=%d", latestBlockNr, blockNr)
+	}
+
+	// create memory mutation
+	txBatch := membatchwithdb.NewMemoryBatch(tx, "", logger)
+	defer txBatch.Rollback()
+
+	chainConfig, err := api.chainConfig(ctx, tx)
+	if err != nil {
+		return nil, fmt.Errorf("error loading chain config: %v", err)
+	}
+
+	execCfg, err := createExecConfig(api, txBatch.MemDB(), chainConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	err = unwindExecution(txBatch, blockNr, latestBlockNr, execCfg, ctx, logger)
+	if err != nil {
+		return nil, err
+	}
+
+	txc := wrap.TxContainer{Tx: txBatch.MemTx()}
+
+	stateSyncStages := stagedsync.DefaultStages(ctx, stagedsync.SnapshotsCfg{}, stagedsync.HeadersCfg{}, stagedsync.BorHeimdallCfg{}, stagedsync.BlockHashesCfg{}, stagedsync.BodiesCfg{}, stagedsync.SendersCfg{}, stagedsync.ExecuteBlockCfg{}, stagedsync.TxLookupCfg{}, stagedsync.FinishCfg{}, true)
+	stateSync := stagedsync.New(
+		ethconfig.Defaults.Sync,
+		stateSyncStages,
+		stagedsync.DefaultUnwindOrder,
+		stagedsync.DefaultPruneOrder,
+		logger,
+	)
+	stageState := &stagedsync.StageState{ID: stages.Execution, BlockNumber: blockNr}
+	// Re-execute block
+	err = stagedsync.ExecBlockV3(stageState, stateSync, txc, stageState.BlockNumber, ctx, *execCfg, false, logger)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return []byte("success"), nil
+}
+
+func createExecConfig(api *BaseAPI, db kv.RwDB, chainConfig *chain.Config) (*stagedsync.ExecuteBlockCfg, error) {
+	pruneMode := prune.Mode{
+		Initialised: false,
+	}
+	vmConfig := &vm.Config{}
+	syncCfg := ethconfig.Defaults.Sync
+	batchSizeStr := "512M"
+	var batchSize datasize.ByteSize
+	err := batchSize.UnmarshalText([]byte(batchSizeStr))
+	if err != nil {
+		return nil, err
+	}
+	engine, ok := api.engine().(consensus.Engine)
+	if !ok {
+		return nil, fmt.Errorf("engine is not consensus.Engine")
+	}
+
+	execCfg := stagedsync.StageExecuteBlocksCfg(db, pruneMode, batchSize, chainConfig, engine, vmConfig, nil, /* accumulator */
+		/*stateStream=*/ false,
+		/*badBlockHalt=*/ true, api.dirs, api._blockReader, nil /** header downloader */, nil /** genesis */, syncCfg, nil /* silkworm*/)
+	return &execCfg, nil
+}
+
+func unwindExecution(batch *membatchwithdb.MemoryMutation, blockNr, latestBlockNr uint64, execCfg *stagedsync.ExecuteBlockCfg, ctx context.Context, logger log.Logger) error {
+	// Rewind the Execution stage to previous block
+	// we want to unwind to the block before blockNr from latestBlockNr
+	unwindState := &stagedsync.UnwindState{ID: stages.Execution, UnwindPoint: blockNr - 1, CurrentBlockNumber: latestBlockNr}
+	stageState := &stagedsync.StageState{ID: stages.Execution, BlockNumber: blockNr}
+
+	txc := wrap.TxContainer{Tx: batch}
+	batchSizeStr := "512M"
+	var batchSize datasize.ByteSize
+	err := batchSize.UnmarshalText([]byte(batchSizeStr))
+	if err != nil {
+		return err
+	}
+
+	if err := stagedsync.UnwindExecutionStage(unwindState, stageState, txc, ctx, *execCfg, logger); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // some addresses (like sender, recipient, block producer, and created contracts)
