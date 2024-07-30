@@ -431,7 +431,6 @@ func BorHeimdallForward(
 
 		if !s.CurrentSyncCycle.IsInitialCycle {
 			if cfg.loopBreakCheck != nil && cfg.loopBreakCheck(int(blockNum-lastBlockNum)) {
-				panic(fmt.Sprintf("break?? %d, %d, %d\n", headNumber, blockNum, lastBlockNum))
 				headNumber = blockNum
 				break
 			}
