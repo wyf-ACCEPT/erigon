@@ -908,15 +908,18 @@ Loop:
 				if ok, err := flushAndCheckCommitmentV3(ctx, b.HeaderNoCopy(), applyTx, doms, cfg, execStage, stageProgress, parallel, logger, u, inMemExec); err != nil {
 					return err
 				} else if !ok {
+					fmt.Printf("[dbg] alex3\n")
 					break Loop
 				}
 
 				t1 = time.Since(tt) + ts
 
 				tt = time.Now()
+				fmt.Printf("[dbg] alex4\n")
 				if _, err := aggregatorRo.PruneSmallBatches(ctx, 10*time.Hour, applyTx); err != nil {
 					return err
 				}
+				fmt.Printf("[dbg] alex5\n")
 				t3 = time.Since(tt)
 
 				if err := func() error {
