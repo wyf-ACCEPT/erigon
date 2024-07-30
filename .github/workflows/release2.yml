@@ -109,7 +109,7 @@ jobs:
             VCS_REF_SHORT=${{ steps.GetShortCommitId.outputs.short_commit_id }}
             VCS_REF_LONG=${{ github.sha }}
             VERSION=${{ steps.GetVersion.outputs.ver }}
-          outputs: type=image,name=${{ env.DOCKERHUB_REPOSITORY }}:${{ steps.GetVersion.outputs.ver }},push-by-digest=true,name-canonical=true,push=true
+          outputs: type=image,name=${{ env.DOCKERHUB_REPOSITORY }},push-by-digest=true,name-canonical=true,push=true
           #tags: ${{ env.DOCKERHUB_REPOSITORY }}:${{ steps.GetVersion.outputs.ver }}
 
       - name: Export digest
@@ -149,7 +149,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.DOCKERHUB_REPOSITORY }}:${{ steps.GetVersion.outputs.ver }}
+          images: ${{ env.DOCKERHUB_REPOSITORY }}
       
       - name: Login to Docker Hub
         uses: docker/login-action@v3
@@ -161,8 +161,8 @@ jobs:
         working-directory: /tmp/digests
         run: |
           docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-            $(printf '${{ env.REGISTRY_IMAGE }}@sha256:%s ' *)          
+            $(printf '${{ env.DOCKERHUB_REPOSITORY }}@sha256:%s ' *)          
       
       - name: Inspect image
         run: |
-          docker buildx imagetools inspect ${{ env.REGISTRY_IMAGE }}:${{ steps.meta.outputs.version }}          
+          docker buildx imagetools inspect ${{ env.DOCKERHUB_REPOSITORY }}
