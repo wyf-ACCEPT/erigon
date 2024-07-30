@@ -898,6 +898,7 @@ Loop:
 					break
 				}
 				fmt.Printf("[dbg] alex2: %d, %d, %t, %t\n", rs.SizeEstimate(), commitThreshold, aggregatorRo.CanPrune(applyTx, outputTxNum.Load()), inMemExec)
+				fmt.Printf("[dbg] alex2.1: %t,  %t, %t\n", skipPostEvaluation, (rs.SizeEstimate() < commitThreshold || inMemExec), !aggregatorRo.CanPrune(applyTx, outputTxNum.Load()))
 				var (
 					commitStart = time.Now()
 					tt          = time.Now()
