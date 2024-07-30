@@ -26,6 +26,7 @@ on:
 jobs:
   build-and-push-binaries:
     runs-on: ubuntu-latest
+    name: build ${{ matrix.arch }}
     strategy:
       matrix:
         include:
