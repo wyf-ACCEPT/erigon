@@ -101,7 +101,7 @@ jobs:
           file: ./Dockerfile.NEW-2
           platforms: ${{ matrix.arch }}
           build-args: |
-            BUILD_DST="./${{ matrix.build_dst }}"
+            BUILD_DST=${{ matrix.build_dst }}
             GOLANG_BUILDER_VERSION=${{ env.GOLANG_BUILDER_VERSION }}
             TARGET_BASE_VERSION=${{ env.TARGET_BASE_VERSION }}
             BUILD_TAGS=${{ env.BUILD_TAGS }}
