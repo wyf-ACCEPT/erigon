@@ -123,7 +123,7 @@ func collectAndComputeCommitment(ctx context.Context, db kv.RwDB, tx kv.RwTx, ag
 
 	lastStep := ac.EndTxNumNoCommitment() / agg.StepSize()
 
-	batchSteps := uint64(1)
+	batchSteps := uint64(32)
 	bigBatches := lastStep / batchSteps
 
 	smallBatchSize := totalKeys.Load() / lastStep
