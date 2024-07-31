@@ -115,7 +115,7 @@ func collectAndComputeCommitment(ctx context.Context, db kv.RwDB, tx kv.RwTx, ag
 			return nil, err
 		}
 		totalKeys.Add(1)
-		if totalKeys.Load() > 1500000 {
+		if totalKeys.Load() > 1000000 {
 			break
 		}
 	}

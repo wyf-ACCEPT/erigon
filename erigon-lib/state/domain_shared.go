@@ -827,10 +827,15 @@ func (sd *SharedDomains) CommitmentInMem(agg *Aggregator, step, txFrom, txTo uin
 		return err
 	}
 	err = sd.aggTx.d[kv.CommitmentDomain].CollateBuildWithMem(context.Background(), step, txFrom, txTo, coll)
+	agg.recalcVisibleFiles()
+
+	nextCTx := sd.aggTx.d[kv.CommitmentDomain].d.BeginFilesRo()
 	if err != nil {
 		return err
 	}
-	agg.recalcVisibleFiles()
+	sd.aggTx.d[kv.CommitmentDomain].Close()
+	sd.aggTx.d[kv.CommitmentDomain] = nextCTx
+
 	return nil
 }
 
