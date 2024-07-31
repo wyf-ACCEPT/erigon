@@ -434,7 +434,11 @@ func (d *Domain) closeWhatNotInList(fNames []string) {
 }
 
 func (d *Domain) reCalcVisibleFiles() {
-	d._visibleFiles = calcVisibleFiles(d.dirtyFiles, d.indexList, false)
+	trace := false
+	if d.filenameBase == "commitment" {
+		trace = true
+	}
+	d._visibleFiles = calcVisibleFiles(d.dirtyFiles, d.indexList, trace)
 	d.History.reCalcVisibleFiles()
 }
 

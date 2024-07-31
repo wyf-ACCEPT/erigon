@@ -384,6 +384,7 @@ func (sd *SharedDomains) LatestCommitment(prefix []byte) ([]byte, uint64, error)
 		return nil, 0, fmt.Errorf("commitment prefix %x read error: %w", prefix, err)
 	}
 	if found {
+		panic("wtf")
 		// db store values as is (without transformation) so safe to return
 		return v, step, nil
 	}
