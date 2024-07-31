@@ -26,7 +26,6 @@ import (
 	"math"
 	"path/filepath"
 	"regexp"
-	"sort"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -886,7 +885,7 @@ func (c Collation) Close() {
 // collate gathers domain changes over the specified step, using read-only transaction,
 // and returns compressors, elias fano, and bitmaps
 // [txFrom; txTo)
-func (d *Domain) collate(ctx context.Context, step, txFrom, txTo uint64, roTx kv.Tx) (coll Collation, err error) {
+func (d *Domain) collate(ctx context.Context, step, txFrom, txTo uint64, roTx kv.Tx, collectedEtl *etl.Collector) (coll Collation, err error) {
 	{ //assert
 		if txFrom%d.aggregationStep != 0 {
 			panic(fmt.Errorf("assert: unexpected txFrom=%d", txFrom))
@@ -923,72 +922,73 @@ func (d *Domain) collate(ctx context.Context, step, txFrom, txTo uint64, roTx kv
 	stepBytes := make([]byte, 8)
 	binary.BigEndian.PutUint64(stepBytes, ^step)
 
-	var valsCursor kv.Cursor
-
-	if d.largeVals {
-		valsCursor, err = roTx.Cursor(d.valsTable)
-		if err != nil {
-			return Collation{}, fmt.Errorf("create %s values cursorDupsort: %w", d.filenameBase, err)
+	if collectedEtl == nil {
+		if !d.largeVals {
+			collectedEtl = etl.NewCollector(d.filenameBase+".domain.collate.etl", d.dirs.Tmp, etl.NewSortableBuffer(WALCollectorRAM), d.logger)
+			defer collectedEtl.Close()
 		}
-	} else {
-		valsCursor, err = roTx.CursorDupSort(d.valsTable)
-		if err != nil {
-			return Collation{}, fmt.Errorf("create %s values cursorDupsort: %w", d.filenameBase, err)
-		}
-	}
-	defer valsCursor.Close()
-
-	kvs := []struct {
-		k, v []byte
-	}{}
-
-	var stepInDB []byte
-	for k, v, err := valsCursor.First(); k != nil; {
-		if err != nil {
-			return coll, err
-		}
-
+		var valsCursor kv.Cursor
 		if d.largeVals {
-			stepInDB = k[len(k)-8:]
+			valsCursor, err = roTx.Cursor(d.valsTable)
+			if err != nil {
+				return Collation{}, fmt.Errorf("create %s values cursorDupsort: %w", d.filenameBase, err)
+			}
 		} else {
-			stepInDB = v[:8]
+			valsCursor, err = roTx.CursorDupSort(d.valsTable)
+			if err != nil {
+				return Collation{}, fmt.Errorf("create %s values cursorDupsort: %w", d.filenameBase, err)
+			}
 		}
-		if !bytes.Equal(stepBytes, stepInDB) { // [txFrom; txTo)
-			k, v, err = valsCursor.Next()
-			continue
-		}
+		defer valsCursor.Close()
 
-		if d.largeVals {
-			kvs = append(kvs, struct {
-				k, v []byte
-			}{common.Copy(k[:len(k)-8]), common.Copy(v)})
-			k, v, err = valsCursor.Next()
-		} else {
-			if err = comp.AddWord(k); err != nil {
-				return coll, fmt.Errorf("add %s values key [%x]: %w", d.filenameBase, k, err)
+		var stepInDB []byte
+		for k, v, err := valsCursor.First(); k != nil; {
+			if err != nil {
+				return coll, err
 			}
-			if err = comp.AddWord(v[8:]); err != nil {
-				return coll, fmt.Errorf("add %s values [%x]=>[%x]: %w", d.filenameBase, k, v[8:], err)
+
+			if d.largeVals {
+				stepInDB = k[len(k)-8:]
+			} else {
+				stepInDB = v[:8]
 			}
-			k, v, err = valsCursor.(kv.CursorDupSort).NextNoDup()
+			if !bytes.Equal(stepBytes, stepInDB) { // [txFrom; txTo)
+				k, v, err = valsCursor.Next()
+				continue
+			}
+
+			if d.largeVals {
+				err = collectedEtl.Collect(common.Copy(k[:len(k)-8]), common.Copy(v))
+				if err != nil {
+					return coll, fmt.Errorf("collect %s values key [%x]: %w", d.filenameBase, k, err)
+				}
+				k, v, err = valsCursor.Next()
+			} else {
+				if err = comp.AddWord(k); err != nil {
+					return coll, fmt.Errorf("add %s values key [%x]: %w", d.filenameBase, k, err)
+				}
+				if err = comp.AddWord(v[8:]); err != nil {
+					return coll, fmt.Errorf("add %s values [%x]=>[%x]: %w", d.filenameBase, k, v[8:], err)
+				}
+				k, v, err = valsCursor.(kv.CursorDupSort).NextNoDup()
+			}
 		}
 	}
 
-	sort.Slice(kvs, func(i, j int) bool {
-		return bytes.Compare(kvs[i].k, kvs[j].k) < 0
-	})
-	// check if any key is duplicated
-	for i := 1; i < len(kvs); i++ {
-		if bytes.Equal(kvs[i].k, kvs[i-1].k) {
-			return coll, fmt.Errorf("duplicate key [%x]", kvs[i].k)
-		}
-	}
-	for _, kv := range kvs {
-		if err = comp.AddWord(kv.k); err != nil {
-			return coll, fmt.Errorf("add %s values key [%x]: %w", d.filenameBase, kv.k, err)
-		}
-		if err = comp.AddWord(kv.v); err != nil {
-			return coll, fmt.Errorf("add %s values [%x]=>[%x]: %w", d.filenameBase, kv.k, kv.v, err)
+	if collectedEtl != nil {
+		err = collectedEtl.Load(nil, "",
+			func(k, v []byte, table etl.CurrentTableReader, next etl.LoadNextFunc) error {
+				if err = comp.AddWord(k); err != nil {
+					return fmt.Errorf("add %s values key [%x]: %w", d.filenameBase, k, err)
+				}
+				if err = comp.AddWord(v); err != nil {
+					return fmt.Errorf("add %s values [%x]=>[%x]: %w", d.filenameBase, k, v, err)
+				}
+				return nil
+			}, etl.TransformArgs{Quit: ctx.Done()})
+
+		if err != nil {
+			return coll, fmt.Errorf("load collectedETL: %w", err)
 		}
 	}
 
@@ -1500,6 +1500,22 @@ func (dt *DomainRoTx) Close() {
 		}
 	}
 	dt.ht.Close()
+}
+
+func (dt *DomainRoTx) CollateBuildWithMem(ctx context.Context, step, txFrom, txTo uint64, cetl *etl.Collector) error {
+	coll, err := dt.d.collate(ctx, step, txFrom, txTo, nil, cetl)
+	if err != nil {
+		return err
+	}
+	log.Warn("Collated", "step", step, "countV", coll.valuesCount, "txFrom", txFrom, "txTo", txTo)
+	defer coll.Close()
+
+	sf, err := dt.d.buildFiles(ctx, step, coll, background.NewProgressSet())
+	if err != nil {
+		return err
+	}
+	dt.d.integrateDirtyFiles(sf, txFrom, txTo)
+	return nil
 }
 
 func (dt *DomainRoTx) statelessGetter(i int) ArchiveGetter {

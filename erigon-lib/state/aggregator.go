@@ -650,7 +650,7 @@ func (a *Aggregator) buildFiles(ctx context.Context, step uint64) error {
 
 			var collation Collation
 			if err := a.db.View(ctx, func(tx kv.Tx) (err error) {
-				collation, err = d.collate(ctx, step, txFrom, txTo, tx)
+				collation, err = d.collate(ctx, step, txFrom, txTo, tx, nil)
 				return err
 			}); err != nil {
 				return fmt.Errorf("domain collation %q has failed: %w", d.filenameBase, err)

@@ -189,7 +189,7 @@ func testCollationBuild(t *testing.T, compressDomainVals bool) {
 	require.NoError(t, err)
 	dc.Close()
 	{
-		c, err := d.collate(ctx, 0, 0, 16, tx)
+		c, err := d.collate(ctx, 0, 0, 16, tx, nil)
 
 		require.NoError(t, err)
 		require.True(t, strings.HasSuffix(c.valuesPath, "v1-accounts.0-1.kv"))
@@ -233,7 +233,7 @@ func testCollationBuild(t *testing.T, compressDomainVals bool) {
 		}
 	}
 	{
-		c, err := d.collate(ctx, 1, 1*d.aggregationStep, 2*d.aggregationStep, tx)
+		c, err := d.collate(ctx, 1, 1*d.aggregationStep, 2*d.aggregationStep, tx, nil)
 		require.NoError(t, err)
 		sf, err := d.buildFiles(ctx, 1, c, background.NewProgressSet())
 		require.NoError(t, err)
@@ -325,7 +325,7 @@ func TestDomain_AfterPrune(t *testing.T) {
 	err = writer.Flush(ctx, tx)
 	require.NoError(t, err)
 
-	c, err := d.collate(ctx, 0, 0, 16, tx)
+	c, err := d.collate(ctx, 0, 0, 16, tx, nil)
 	require.NoError(t, err)
 
 	sf, err := d.buildFiles(ctx, 0, c, background.NewProgressSet())
@@ -480,7 +480,7 @@ func collateAndMerge(t *testing.T, db kv.RwDB, tx kv.RwTx, d *Domain, txs uint64
 	}
 	// Leave the last 2 aggregation steps un-collated
 	for step := uint64(0); step < txs/d.aggregationStep-1; step++ {
-		c, err := d.collate(ctx, step, step*d.aggregationStep, (step+1)*d.aggregationStep, tx)
+		c, err := d.collate(ctx, step, step*d.aggregationStep, (step+1)*d.aggregationStep, tx, nil)
 		require.NoError(t, err)
 		sf, err := d.buildFiles(ctx, step, c, background.NewProgressSet())
 		require.NoError(t, err)
@@ -529,7 +529,7 @@ func collateAndMergeOnce(t *testing.T, d *Domain, tx kv.RwTx, step uint64, prune
 	ctx := context.Background()
 	txFrom, txTo := (step)*d.aggregationStep, (step+1)*d.aggregationStep
 
-	c, err := d.collate(ctx, step, txFrom, txTo, tx)
+	c, err := d.collate(ctx, step, txFrom, txTo, tx, nil)
 	require.NoError(t, err)
 
 	sf, err := d.buildFiles(ctx, step, c, background.NewProgressSet())
@@ -840,7 +840,7 @@ func TestDomain_OpenFilesWithDeletions(t *testing.T) {
 	err := db.Update(ctx, func(tx kv.RwTx) error {
 		for step := uint64(0); step < txCount/dom.aggregationStep-1; step++ {
 			s, ns := step*dom.aggregationStep, (step+1)*dom.aggregationStep
-			c, err := dom.collate(ctx, step, s, ns, tx)
+			c, err := dom.collate(ctx, step, s, ns, tx, nil)
 			require.NoError(t, err)
 			sf, err := dom.buildFiles(ctx, step, c, background.NewProgressSet())
 			require.NoError(t, err)
@@ -990,7 +990,7 @@ func TestDomain_CollationBuildInMem(t *testing.T) {
 	err = writer.Flush(ctx, tx)
 	require.NoError(t, err)
 
-	c, err := d.collate(ctx, 0, 0, maxTx, tx)
+	c, err := d.collate(ctx, 0, 0, maxTx, tx, nil)
 
 	require.NoError(t, err)
 	require.True(t, strings.HasSuffix(c.valuesPath, "v1-accounts.0-1.kv"))
@@ -1086,7 +1086,7 @@ func TestDomainContext_getFromFiles(t *testing.T) {
 
 		fmt.Printf("Step %d [%d,%d)\n", step, txFrom, txTo)
 
-		collation, err := d.collate(ctx, step, txFrom, txTo, tx)
+		collation, err := d.collate(ctx, step, txFrom, txTo, tx, nil)
 		require.NoError(t, err)
 
 		sf, err := d.buildFiles(ctx, step, collation, ps)
@@ -1686,7 +1686,7 @@ func TestDomain_PruneProgress(t *testing.T) {
 		ctx := context.Background()
 		txFrom, txTo := (step)*d.aggregationStep, (step+1)*d.aggregationStep
 
-		c, err := d.collate(ctx, step, txFrom, txTo, rwTx)
+		c, err := d.collate(ctx, step, txFrom, txTo, rwTx, nil)
 		require.NoError(t, err)
 
 		sf, err := d.buildFiles(ctx, step, c, background.NewProgressSet())
@@ -2149,7 +2149,7 @@ func TestDomain_PruneSimple(t *testing.T) {
 		t.Logf("v=%s vs=%d", v, vs)
 		dc.Close()
 
-		c, err := d.collate(ctx, 0, pruneFrom, pruneTo, rotx)
+		c, err := d.collate(ctx, 0, pruneFrom, pruneTo, rotx, nil)
 		require.NoError(t, err)
 		sf, err := d.buildFiles(ctx, 0, c, background.NewProgressSet())
 		require.NoError(t, err)

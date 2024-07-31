@@ -22,6 +22,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"github.com/erigontech/erigon-lib/etl"
 	"math"
 	"path/filepath"
 	"runtime"
@@ -539,7 +540,7 @@ func (sd *SharedDomains) updateAccountCode(addr, code, prevCode []byte, prevStep
 
 func (sd *SharedDomains) updateCommitmentData(prefix []byte, data, prev []byte, prevStep uint64) error {
 	sd.put(kv.CommitmentDomain, string(prefix), data)
-	return sd.domainWriters[kv.CommitmentDomain].PutWithPrev(prefix, nil, data, prev, prevStep)
+	return nil //sd.domainWriters[kv.CommitmentDomain].PutWithPrev(prefix, nil, data, prev, prevStep)
 }
 
 func (sd *SharedDomains) deleteAccount(addr, prev []byte, prevStep uint64) error {
@@ -817,6 +818,31 @@ func (sd *SharedDomains) Close() {
 	if sd.sdCtx != nil {
 		sd.sdCtx.Close()
 	}
+}
+
+func (sd *SharedDomains) CommitmentInMem(agg *Aggregator, step, txFrom, txTo uint64, logger log.Logger) error {
+	coll, err := sd.FlushCommitment(agg.dirs.Tmp, logger)
+	if err != nil {
+		return err
+	}
+	err = sd.aggTx.d[kv.CommitmentDomain].CollateBuildWithMem(context.Background(), step, txFrom, txTo, coll)
+	if err != nil {
+		return err
+	}
+	agg.recalcVisibleFiles()
+	return nil
+}
+
+func (sd *SharedDomains) FlushCommitment(tempDir string, logger log.Logger) (*etl.Collector, error) {
+	coll := etl.NewCollector("FlushCommitment", tempDir, etl.NewSortableBuffer(WALCollectorRAM), logger)
+	coll.SortAndFlushInBackground(true)
+	for k, d := range sd.domains[kv.CommitmentDomain] {
+		if err := coll.Collect([]byte(k), d.data); err != nil {
+			coll.Close()
+			return nil, err
+		}
+	}
+	return coll, nil
 }
 
 func (sd *SharedDomains) Flush(ctx context.Context, tx kv.RwTx) error {

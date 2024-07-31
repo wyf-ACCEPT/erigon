@@ -41,7 +41,7 @@ import (
 	"github.com/erigontech/erigon/turbo/trie"
 )
 
-func collectAndComputeCommitment(ctx context.Context, tx kv.RwTx, tmpDir string, toTxNum uint64) ([]byte, error) {
+func collectAndComputeCommitment(ctx context.Context, db kv.RwDB, tx kv.RwTx, agg *state.Aggregator, tmpDir string, toTxNum uint64) ([]byte, error) {
 	domains, err := state.NewSharedDomains(tx, log.New())
 	if err != nil {
 		return nil, err
@@ -52,10 +52,18 @@ func collectAndComputeCommitment(ctx context.Context, tx kv.RwTx, tmpDir string,
 	// has to set this value because it will be used during domain.Commit() call.
 	// If we do not, txNum of block beginning will be used, which will cause invalid txNum on restart following commitment rebuilding
 	domains.SetTxNum(toTxNum)
+	blockFound, blockNum, err := rawdbv3.TxNums.FindBlockNum(tx, toTxNum)
+	if err != nil {
+		return nil, err
+	}
+	if !blockFound {
+		return nil, fmt.Errorf("block not found for txnum %d", toTxNum)
+	}
+	domains.SetBlockNum(blockNum)
 
-	logger := log.New("stage", "patricia_trie", "block", domains.BlockNum())
-	logger.Info("Collecting account/storage keys")
-	collector := etl.NewCollector("collect_keys", tmpDir, etl.NewSortableBuffer(etl.BufferOptimalSize/2), logger)
+	logger := log.New()
+	logger.Info("Collecting account/storage keys", "block", domains.BlockNum(), "txnum", toTxNum)
+	collector := etl.NewCollector("CollectKeys", tmpDir, etl.NewSortableBuffer(etl.BufferOptimalSize/2), logger)
 	defer collector.Close()
 
 	var totalKeys atomic.Uint64
@@ -72,22 +80,27 @@ func collectAndComputeCommitment(ctx context.Context, tx kv.RwTx, tmpDir string,
 			return nil, err
 		}
 		totalKeys.Add(1)
+		// if totalKeys.Load() > 50000 {
+		// 	break
+		// }
 	}
 
-	it, err = ac.DomainRangeLatest(tx, kv.CodeDomain, nil, nil, -1)
-	if err != nil {
-		return nil, err
-	}
-	for it.HasNext() {
-		k, _, err := it.Next()
-		if err != nil {
-			return nil, err
-		}
-		if err := collector.Collect(k, nil); err != nil {
-			return nil, err
-		}
-		totalKeys.Add(1)
-	}
+	logger.Info("Collected account keys", "count", totalKeys.Load())
+
+	//it, err = ac.DomainRangeLatest(tx, kv.CodeDomain, nil, nil, -1)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//for it.HasNext() {
+	//	k, _, err := it.Next()
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//	if err := collector.Collect(k, nil); err != nil {
+	//		return nil, err
+	//	}
+	//	totalKeys.Add(1)
+	//}
 
 	it, err = ac.DomainRangeLatest(tx, kv.StorageDomain, nil, nil, -1)
 	if err != nil {
@@ -102,24 +115,46 @@ func collectAndComputeCommitment(ctx context.Context, tx kv.RwTx, tmpDir string,
 			return nil, err
 		}
 		totalKeys.Add(1)
+		// if totalKeys.Load() > 150000 {
+		// 	break
+		// }
 	}
+	logger.Info("Collected storage keys", "total keys", totalKeys.Load())
 
-	var (
-		batchSize = uint64(10_000_000)
-		processed atomic.Uint64
-	)
+	lastStep := ac.EndTxNumNoCommitment() / agg.StepSize()
+	batchSize := totalKeys.Load() / lastStep
+	cStep, cTxFrom, cTxTo := uint64(0), uint64(0), agg.StepSize()
+	domains.SetTxNum(cTxFrom)
+	domains.SetBlockNum(1)
+
+	var processed atomic.Uint64
+	logger.Warn("Committing batch", "lastStep", lastStep, "batchSize", batchSize, "totalKeys", totalKeys.Load())
 
 	sdCtx := state.NewSharedDomainsCommitmentContext(domains, commitment.ModeDirect, commitment.VariantHexPatriciaTrie)
-
 	loadKeys := func(k, v []byte, table etl.CurrentTableReader, next etl.LoadNextFunc) error {
-		if sdCtx.KeysCount() >= batchSize {
-			rh, err := sdCtx.ComputeCommitment(ctx, true, domains.BlockNum(), "")
+		if sdCtx.KeysCount() >= batchSize && cStep < lastStep {
+			rh, err := sdCtx.ComputeCommitment(ctx, true, domains.BlockNum(), fmt.Sprintf("applying shard %d", cStep))
 			if err != nil {
 				return err
 			}
 			logger.Info("Committing batch",
 				"processed", fmt.Sprintf("%dM/%dM (%.2f%%)", processed.Load()/1_000_000, totalKeys.Load()/1_000_000, float64(processed.Load())/float64(totalKeys.Load())*100),
 				"intermediate root", fmt.Sprintf("%x", rh))
+
+			if err = domains.CommitmentInMem(agg, cStep, cTxFrom, cTxTo, logger); err != nil {
+				return err
+			}
+			domains.ClearRam(false)
+
+			cStep++
+			cTxFrom = cTxTo
+			cTxTo = cTxFrom + agg.StepSize()
+
+			domains.SetTxNum(cTxFrom)
+			ok, bn, err := rawdbv3.TxNums.FindBlockNum(tx, (cTxTo-cTxFrom)/2)
+			if err == nil && ok {
+				domains.SetBlockNum(bn)
+			}
 		}
 		processed.Add(1)
 		sdCtx.TouchKey(kv.AccountsDomain, string(k), nil)
@@ -132,17 +167,23 @@ func collectAndComputeCommitment(ctx context.Context, tx kv.RwTx, tmpDir string,
 	}
 	collector.Close()
 
-	rh, err := sdCtx.ComputeCommitment(ctx, true, domains.BlockNum(), "")
+	rh, err := sdCtx.ComputeCommitment(ctx, true, domains.BlockNum(), "Finalizing")
 	if err != nil {
 		return nil, err
 	}
 	logger.Info("Commitment has been reevaluated",
+		"block", domains.BlockNum(),
 		"tx", domains.TxNum(),
 		"root", hex.EncodeToString(rh),
 		"processed", processed.Load(),
 		"total", totalKeys.Load())
 
-	if err := domains.Flush(ctx, tx); err != nil {
+	logger.Info("flushing latest step on disk", "step", lastStep)
+
+	cStep++
+	cTxFrom = cTxTo
+	cTxTo = cTxFrom + agg.StepSize()
+	if err = domains.CommitmentInMem(agg, cStep, cTxFrom, cTxTo, logger); err != nil {
 		return nil, err
 	}
 
@@ -290,7 +331,7 @@ func RebuildPatriciaTrieBasedOnFiles(rwTx kv.RwTx, cfg TrieCfg, ctx context.Cont
 		headerHash = syncHeadHeader.Hash()
 	}
 
-	rh, err := collectAndComputeCommitment(ctx, rwTx, cfg.tmpDir, toTxNum)
+	rh, err := collectAndComputeCommitment(ctx, cfg.db, rwTx, cfg.agg, cfg.tmpDir, toTxNum)
 	if err != nil {
 		return trie.EmptyRoot, err
 	}
