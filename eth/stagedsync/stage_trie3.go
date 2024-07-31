@@ -141,7 +141,7 @@ func collectAndComputeCommitment(ctx context.Context, db kv.RwDB, tx kv.RwTx, ag
 	}
 
 	var processed atomic.Uint64
-	logger.Warn("Committing batch", "lastStep", lastStep, "batchSize", batchSize, "totalKeys", totalKeys.Load())
+	logger.Warn("Begun commitment", "lastStep", lastStep, "batchSize", batchSize, "totalKeys", totalKeys.Load(), "bigBatches", bigBatches)
 
 	sdCtx := state.NewSharedDomainsCommitmentContext(domains, commitment.ModeDirect, commitment.VariantHexPatriciaTrie)
 	loadKeys := func(k, v []byte, table etl.CurrentTableReader, next etl.LoadNextFunc) error {

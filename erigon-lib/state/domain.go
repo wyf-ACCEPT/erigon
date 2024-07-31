@@ -982,7 +982,6 @@ func (d *Domain) collate(ctx context.Context, step, txFrom, txTo uint64, roTx kv
 	if collectedEtl != nil {
 		err = collectedEtl.Load(nil, "",
 			func(k, v []byte, table etl.CurrentTableReader, next etl.LoadNextFunc) error {
-				fmt.Printf("collate: %x -> %x\n", k, v)
 				if err = comp.AddWord(k); err != nil {
 					return fmt.Errorf("add %s values key [%x]: %w", d.filenameBase, k, err)
 				}

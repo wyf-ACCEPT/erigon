@@ -188,10 +188,15 @@ func (be *BranchEncoder) CollectUpdate(
 			return 0, err
 		}
 	}
-	//fmt.Printf("collectBranchUpdate [%x] -> [%x]\n", prefix, update)
-	if err = be.updates.Collect(prefix, update); err != nil {
+
+	if err = ctx.PutBranch(prefix, update, prev, prevStep); err != nil {
 		return 0, err
 	}
+	mxBranchUpdatesApplied.Inc()
+	//fmt.Printf("collectBranchUpdate [%x] -> [%x]\n", prefix, update)
+	//if err = be.updates.Collect(prefix, update); err != nil {
+	//	return 0, err
+	//}
 	return lastNibble, nil
 }
 

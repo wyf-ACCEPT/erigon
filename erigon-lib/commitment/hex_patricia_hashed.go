@@ -1538,10 +1538,12 @@ func (hph *HexPatriciaHashed) ProcessTree(ctx context.Context, tree *Updates, lo
 	if hph.trace {
 		fmt.Printf("root hash %x updates %d root=%s\n", rootHash, updatesCount, hph.root.FullString())
 	}
-	err = hph.branchEncoder.Load(hph.ctx, etl.TransformArgs{Quit: ctx.Done()})
-	if err != nil {
-		return nil, fmt.Errorf("branch update failed: %w", err)
-	}
+
+	//err = hph.ctx.FlushBranches(hph.branchEncoder.updates)
+	//err = hph.branchEncoder.Load(hph.ctx, etl.TransformArgs{Quit: ctx.Done()})
+	//if err != nil {
+	//	return nil, fmt.Errorf("branch update failed: %w", err)
+	//}
 	log.Warn("commitment finished, counters updated (no reset)", "hadToLoad", hadToLoad.Load(), "skippedLoad", skippedLoad.Load(), "ratio", float64(skippedLoad.Load())/float64(hadToLoad.Load()+skippedLoad.Load()))
 	return rootHash, nil
 }
