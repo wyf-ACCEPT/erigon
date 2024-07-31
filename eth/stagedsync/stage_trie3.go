@@ -80,9 +80,9 @@ func collectAndComputeCommitment(ctx context.Context, db kv.RwDB, tx kv.RwTx, ag
 			return nil, err
 		}
 		totalKeys.Add(1)
-		//if totalKeys.Load() > 500000 {
-		//	break
-		//}
+		if totalKeys.Load() > 500000 {
+			break
+		}
 	}
 
 	logger.Info("Collected account keys", "count", totalKeys.Load())
@@ -115,15 +115,15 @@ func collectAndComputeCommitment(ctx context.Context, db kv.RwDB, tx kv.RwTx, ag
 			return nil, err
 		}
 		totalKeys.Add(1)
-		//if totalKeys.Load() > 1000000 {
-		//	break
-		//}
+		if totalKeys.Load() > 1000000 {
+			break
+		}
 	}
 	logger.Info("Collected storage keys", "total keys", totalKeys.Load())
 
 	lastStep := ac.EndTxNumNoCommitment() / agg.StepSize()
 
-	batchSteps := uint64(1)
+	batchSteps := uint64(32)
 	bigBatches := lastStep / batchSteps
 
 	smallBatchSize := totalKeys.Load() / lastStep

@@ -101,7 +101,7 @@ type Aggregator struct {
 
 type OnFreezeFunc func(frozenFileNames []string)
 
-const AggregatorSqueezeCommitmentValues = true
+const AggregatorSqueezeCommitmentValues = false
 
 func NewAggregator(ctx context.Context, dirs datadir.Dirs, aggregationStep uint64, db kv.RoDB, iters CanonicalsReader, logger log.Logger) (*Aggregator, error) {
 	tmpdir := dirs.Tmp
