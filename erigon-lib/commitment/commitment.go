@@ -189,7 +189,7 @@ func (be *BranchEncoder) CollectUpdate(
 		}
 	}
 
-	if err = ctx.PutBranch(prefix, update, prev, prevStep); err != nil {
+	if err = ctx.PutBranch(common.Copy(prefix), common.Copy(update), prev, prevStep); err != nil {
 		return 0, err
 	}
 	mxBranchUpdatesApplied.Inc()
