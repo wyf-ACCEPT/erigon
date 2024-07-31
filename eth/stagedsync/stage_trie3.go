@@ -122,17 +122,30 @@ func collectAndComputeCommitment(ctx context.Context, db kv.RwDB, tx kv.RwTx, ag
 	logger.Info("Collected storage keys", "total keys", totalKeys.Load())
 
 	lastStep := ac.EndTxNumNoCommitment() / agg.StepSize()
-	batchSize := totalKeys.Load() / lastStep
-	cStep, cTxFrom, cTxTo := uint64(0), uint64(0), agg.StepSize()
+
+	batchSteps := uint64(32)
+	bigBatches := lastStep / batchSteps
+
+	smallBatchSize := totalKeys.Load() / lastStep
+	batchSize := smallBatchSize * batchSteps
+
+	cStep := batchSteps - 1
+	cTxFrom, cTxTo := uint64(0), batchSteps*agg.StepSize()
+
 	domains.SetTxNum(cTxFrom)
-	domains.SetBlockNum(1)
+	ok, bn, err := rawdbv3.TxNums.FindBlockNum(tx, cTxTo-1)
+	if err == nil && ok {
+		domains.SetBlockNum(bn)
+	} else {
+		domains.SetBlockNum(1)
+	}
 
 	var processed atomic.Uint64
 	logger.Warn("Committing batch", "lastStep", lastStep, "batchSize", batchSize, "totalKeys", totalKeys.Load())
 
 	sdCtx := state.NewSharedDomainsCommitmentContext(domains, commitment.ModeDirect, commitment.VariantHexPatriciaTrie)
 	loadKeys := func(k, v []byte, table etl.CurrentTableReader, next etl.LoadNextFunc) error {
-		if sdCtx.KeysCount() >= batchSize && cStep < lastStep {
+		if sdCtx.KeysCount() >= batchSize {
 			rh, err := sdCtx.ComputeCommitment(ctx, true, domains.BlockNum(), fmt.Sprintf("applying shard %d", cStep))
 			if err != nil {
 				return err
@@ -146,12 +159,18 @@ func collectAndComputeCommitment(ctx context.Context, db kv.RwDB, tx kv.RwTx, ag
 			}
 			domains.ClearRam(false)
 
-			cStep++
+			if bigBatches == 0 {
+				batchSize = smallBatchSize
+				batchSteps = 1
+			}
+			bigBatches--
+
+			cStep += batchSteps
 			cTxFrom = cTxTo
-			cTxTo = cTxFrom + agg.StepSize()
+			cTxTo = cTxFrom + batchSteps*agg.StepSize()
 
 			domains.SetTxNum(cTxFrom)
-			ok, bn, err := rawdbv3.TxNums.FindBlockNum(tx, (cTxTo-cTxFrom)/2)
+			ok, bn, err := rawdbv3.TxNums.FindBlockNum(tx, cTxTo-1)
 			if err == nil && ok {
 				domains.SetBlockNum(bn)
 			}
@@ -171,6 +190,7 @@ func collectAndComputeCommitment(ctx context.Context, db kv.RwDB, tx kv.RwTx, ag
 	if err != nil {
 		return nil, err
 	}
+
 	logger.Info("Commitment has been reevaluated",
 		"block", domains.BlockNum(),
 		"tx", domains.TxNum(),
