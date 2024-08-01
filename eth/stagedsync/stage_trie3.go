@@ -22,6 +22,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/erigontech/erigon-lib/common/datadir"
+	"github.com/erigontech/erigon-lib/kv/order"
 	"github.com/erigontech/erigon-lib/kv/temporal"
 	"github.com/erigontech/erigon-lib/log/v3"
 	"github.com/erigontech/erigon/turbo/stages/headerdownload"
@@ -57,6 +58,19 @@ func collectAndComputeCommitment(ctx context.Context, db kv.RwDB, tx kv.RwTx, ag
 		return nil, fmt.Errorf("block not found for txnum %d", toTxNum)
 	}
 	logger := log.New()
+
+	it, err := ac.DomainRange(ctx, tx, kv.CommitmentDomain, []byte("state"), nil, toTxNum, order.Asc, -1)
+	if err != nil {
+		return nil, err
+	}
+	for it.HasNext() {
+		k, v, err := it.Next()
+		if err != nil {
+			return nil, err
+		}
+		logger.Info("Commitment key", "key", k, "value", v)
+	}
+	it.Close()
 
 	logger.Info("Rebuilding commitment", "block", blockNum, "txnum", toTxNum, "domainsBlockNum", domains.BlockNum(),
 		"domainsTxNum", domains.TxNum(), "domainsEndTxNum", ac.EndTxNumNoCommitment())
