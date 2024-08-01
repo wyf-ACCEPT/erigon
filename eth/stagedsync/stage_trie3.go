@@ -46,7 +46,7 @@ func collectAndComputeCommitment(ctx context.Context, db kv.RwDB, tx kv.RwTx, ag
 	defer domains.Close()
 	ac := domains.AggTx().(*state.AggregatorRoTx)
 
-	toTxNum = ac.EndTxNumNoCommitment()
+	toTxNum = ac.EndTxNumNoCommitment() + agg.StepSize()
 
 	// has to set this value because it will be used during domain.Commit() call.
 	// If we do not, txNum of block beginning will be used, which will cause invalid txNum on restart following commitment rebuilding
@@ -75,9 +75,9 @@ func collectAndComputeCommitment(ctx context.Context, db kv.RwDB, tx kv.RwTx, ag
 	logger.Info("Rebuilding commitment", "block", blockNum, "txnum", toTxNum, "domainsBlockNum", domains.BlockNum(),
 		"domainsTxNum", domains.TxNum(), "domainsEndTxNum", ac.EndTxNumNoCommitment())
 
-	domains.SetTxNum(ac.EndTxNumNoCommitment())
+	domains.SetTxNum(toTxNum)
 	domains.SetBlockNum(blockNum)
-	step := toTxNum / agg.StepSize()
+	step := toTxNum - 1/agg.StepSize()
 
 	rh, err := domains.ComputeCommitment(ctx, true, domains.BlockNum(), "Finalizing")
 	if err != nil {
