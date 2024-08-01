@@ -68,7 +68,7 @@ func collectAndComputeCommitment(ctx context.Context, db kv.RwDB, tx kv.RwTx, ag
 		if err != nil {
 			return nil, err
 		}
-		logger.Info("Commitment key", "key", k, "value", v)
+		logger.Info("Commitment key", "key", string(k), "value", v)
 	}
 	it.Close()
 
@@ -77,9 +77,33 @@ func collectAndComputeCommitment(ctx context.Context, db kv.RwDB, tx kv.RwTx, ag
 
 	domains.SetTxNum(toTxNum)
 	domains.SetBlockNum(blockNum)
-	step := toTxNum - 1/agg.StepSize()
+	step := (toTxNum - 1) / agg.StepSize()
 
 	rh, err := domains.ComputeCommitment(ctx, true, domains.BlockNum(), "Finalizing")
+	if err != nil {
+		return nil, err
+	}
+	logger.Info("Commitment has been reevaluated",
+		"block", domains.BlockNum(),
+		"tx", domains.TxNum(),
+		"root", hex.EncodeToString(rh),
+	)
+
+	it, err = ac.DomainRangeLatest(tx, kv.AccountsDomain, nil, nil, -1)
+	if err != nil {
+		return nil, err
+	}
+
+	for it.HasNext() {
+		k, v, err := it.Next()
+		if err != nil {
+			return nil, err
+		}
+		domains.DomainPut(kv.AccountsDomain, k, nil, v, nil, 0)
+		break
+	}
+
+	rh, err = domains.ComputeCommitment(ctx, true, domains.BlockNum(), "Finalizing")
 	if err != nil {
 		return nil, err
 	}
