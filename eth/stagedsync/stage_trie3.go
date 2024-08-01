@@ -21,8 +21,6 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"sync/atomic"
-
 	"github.com/erigontech/erigon-lib/common/datadir"
 	"github.com/erigontech/erigon-lib/kv/temporal"
 	"github.com/erigontech/erigon-lib/log/v3"
@@ -34,7 +32,6 @@ import (
 	"github.com/erigontech/erigon/turbo/services"
 
 	libcommon "github.com/erigontech/erigon-lib/common"
-	"github.com/erigontech/erigon-lib/etl"
 	"github.com/erigontech/erigon-lib/kv"
 	"github.com/erigontech/erigon-lib/state"
 	"github.com/erigontech/erigon/core/types"
@@ -47,47 +44,49 @@ func collectAndComputeCommitment(ctx context.Context, db kv.RwDB, tx kv.RwTx, ag
 		return nil, err
 	}
 	defer domains.Close()
-	ac := domains.AggTx().(*state.AggregatorRoTx)
+	//ac := domains.AggTx().(*state.AggregatorRoTx)
 
 	// has to set this value because it will be used during domain.Commit() call.
 	// If we do not, txNum of block beginning will be used, which will cause invalid txNum on restart following commitment rebuilding
-	domains.SetTxNum(toTxNum)
 	blockFound, blockNum, err := rawdbv3.TxNums.FindBlockNum(tx, toTxNum)
 	if err != nil {
 		return nil, err
 	}
 	if !blockFound {
-		return nil, fmt.Errorf("block not found for txnum %d", toTxNum)
+		return nil, fmt.Errorf("block not found for txnum %d", toTxNum-1)
 	}
+	domains.SetTxNum(toTxNum - 1)
 	domains.SetBlockNum(blockNum)
+	step := (toTxNum - 1) / agg.StepSize()
 
-	logger := log.New()
-	logger.Info("Collecting account/storage keys", "block", domains.BlockNum(), "txnum", toTxNum)
-	collector := etl.NewCollector("CollectKeys", tmpDir, etl.NewSortableBuffer(etl.BufferOptimalSize/2), logger)
-	defer collector.Close()
-
-	var totalKeys atomic.Uint64
-	it, err := ac.DomainRangeLatest(tx, kv.AccountsDomain, nil, nil, -1)
+	sdCtx := state.NewSharedDomainsCommitmentContext(domains, commitment.ModeDirect, commitment.VariantHexPatriciaTrie)
+	rh, err := sdCtx.ComputeCommitment(ctx, true, domains.BlockNum(), "Finalizing")
 	if err != nil {
 		return nil, err
 	}
-	for it.HasNext() {
-		k, _, err := it.Next()
-		if err != nil {
-			return nil, err
-		}
-		if err := collector.Collect(k, nil); err != nil {
-			return nil, err
-		}
-		totalKeys.Add(1)
-		//if totalKeys.Load() > 500000 {
-		//	break
-		//}
+
+	logger := log.New()
+	logger.Info("Commitment has been reevaluated",
+		"block", domains.BlockNum(),
+		"tx", domains.TxNum(),
+		"root", hex.EncodeToString(rh),
+	)
+	//"processed", processed.Load(),
+	//"total", totalKeys.Load())
+
+	logger.Info("flushing latest step on disk", "step", step)
+
+	if err = domains.CommitmentInMem(agg, step, toTxNum-agg.StepSize(), toTxNum, logger); err != nil {
+		return nil, err
 	}
-
-	logger.Info("Collected account keys", "count", totalKeys.Load())
-
-	//it, err = ac.DomainRangeLatest(tx, kv.CodeDomain, nil, nil, -1)
+	return nil, nil
+	//
+	//logger.Info("Collecting account/storage keys", "block", domains.BlockNum(), "txnum", toTxNum)
+	//collector := etl.NewCollector("CollectKeys", tmpDir, etl.NewSortableBuffer(etl.BufferOptimalSize/2), logger)
+	//defer collector.Close()
+	//
+	//var totalKeys atomic.Uint64
+	//it, err := ac.DomainRangeLatest(tx, kv.AccountsDomain, nil, nil, -1)
 	//if err != nil {
 	//	return nil, err
 	//}
@@ -100,114 +99,134 @@ func collectAndComputeCommitment(ctx context.Context, db kv.RwDB, tx kv.RwTx, ag
 	//		return nil, err
 	//	}
 	//	totalKeys.Add(1)
+	//	//if totalKeys.Load() > 500000 {
+	//	//	break
+	//	//}
 	//}
-
-	it, err = ac.DomainRangeLatest(tx, kv.StorageDomain, nil, nil, -1)
-	if err != nil {
-		return nil, err
-	}
-	for it.HasNext() {
-		k, _, err := it.Next()
-		if err != nil {
-			return nil, err
-		}
-		if err := collector.Collect(k, nil); err != nil {
-			return nil, err
-		}
-		totalKeys.Add(1)
-		//if totalKeys.Load() > 1000000 {
-		//	break
-		//}
-	}
-	logger.Info("Collected storage keys", "total keys", totalKeys.Load())
-
-	lastStep := ac.EndTxNumNoCommitment() / agg.StepSize()
-
-	batchSteps := uint64(32)
-	bigBatches := lastStep / batchSteps
-
-	smallBatchSize := totalKeys.Load() / lastStep
-	batchSize := smallBatchSize * batchSteps
-
-	cStep := batchSteps - 1
-	cTxFrom, cTxTo := uint64(0), batchSteps*agg.StepSize()
-
-	domains.SetTxNum(cTxFrom)
-	ok, bn, err := rawdbv3.TxNums.FindBlockNum(tx, cTxTo-1)
-	if err == nil && ok {
-		domains.SetBlockNum(bn)
-	} else {
-		domains.SetBlockNum(1)
-	}
-
-	var processed atomic.Uint64
-	logger.Warn("Begun commitment", "lastStep", lastStep, "batchSize", batchSize, "totalKeys", totalKeys.Load(), "bigBatches", bigBatches)
-
-	sdCtx := state.NewSharedDomainsCommitmentContext(domains, commitment.ModeDirect, commitment.VariantHexPatriciaTrie)
-	loadKeys := func(k, v []byte, table etl.CurrentTableReader, next etl.LoadNextFunc) error {
-		if sdCtx.KeysCount() >= batchSize {
-			rh, err := sdCtx.ComputeCommitment(ctx, true, domains.BlockNum(), fmt.Sprintf("applying shard %d", cStep))
-			if err != nil {
-				return err
-			}
-			logger.Info("Committing batch",
-				"processed", fmt.Sprintf("%dM/%dM (%.2f%%)", processed.Load()/1_000_000, totalKeys.Load()/1_000_000, float64(processed.Load())/float64(totalKeys.Load())*100),
-				"intermediate root", fmt.Sprintf("%x", rh))
-
-			if err = domains.CommitmentInMem(agg, cStep, cTxFrom, cTxTo, logger); err != nil {
-				return err
-			}
-			domains.ClearRam(false)
-
-			if bigBatches == 0 {
-				batchSize = smallBatchSize
-				batchSteps = 1
-			}
-			bigBatches--
-
-			cStep += batchSteps
-			cTxFrom = cTxTo
-			cTxTo = cTxFrom + batchSteps*agg.StepSize()
-
-			domains.SetTxNum(cTxFrom)
-			ok, bn, err := rawdbv3.TxNums.FindBlockNum(tx, cTxTo-1)
-			if err == nil && ok {
-				domains.SetBlockNum(bn)
-			}
-		}
-		processed.Add(1)
-		sdCtx.TouchKey(kv.AccountsDomain, string(k), nil)
-
-		return nil
-	}
-	err = collector.Load(nil, "", loadKeys, etl.TransformArgs{Quit: ctx.Done()})
-	if err != nil {
-		return nil, err
-	}
-	collector.Close()
-
-	rh, err := sdCtx.ComputeCommitment(ctx, true, domains.BlockNum(), "Finalizing")
-	if err != nil {
-		return nil, err
-	}
-
-	logger.Info("Commitment has been reevaluated",
-		"block", domains.BlockNum(),
-		"tx", domains.TxNum(),
-		"root", hex.EncodeToString(rh),
-		"processed", processed.Load(),
-		"total", totalKeys.Load())
-
-	logger.Info("flushing latest step on disk", "step", lastStep)
-
-	cStep++
-	cTxFrom = cTxTo
-	cTxTo = cTxFrom + agg.StepSize()
-	if err = domains.CommitmentInMem(agg, cStep, cTxFrom, cTxTo, logger); err != nil {
-		return nil, err
-	}
-
-	return rh, nil
+	//
+	//logger.Info("Collected account keys", "count", totalKeys.Load())
+	//
+	////it, err = ac.DomainRangeLatest(tx, kv.CodeDomain, nil, nil, -1)
+	////if err != nil {
+	////	return nil, err
+	////}
+	////for it.HasNext() {
+	////	k, _, err := it.Next()
+	////	if err != nil {
+	////		return nil, err
+	////	}
+	////	if err := collector.Collect(k, nil); err != nil {
+	////		return nil, err
+	////	}
+	////	totalKeys.Add(1)
+	////}
+	//
+	//it, err = ac.DomainRangeLatest(tx, kv.StorageDomain, nil, nil, -1)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//for it.HasNext() {
+	//	k, _, err := it.Next()
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//	if err := collector.Collect(k, nil); err != nil {
+	//		return nil, err
+	//	}
+	//	totalKeys.Add(1)
+	//	//if totalKeys.Load() > 1000000 {
+	//	//	break
+	//	//}
+	//}
+	//logger.Info("Collected storage keys", "total keys", totalKeys.Load())
+	//
+	//lastStep := ac.EndTxNumNoCommitment() / agg.StepSize()
+	//
+	//batchSteps := uint64(32)
+	//bigBatches := lastStep / batchSteps
+	//
+	//smallBatchSize := totalKeys.Load() / lastStep
+	//batchSize := smallBatchSize * batchSteps
+	//
+	//cStep := batchSteps - 1
+	//cTxFrom, cTxTo := uint64(0), batchSteps*agg.StepSize()
+	//
+	//domains.SetTxNum(cTxFrom)
+	//ok, bn, err := rawdbv3.TxNums.FindBlockNum(tx, cTxTo-1)
+	//if err == nil && ok {
+	//	domains.SetBlockNum(bn)
+	//} else {
+	//	domains.SetBlockNum(1)
+	//}
+	//
+	//var processed atomic.Uint64
+	//logger.Warn("Begun commitment", "lastStep", lastStep, "batchSize", batchSize, "totalKeys", totalKeys.Load(), "bigBatches", bigBatches)
+	//
+	//sdCtx := state.NewSharedDomainsCommitmentContext(domains, commitment.ModeDirect, commitment.VariantHexPatriciaTrie)
+	//loadKeys := func(k, v []byte, table etl.CurrentTableReader, next etl.LoadNextFunc) error {
+	//	if sdCtx.KeysCount() >= batchSize {
+	//		rh, err := sdCtx.ComputeCommitment(ctx, true, domains.BlockNum(), fmt.Sprintf("applying shard %d", cStep))
+	//		if err != nil {
+	//			return err
+	//		}
+	//		logger.Info("Committing batch",
+	//			"processed", fmt.Sprintf("%dM/%dM (%.2f%%)", processed.Load()/1_000_000, totalKeys.Load()/1_000_000, float64(processed.Load())/float64(totalKeys.Load())*100),
+	//			"intermediate root", fmt.Sprintf("%x", rh))
+	//
+	//		if err = domains.CommitmentInMem(agg, cStep, cTxFrom, cTxTo, logger); err != nil {
+	//			return err
+	//		}
+	//		domains.ClearRam(false)
+	//
+	//		bigBatches--
+	//		if bigBatches == 0 {
+	//			batchSize = smallBatchSize
+	//			batchSteps = 1
+	//		}
+	//
+	//		cStep += batchSteps
+	//		cTxFrom = cTxTo
+	//		cTxTo = cTxFrom + batchSteps*agg.StepSize()
+	//
+	//		domains.SetTxNum(cTxFrom)
+	//		ok, bn, err := rawdbv3.TxNums.FindBlockNum(tx, cTxTo-1)
+	//		if err == nil && ok {
+	//			domains.SetBlockNum(bn)
+	//		}
+	//	}
+	//	processed.Add(1)
+	//	sdCtx.TouchKey(kv.AccountsDomain, string(k), nil)
+	//
+	//	return nil
+	//}
+	//err = collector.Load(nil, "", loadKeys, etl.TransformArgs{Quit: ctx.Done()})
+	//if err != nil {
+	//	return nil, err
+	//}
+	//collector.Close()
+	//
+	//rh, err := sdCtx.ComputeCommitment(ctx, true, domains.BlockNum(), "Finalizing")
+	//if err != nil {
+	//	return nil, err
+	//}
+	//
+	//logger.Info("Commitment has been reevaluated",
+	//	"block", domains.BlockNum(),
+	//	"tx", domains.TxNum(),
+	//	"root", hex.EncodeToString(rh),
+	//	"processed", processed.Load(),
+	//	"total", totalKeys.Load())
+	//
+	//logger.Info("flushing latest step on disk", "step", lastStep)
+	//
+	//cStep++
+	//cTxFrom = cTxTo
+	//cTxTo = cTxFrom + agg.StepSize()
+	//if err = domains.CommitmentInMem(agg, cStep, cTxFrom, cTxTo, logger); err != nil {
+	//	return nil, err
+	//}
+	//
+	//return rh, nil
 }
 
 type blockBorders struct {
