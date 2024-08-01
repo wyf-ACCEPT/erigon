@@ -38,7 +38,7 @@ import (
 	"github.com/erigontech/erigon/core/rawdb"
 )
 
-func setup(t *testing.T) *silkworm.Silkworm {
+func setup(t *testing.T) (*silkworm.Silkworm, kv.RwDB, *types.Block) {
 	defer log.Root().SetHandler(log.Root().GetHandler())
 	log.Root().SetHandler(log.LvlFilterHandler(log.LvlError, log.StderrHandler))
 	dirs := datadir.New(t.TempDir())
@@ -48,7 +48,24 @@ func setup(t *testing.T) *silkworm.Silkworm {
 	silkworm, err := silkworm.New(dirs.DataDir, mdbx.Version(), uint32(num_contexts), log_level)
 	require.NoError(t, err)
 
-	return silkworm
+	db := mdbx2.NewMDBX(log.New()).Path(dirs.DataDir).Exclusive().InMem(dirs.DataDir).Label(kv.ChainDB).MustOpen()
+
+	network := "mainnet"
+
+	genesis := core.GenesisBlockByChainName(network)
+	tx, err := db.BeginRw(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback()
+	_, genesisBlock, err := core.WriteGenesisBlock(tx, genesis, nil, dirs, log.New())
+	require.NoError(t, err)
+	expect := params.GenesisHashByChainName(network)
+	require.NotNil(t, expect, network)
+	require.EqualValues(t, genesisBlock.Hash(), *expect, network)
+	tx.Commit()
+
+	return silkworm, db, genesisBlock
 }
 
 func SampleBlock(parent *types.Header) *types.Block {
@@ -65,77 +82,167 @@ func SampleBlock(parent *types.Header) *types.Block {
 	})
 }
 
+func ForkValidatorTestSettings() silkworm_go.ForkValidatorSettings {
+	return silkworm_go.ForkValidatorSettings{
+		BatchSize:               512 * 1024 * 1024,
+		EtlBufferSize:           256 * 1024 * 1024,
+		SyncLoopThrottleSeconds: 0,
+		StopBeforeSendersStage:  true,
+	}
+}
+
 func TestSilkwormInitialization(t *testing.T) {
-	silkworm := setup(t)
+	silkworm, _, _ := setup(t)
 	require.NotNil(t, silkworm)
 }
 
 func TestSilkwormForkValidatorInitialization(t *testing.T) {
-	silkwormInstance := setup(t)
-	defer log.Root().SetHandler(log.Root().GetHandler())
-	log.Root().SetHandler(log.LvlFilterHandler(log.LvlError, log.StderrHandler))
+	silkwormInstance, db, _ := setup(t)
 
-	dirs := datadir.New(t.TempDir())
-	db := mdbx2.NewMDBX(log.New()).Path(dirs.DataDir).Exclusive().MustOpen()
-
-	err := silkwormInstance.StartForkValidator(db.CHandle())
+	err := silkwormInstance.StartForkValidator(db.CHandle(), ForkValidatorTestSettings())
 	require.NoError(t, err)
 }
 
 func TestSilkwormForkValidatorTermination(t *testing.T) {
-	silkwormInstance := setup(t)
-	defer log.Root().SetHandler(log.Root().GetHandler())
-	log.Root().SetHandler(log.LvlFilterHandler(log.LvlError, log.StderrHandler))
+	silkwormInstance, db, _ := setup(t)
 
-	dirs := datadir.New(t.TempDir())
+	err := silkwormInstance.StartForkValidator(db.CHandle(), ForkValidatorTestSettings())
+	require.NoError(t, err)
 
-	db := mdbx2.NewMDBX(log.New()).Path(dirs.DataDir).MustOpen()
-
-	err := silkwormInstance.StartForkValidator(db.CHandle())
+	err = silkwormInstance.StopForkValidator()
 	require.NoError(t, err)
 }
 
-func TestSilkwormInsertBlock(t *testing.T) {
-	defer log.Root().SetHandler(log.Root().GetHandler())
-	log.Root().SetHandler(log.LvlFilterHandler(log.LvlError, log.StderrHandler))
-	dirs := datadir.New(t.TempDir())
+func TestSilkwormVerifyChainSingleBlock(t *testing.T) {
+	silkwormInstance, db, genesisBlock := setup(t)
 
-	db := mdbx2.NewMDBX(log.New()).Path(dirs.DataDir).Exclusive().InMem(dirs.DataDir).Label(kv.ChainDB).MustOpen()
-
-	network := "mainnet"
-	logger := log.New()
-
-	genesis := core.GenesisBlockByChainName(network)
 	tx, err := db.BeginRw(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer tx.Rollback()
-	_, block, err := core.WriteGenesisBlock(tx, genesis, nil, "", logger)
-	require.NoError(t, err)
-	expect := params.GenesisHashByChainName(network)
-	require.NotNil(t, expect, network)
-	require.EqualValues(t, block.Hash(), *expect, network)
 
-	canon_zero, _ := rawdb.ReadCanonicalHash(tx, 0)
-	chain_conf, _ := rawdb.ReadChainConfig(tx, canon_zero)
-
-	require.NotNil(t, chain_conf, network)
-
-	newBlock := SampleBlock(block.Header())
-	hh := newBlock.Header().Hash()
+	newBlock := SampleBlock(genesisBlock.Header())
 
 	err = rawdb.WriteBlock(tx, newBlock)
 	require.NoError(t, err)
 	tx.Commit()
 
-	logger.Info("Starting silkworm fork validator    ")
-
-	silkwormInstance := setup(t)
-	err2 := silkwormInstance.StartForkValidator(db.CHandle())
+	err2 := silkwormInstance.StartForkValidator(db.CHandle(), ForkValidatorTestSettings())
 	require.NoError(t, err2)
 
-	logger.Info("Verifying chain for block", "hash", hh)
-	err3 := silkwormInstance.VerifyChain(silkworm_go.Hash(hh))
+	err3 := silkwormInstance.VerifyChain(silkworm_go.Hash(newBlock.Header().Hash()))
 	require.NoError(t, err3)
+}
+
+func TestSilkwormForkChoiceUpdateSingleBlock(t *testing.T) {
+	silkwormInstance, db, genesisBlock := setup(t)
+
+	tx, err := db.BeginRw(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback()
+
+	newBlock := SampleBlock(genesisBlock.Header())
+
+	err = rawdb.WriteBlock(tx, newBlock)
+	require.NoError(t, err)
+	tx.Commit()
+
+	err = silkwormInstance.StartForkValidator(db.CHandle(), ForkValidatorTestSettings())
+	require.NoError(t, err)
+
+	err = silkwormInstance.VerifyChain(silkworm_go.Hash(newBlock.Header().Hash()))
+	require.NoError(t, err)
+
+	err = silkwormInstance.ForkChoiceUpdate(silkworm_go.Hash(newBlock.Header().Hash()), silkworm_go.Hash{}, silkworm_go.Hash{})
+	require.NoError(t, err)
+}
+
+func TestSilkwormVerifyChainTwoBlocks(t *testing.T) {
+	silkwormInstance, db, genesisBlock := setup(t)
+
+	tx, err := db.BeginRw(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback()
+
+	newBlock1 := SampleBlock(genesisBlock.Header())
+	err = rawdb.WriteBlock(tx, newBlock1)
+	require.NoError(t, err)
+
+	newBlock2 := SampleBlock(newBlock1.Header())
+	err = rawdb.WriteBlock(tx, newBlock2)
+	require.NoError(t, err)
+
+	tx.Commit()
+
+	err = silkwormInstance.StartForkValidator(db.CHandle(), ForkValidatorTestSettings())
+	require.NoError(t, err)
+
+	err = silkwormInstance.VerifyChain(silkworm_go.Hash(newBlock2.Header().Hash()))
+	require.NoError(t, err)
+
+	err = silkwormInstance.VerifyChain(silkworm_go.Hash(newBlock1.Header().Hash()))
+	require.NoError(t, err)
+}
+
+func TestSilkwormVerifyTwoChains(t *testing.T) {
+	silkwormInstance, db, genesisBlock := setup(t)
+
+	tx, err := db.BeginRw(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback()
+
+	newBlock1 := SampleBlock(genesisBlock.Header())
+	err = rawdb.WriteBlock(tx, newBlock1)
+	require.NoError(t, err)
+
+	newBlock2 := SampleBlock(genesisBlock.Header())
+	err = rawdb.WriteBlock(tx, newBlock2)
+	require.NoError(t, err)
+
+	tx.Commit()
+
+	err = silkwormInstance.StartForkValidator(db.CHandle(), ForkValidatorTestSettings())
+	require.NoError(t, err)
+
+	err = silkwormInstance.VerifyChain(silkworm_go.Hash(newBlock1.Header().Hash()))
+	require.NoError(t, err)
+
+	err = silkwormInstance.VerifyChain(silkworm_go.Hash(newBlock2.Header().Hash()))
+	require.NoError(t, err)
+}
+
+func TestSilkwormForkChoiceUpdateTwoChains(t *testing.T) {
+	silkwormInstance, db, genesisBlock := setup(t)
+
+	tx, err := db.BeginRw(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback()
+
+	newBlock1 := SampleBlock(genesisBlock.Header())
+	err = rawdb.WriteBlock(tx, newBlock1)
+	require.NoError(t, err)
+
+	newBlock2 := SampleBlock(genesisBlock.Header())
+	err = rawdb.WriteBlock(tx, newBlock2)
+	require.NoError(t, err)
+
+	tx.Commit()
+
+	err = silkwormInstance.StartForkValidator(db.CHandle(), ForkValidatorTestSettings())
+	require.NoError(t, err)
+
+	err = silkwormInstance.VerifyChain(silkworm_go.Hash(newBlock1.Header().Hash()))
+	require.NoError(t, err)
+
+	err = silkwormInstance.ForkChoiceUpdate(silkworm_go.Hash(newBlock2.Header().Hash()), silkworm_go.Hash(newBlock2.Header().Hash()), silkworm_go.Hash(newBlock2.Header().Hash()))
+	require.NoError(t, err)
 }
