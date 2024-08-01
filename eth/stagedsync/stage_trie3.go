@@ -26,7 +26,6 @@ import (
 	"github.com/erigontech/erigon-lib/log/v3"
 	"github.com/erigontech/erigon/turbo/stages/headerdownload"
 
-	"github.com/erigontech/erigon-lib/commitment"
 	"github.com/erigontech/erigon-lib/kv/rawdbv3"
 	"github.com/erigontech/erigon/common/math"
 	"github.com/erigontech/erigon/turbo/services"
@@ -46,6 +45,8 @@ func collectAndComputeCommitment(ctx context.Context, db kv.RwDB, tx kv.RwTx, ag
 	defer domains.Close()
 	ac := domains.AggTx().(*state.AggregatorRoTx)
 
+	toTxNum = ac.EndTxNumNoCommitment()
+
 	// has to set this value because it will be used during domain.Commit() call.
 	// If we do not, txNum of block beginning will be used, which will cause invalid txNum on restart following commitment rebuilding
 	blockFound, blockNum, err := rawdbv3.TxNums.FindBlockNum(tx, toTxNum)
@@ -53,19 +54,18 @@ func collectAndComputeCommitment(ctx context.Context, db kv.RwDB, tx kv.RwTx, ag
 		return nil, err
 	}
 	if !blockFound {
-		return nil, fmt.Errorf("block not found for txnum %d", toTxNum-1)
+		return nil, fmt.Errorf("block not found for txnum %d", toTxNum)
 	}
 	logger := log.New()
 
 	logger.Info("Rebuilding commitment", "block", blockNum, "txnum", toTxNum, "domainsBlockNum", domains.BlockNum(),
 		"domainsTxNum", domains.TxNum(), "domainsEndTxNum", ac.EndTxNumNoCommitment())
 
-	domains.SetTxNum(toTxNum)
+	domains.SetTxNum(ac.EndTxNumNoCommitment())
 	domains.SetBlockNum(blockNum)
 	step := toTxNum / agg.StepSize()
 
-	sdCtx := state.NewSharedDomainsCommitmentContext(domains, commitment.ModeDirect, commitment.VariantHexPatriciaTrie)
-	rh, err := sdCtx.ComputeCommitment(ctx, true, domains.BlockNum(), "Finalizing")
+	rh, err := domains.ComputeCommitment(ctx, true, domains.BlockNum(), "Finalizing")
 	if err != nil {
 		return nil, err
 	}
@@ -75,8 +75,6 @@ func collectAndComputeCommitment(ctx context.Context, db kv.RwDB, tx kv.RwTx, ag
 		"tx", domains.TxNum(),
 		"root", hex.EncodeToString(rh),
 	)
-	//"processed", processed.Load(),
-	//"total", totalKeys.Load())
 
 	logger.Info("flushing latest step on disk", "step", step)
 
@@ -84,7 +82,6 @@ func collectAndComputeCommitment(ctx context.Context, db kv.RwDB, tx kv.RwTx, ag
 		return nil, err
 	}
 	return nil, nil
-	//
 	//logger.Info("Collecting account/storage keys", "block", domains.BlockNum(), "txnum", toTxNum)
 	//collector := etl.NewCollector("CollectKeys", tmpDir, etl.NewSortableBuffer(etl.BufferOptimalSize/2), logger)
 	//defer collector.Close()
