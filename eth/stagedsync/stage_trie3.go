@@ -44,7 +44,7 @@ func collectAndComputeCommitment(ctx context.Context, db kv.RwDB, tx kv.RwTx, ag
 		return nil, err
 	}
 	defer domains.Close()
-	//ac := domains.AggTx().(*state.AggregatorRoTx)
+	ac := domains.AggTx().(*state.AggregatorRoTx)
 
 	// has to set this value because it will be used during domain.Commit() call.
 	// If we do not, txNum of block beginning will be used, which will cause invalid txNum on restart following commitment rebuilding
@@ -55,9 +55,14 @@ func collectAndComputeCommitment(ctx context.Context, db kv.RwDB, tx kv.RwTx, ag
 	if !blockFound {
 		return nil, fmt.Errorf("block not found for txnum %d", toTxNum-1)
 	}
-	domains.SetTxNum(toTxNum - 1)
+	logger := log.New()
+
+	logger.Info("Rebuilding commitment", "block", blockNum, "txnum", toTxNum, "domainsBlockNum", domains.BlockNum(),
+		"domainsTxNum", domains.TxNum(), "domainsEndTxNum", ac.EndTxNumNoCommitment())
+
+	domains.SetTxNum(toTxNum)
 	domains.SetBlockNum(blockNum)
-	step := (toTxNum - 1) / agg.StepSize()
+	step := toTxNum / agg.StepSize()
 
 	sdCtx := state.NewSharedDomainsCommitmentContext(domains, commitment.ModeDirect, commitment.VariantHexPatriciaTrie)
 	rh, err := sdCtx.ComputeCommitment(ctx, true, domains.BlockNum(), "Finalizing")
@@ -65,7 +70,6 @@ func collectAndComputeCommitment(ctx context.Context, db kv.RwDB, tx kv.RwTx, ag
 		return nil, err
 	}
 
-	logger := log.New()
 	logger.Info("Commitment has been reevaluated",
 		"block", domains.BlockNum(),
 		"tx", domains.TxNum(),
