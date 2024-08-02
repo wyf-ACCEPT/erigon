@@ -1205,17 +1205,22 @@ func (s *Ethereum) StartMining(ctx context.Context, db kv.RwDB, stateDiffClient 
 					hasWork = true
 
 				case <-s.notifyMiningAboutNewTxs:
+					log.Warn("[dbg] notifyMiningAboutNewTxs")
+
 					// Skip mining based on new tx notif for bor consensus
 					hasWork = s.chainConfig.Bor == nil
 					if hasWork {
 						s.logger.Debug("Start mining based on txpool notif")
 					}
 				case <-mineEvery.C:
+					log.Warn("[dbg] mineEvery")
 					if !(working || waiting.Load()) {
 						s.logger.Debug("Start mining based on miner.recommit", "duration", miner.MiningConfig.Recommit)
 					}
 					hasWork = !(working || waiting.Load())
 				case err := <-errc:
+					log.Warn("[dbg] errc", "err", err)
+
 					working = false
 					hasWork = false
 					if errors.Is(err, libcommon.ErrStopped) {
