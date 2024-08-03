@@ -17,6 +17,7 @@
 package types
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"math/big"
@@ -25,13 +26,13 @@ import (
 	gokzg4844 "github.com/crate-crypto/go-kzg-4844"
 	"github.com/holiman/uint256"
 
-	"github.com/ledgerwatch/erigon-lib/chain"
-	libcommon "github.com/ledgerwatch/erigon-lib/common"
-	"github.com/ledgerwatch/erigon-lib/common/fixedgas"
-	libkzg "github.com/ledgerwatch/erigon-lib/crypto/kzg"
-	types2 "github.com/ledgerwatch/erigon-lib/types"
+	"github.com/erigontech/erigon-lib/chain"
+	libcommon "github.com/erigontech/erigon-lib/common"
+	"github.com/erigontech/erigon-lib/common/fixedgas"
+	libkzg "github.com/erigontech/erigon-lib/crypto/kzg"
+	types2 "github.com/erigontech/erigon-lib/types"
 
-	"github.com/ledgerwatch/erigon/rlp"
+	"github.com/erigontech/erigon/rlp"
 )
 
 const (
@@ -275,7 +276,7 @@ func (txw *BlobTxWrapper) ValidateBlobTransactionWrapper() error {
 	blobTx := txw.Tx
 	l1 := len(blobTx.BlobVersionedHashes)
 	if l1 == 0 {
-		return fmt.Errorf("a blob txn must contain at least one blob")
+		return errors.New("a blob txn must contain at least one blob")
 	}
 	l2 := len(txw.Commitments)
 	l3 := len(txw.Blobs)
@@ -327,7 +328,7 @@ func (txw *BlobTxWrapper) WithSignature(signer Signer, sig []byte) (Transaction,
 	return txw.Tx.WithSignature(signer, sig)
 }
 
-func (txw *BlobTxWrapper) FakeSign(address libcommon.Address) (Transaction, error) {
+func (txw *BlobTxWrapper) FakeSign(address libcommon.Address) Transaction {
 	return txw.Tx.FakeSign(address)
 }
 
@@ -347,7 +348,7 @@ func (txw *BlobTxWrapper) RawSignatureValues() (*uint256.Int, *uint256.Int, *uin
 	return txw.Tx.RawSignatureValues()
 }
 
-func (txw *BlobTxWrapper) cashedSender() (libcommon.Address, bool) { return txw.Tx.cashedSender() }
+func (txw *BlobTxWrapper) cachedSender() (libcommon.Address, bool) { return txw.Tx.cachedSender() }
 
 func (txw *BlobTxWrapper) Sender(s Signer) (libcommon.Address, error) { return txw.Tx.Sender(s) }
 

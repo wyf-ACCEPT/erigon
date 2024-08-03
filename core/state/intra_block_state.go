@@ -21,20 +21,22 @@
 package state
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 
 	"github.com/holiman/uint256"
-	"github.com/ledgerwatch/erigon-lib/chain"
-	libcommon "github.com/ledgerwatch/erigon-lib/common"
-	types2 "github.com/ledgerwatch/erigon-lib/types"
-	"github.com/ledgerwatch/erigon/common/u256"
-	"github.com/ledgerwatch/erigon/core/tracing"
-	"github.com/ledgerwatch/erigon/core/types"
-	"github.com/ledgerwatch/erigon/core/types/accounts"
-	"github.com/ledgerwatch/erigon/core/vm/evmtypes"
-	"github.com/ledgerwatch/erigon/crypto"
-	"github.com/ledgerwatch/erigon/turbo/trie"
+
+	"github.com/erigontech/erigon-lib/chain"
+	libcommon "github.com/erigontech/erigon-lib/common"
+	types2 "github.com/erigontech/erigon-lib/types"
+	"github.com/erigontech/erigon/common/u256"
+	"github.com/erigontech/erigon/core/tracing"
+	"github.com/erigontech/erigon/core/types"
+	"github.com/erigontech/erigon/core/types/accounts"
+	"github.com/erigontech/erigon/core/vm/evmtypes"
+	"github.com/erigontech/erigon/crypto"
+	"github.com/erigontech/erigon/turbo/trie"
 )
 
 var _ evmtypes.IntraBlockState = new(IntraBlockState) // compile-time interface-check
@@ -194,7 +196,7 @@ func (sdb *IntraBlockState) AddRefund(gas uint64) {
 func (sdb *IntraBlockState) SubRefund(gas uint64) {
 	sdb.journal.append(refundChange{prev: sdb.refund})
 	if gas > sdb.refund {
-		sdb.setErrorUnsafe(fmt.Errorf("refund counter below zero"))
+		sdb.setErrorUnsafe(errors.New("refund counter below zero"))
 	}
 	sdb.refund -= gas
 }
@@ -803,10 +805,9 @@ func (sdb *IntraBlockState) clearJournalAndRefund() {
 // Cancun fork:
 // - Reset transient storage (EIP-1153)
 func (sdb *IntraBlockState) Prepare(rules *chain.Rules, sender, coinbase libcommon.Address, dst *libcommon.Address,
-	precompiles []libcommon.Address, list types2.AccessList,
-) {
+	precompiles []libcommon.Address, list types2.AccessList, authorities []libcommon.Address) {
 	if sdb.trace {
-		fmt.Printf("ibs.Prepare %x, %x, %x, %x, %v, %v\n", sender, coinbase, dst, precompiles, list, rules)
+		fmt.Printf("ibs.Prepare %x, %x, %x, %x, %v, %v, %v\n", sender, coinbase, dst, precompiles, list, rules, authorities)
 	}
 	if rules.IsBerlin {
 		// Clear out any leftover from previous executions
@@ -831,6 +832,11 @@ func (sdb *IntraBlockState) Prepare(rules *chain.Rules, sender, coinbase libcomm
 		}
 		if rules.IsShanghai { // EIP-3651: warm coinbase
 			al.AddAddress(coinbase)
+		}
+	}
+	if rules.IsPrague {
+		for _, addr := range authorities {
+			sdb.accessList.AddAddress(addr)
 		}
 	}
 	// Reset transient storage at the beginning of transaction execution

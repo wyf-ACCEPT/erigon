@@ -22,19 +22,20 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ledgerwatch/erigon-lib/kv"
-	"github.com/ledgerwatch/erigon-lib/log/v3"
-	"github.com/ledgerwatch/erigon/cl/beacon/beaconevents"
-	"github.com/ledgerwatch/erigon/cl/beacon/synced_data"
-	"github.com/ledgerwatch/erigon/cl/clparams"
-	"github.com/ledgerwatch/erigon/cl/cltypes"
-	"github.com/ledgerwatch/erigon/cl/cltypes/solid"
-	"github.com/ledgerwatch/erigon/cl/persistence/beacon_indicies"
-	"github.com/ledgerwatch/erigon/cl/phase1/core/state/lru"
-	"github.com/ledgerwatch/erigon/cl/phase1/forkchoice"
-	"github.com/ledgerwatch/erigon/cl/utils/eth_clock"
+	"github.com/erigontech/erigon-lib/kv"
+	"github.com/erigontech/erigon-lib/log/v3"
+	"github.com/erigontech/erigon/cl/beacon/beaconevents"
+	"github.com/erigontech/erigon/cl/beacon/synced_data"
+	"github.com/erigontech/erigon/cl/clparams"
+	"github.com/erigontech/erigon/cl/cltypes"
+	"github.com/erigontech/erigon/cl/cltypes/solid"
+	"github.com/erigontech/erigon/cl/monitor"
+	"github.com/erigontech/erigon/cl/persistence/beacon_indicies"
+	"github.com/erigontech/erigon/cl/phase1/core/state/lru"
+	"github.com/erigontech/erigon/cl/phase1/forkchoice"
+	"github.com/erigontech/erigon/cl/utils/eth_clock"
 
-	libcommon "github.com/ledgerwatch/erigon-lib/common"
+	libcommon "github.com/erigontech/erigon-lib/common"
 )
 
 type proposerIndexAndSlot struct {
@@ -60,7 +61,8 @@ type blockService struct {
 	emitter                          *beaconevents.Emitters
 	blocksScheduledForLaterExecution sync.Map
 	// store the block in db
-	db kv.RwDB
+	db               kv.RwDB
+	validatorMonitor monitor.ValidatorMonitor
 }
 
 // NewBlockService creates a new block service
@@ -72,19 +74,21 @@ func NewBlockService(
 	ethClock eth_clock.EthereumClock,
 	beaconCfg *clparams.BeaconChainConfig,
 	emitter *beaconevents.Emitters,
+	validatorMonitor monitor.ValidatorMonitor,
 ) Service[*cltypes.SignedBeaconBlock] {
 	seenBlocksCache, err := lru.New[proposerIndexAndSlot, struct{}]("seenblocks", seenBlockCacheSize)
 	if err != nil {
 		panic(err)
 	}
 	b := &blockService{
-		forkchoiceStore: forkchoiceStore,
-		syncedData:      syncedData,
-		ethClock:        ethClock,
-		beaconCfg:       beaconCfg,
-		seenBlocksCache: seenBlocksCache,
-		emitter:         emitter,
-		db:              db,
+		forkchoiceStore:  forkchoiceStore,
+		syncedData:       syncedData,
+		ethClock:         ethClock,
+		beaconCfg:        beaconCfg,
+		seenBlocksCache:  seenBlocksCache,
+		emitter:          emitter,
+		db:               db,
+		validatorMonitor: validatorMonitor,
 	}
 	go b.loop(ctx)
 	return b
@@ -169,7 +173,7 @@ func (b *blockService) publishBlockEvent(block *cltypes.SignedBeaconBlock) {
 
 // scheduleBlockForLaterProcessing schedules a block for later processing
 func (b *blockService) scheduleBlockForLaterProcessing(block *cltypes.SignedBeaconBlock) {
-	log.Debug("Block scheduled for later processing", "block", block.Block.Slot)
+	log.Debug("Block scheduled for later processing", "slot", block.Block.Slot, "block", block.Block.Body.ExecutionPayload.BlockNumber)
 	blockRoot, err := block.Block.HashSSZ()
 	if err != nil {
 		log.Debug("Failed to hash block", "block", block, "error", err)
@@ -193,10 +197,13 @@ func (b *blockService) processAndStoreBlock(ctx context.Context, block *cltypes.
 		return err
 	}
 	go b.importBlockOperations(block)
-	return b.db.Update(ctx, func(tx kv.RwTx) error {
+	if err := b.db.Update(ctx, func(tx kv.RwTx) error {
 		return beacon_indicies.WriteHighestFinalized(tx, b.forkchoiceStore.FinalizedSlot())
-	})
-
+	}); err != nil {
+		return err
+	}
+	b.validatorMonitor.OnNewBlock(block.Block)
+	return nil
 }
 
 // importBlockOperations imports block operations in parallel
