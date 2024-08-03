@@ -24,7 +24,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/erigontech/erigon-lib/common/datadir"
 	"io"
 	"math/big"
 	"os"
@@ -32,6 +31,8 @@ import (
 	"runtime/pprof"
 	"testing"
 	"time"
+
+	"github.com/erigontech/erigon-lib/common/datadir"
 
 	"github.com/holiman/uint256"
 	"github.com/urfave/cli/v2"

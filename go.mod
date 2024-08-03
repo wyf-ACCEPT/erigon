@@ -4,7 +4,7 @@ go 1.21.5
 
 require (
 	github.com/erigontech/erigonwatch v0.0.0-20240718131902-b6576bde1116
-	github.com/erigontech/mdbx-go v0.38.4
+	github.com/erigontech/mdbx-go v0.39.0-alpha.0.20240803043957-9e6df5438d95
 	github.com/erigontech/secp256k1 v1.1.0
 	github.com/erigontech/silkworm-go v0.18.0
 )

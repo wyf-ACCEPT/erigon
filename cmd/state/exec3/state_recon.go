@@ -20,8 +20,9 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
-	"github.com/erigontech/erigon-lib/common/datadir"
 	"sync"
+
+	"github.com/erigontech/erigon-lib/common/datadir"
 
 	"github.com/RoaringBitmap/roaring/roaring64"
 
