@@ -19,10 +19,10 @@ package stagedsync
 import (
 	"context"
 	"fmt"
+	"github.com/erigontech/erigon-lib/wrap"
 
 	"github.com/erigontech/erigon-lib/log/v3"
 
-	"github.com/erigontech/erigon-lib/kv"
 	"github.com/erigontech/erigon/core/types"
 	"github.com/erigontech/erigon/dataflow"
 	"github.com/erigontech/erigon/eth/stagedsync/stages"
@@ -34,9 +34,10 @@ func MiningBorHeimdallForward(
 	cfg BorHeimdallCfg,
 	stageStage *StageState,
 	unwinder Unwinder,
-	tx kv.RwTx,
+	txc wrap.TxContainer,
 	logger log.Logger,
 ) error {
+	tx := txc.Tx
 	if cfg.borConfig == nil || cfg.heimdallClient == nil {
 		return nil
 	}
@@ -64,7 +65,7 @@ func MiningBorHeimdallForward(
 			"err", err,
 		)
 		dataflow.HeaderDownloadStates.AddChange(headerNum, dataflow.HeaderInvalidated)
-		if err := unwinder.UnwindTo(headerNum-1, ForkReset(hash), tx); err != nil {
+		if err := unwinder.UnwindTo(headerNum-1, ForkReset(hash), txc.Doms); err != nil {
 			return err
 		}
 		return fmt.Errorf("mining on a wrong fork %d:%x", headerNum, hash)

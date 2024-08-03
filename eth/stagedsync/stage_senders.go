@@ -21,6 +21,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/erigontech/erigon-lib/wrap"
 	"math"
 	"sync"
 	"time"
@@ -84,10 +85,11 @@ func StageSendersCfg(db kv.RwDB, chainCfg *chain.Config, syncCfg ethconfig.Sync,
 	}
 }
 
-func SpawnRecoverSendersStage(cfg SendersCfg, s *StageState, u Unwinder, tx kv.RwTx, toBlock uint64, ctx context.Context, logger log.Logger) error {
+func SpawnRecoverSendersStage(cfg SendersCfg, s *StageState, u Unwinder, txc wrap.TxContainer, toBlock uint64, ctx context.Context, logger log.Logger) error {
 	if cfg.blockReader.FreezingCfg().Enabled && s.BlockNumber < cfg.blockReader.FrozenBlocks() {
 		s.BlockNumber = cfg.blockReader.FrozenBlocks()
 	}
+	tx := txc.Tx
 
 	quitCh := ctx.Done()
 	useExternalTx := tx != nil
@@ -287,7 +289,7 @@ Loop:
 		}
 
 		if to > s.BlockNumber {
-			if err := u.UnwindTo(minBlockNum-1, BadBlock(minBlockHash, minBlockErr), tx); err != nil {
+			if err := u.UnwindTo(minBlockNum-1, BadBlock(minBlockHash, minBlockErr), txc.Doms); err != nil {
 				return err
 			}
 		}

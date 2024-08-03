@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/erigontech/erigon-lib/wrap"
 	"math/big"
 	"slices"
 	"time"
@@ -143,22 +144,22 @@ type PolygonSyncStageCfg struct {
 
 func SpawnPolygonSyncStage(
 	ctx context.Context,
-	tx kv.RwTx,
+	txc wrap.TxContainer,
 	stageState *StageState,
 	unwinder Unwinder,
 	cfg PolygonSyncStageCfg,
 ) error {
-	useExternalTx := tx != nil
+	useExternalTx := txc.Tx != nil
 	if !useExternalTx {
 		var err error
-		tx, err = cfg.db.BeginRw(ctx)
+		txc.Tx, err = cfg.db.BeginRw(ctx)
 		if err != nil {
 			return err
 		}
-		defer tx.Rollback()
+		defer txc.Tx.Rollback()
 	}
 
-	if err := cfg.service.Run(ctx, tx, stageState, unwinder); err != nil {
+	if err := cfg.service.Run(ctx, txc, stageState, unwinder); err != nil {
 		return err
 	}
 
@@ -166,7 +167,7 @@ func SpawnPolygonSyncStage(
 		return nil
 	}
 
-	if err := tx.Commit(); err != nil {
+	if err := txc.Tx.Commit(); err != nil {
 		return err
 	}
 
@@ -184,7 +185,7 @@ func PrunePolygonSyncStage() error {
 }
 
 type polygonSyncStageTxAction struct {
-	apply func(tx kv.RwTx) error
+	apply func(txc wrap.TxContainer) error
 }
 
 type polygonSyncStageService struct {
@@ -202,7 +203,7 @@ type polygonSyncStageService struct {
 	bgComponentsErr chan error
 }
 
-func (s *polygonSyncStageService) Run(ctx context.Context, tx kv.RwTx, stageState *StageState, unwinder Unwinder) error {
+func (s *polygonSyncStageService) Run(ctx context.Context, txc wrap.TxContainer, stageState *StageState, unwinder Unwinder) error {
 	s.appendLogPrefix = newAppendLogPrefix(stageState.LogPrefix())
 	s.executionEngine.appendLogPrefix = s.appendLogPrefix
 	s.executionEngine.stageState = stageState
@@ -238,7 +239,7 @@ func (s *polygonSyncStageService) Run(ctx context.Context, tx kv.RwTx, stageStat
 			// use ErrStopped to exit the stage loop
 			return fmt.Errorf("%w: %w", common.ErrStopped, err)
 		case txAction := <-s.txActionStream:
-			err := txAction.apply(tx)
+			err := txAction.apply(txc)
 			if errors.Is(err, updateForkChoiceSuccessErr) {
 				return nil
 			}
@@ -343,8 +344,8 @@ func (s polygonSyncStageCheckpointStore) GetLastEntityId(ctx context.Context) (u
 		err error
 	}
 
-	r, err := awaitTxAction(ctx, s.txActionStream, func(tx kv.RwTx, responseStream chan<- response) error {
-		id, ok, err := s.checkpointReader.LastCheckpointId(ctx, tx)
+	r, err := awaitTxAction(ctx, s.txActionStream, func(txc wrap.TxContainer, responseStream chan<- response) error {
+		id, ok, err := s.checkpointReader.LastCheckpointId(ctx, txc.Tx)
 		responseStream <- response{id: id, ok: ok, err: err}
 		return nil
 	})
@@ -373,8 +374,8 @@ func (s polygonSyncStageCheckpointStore) GetEntity(ctx context.Context, id uint6
 		err error
 	}
 
-	r, err := awaitTxAction(ctx, s.txActionStream, func(tx kv.RwTx, responseStream chan<- response) error {
-		v, err := s.checkpointReader.Checkpoint(ctx, tx, id)
+	r, err := awaitTxAction(ctx, s.txActionStream, func(txc wrap.TxContainer, responseStream chan<- response) error {
+		v, err := s.checkpointReader.Checkpoint(ctx, txc.Tx, id)
 		responseStream <- response{v: v, err: err}
 		return nil
 	})
@@ -409,8 +410,8 @@ func (s polygonSyncStageCheckpointStore) PutEntity(ctx context.Context, id uint6
 		err error
 	}
 
-	r, err := awaitTxAction(ctx, s.txActionStream, func(tx kv.RwTx, responseStream chan<- response) error {
-		responseStream <- response{err: tx.Put(kv.BorCheckpoints, k[:], v)}
+	r, err := awaitTxAction(ctx, s.txActionStream, func(txc wrap.TxContainer, responseStream chan<- response) error {
+		responseStream <- response{err: txc.Tx.Put(kv.BorCheckpoints, k[:], v)}
 		return nil
 	})
 	if err != nil {
@@ -426,9 +427,9 @@ func (s polygonSyncStageCheckpointStore) RangeFromBlockNum(ctx context.Context, 
 		err    error
 	}
 
-	r, err := awaitTxAction(ctx, s.txActionStream, func(tx kv.RwTx, responseStream chan<- response) error {
+	r, err := awaitTxAction(ctx, s.txActionStream, func(txc wrap.TxContainer, responseStream chan<- response) error {
 		makeEntity := func() *heimdall.Checkpoint { return &heimdall.Checkpoint{} }
-		r, err := blockRangeEntitiesFromBlockNum(tx, kv.BorCheckpoints, makeEntity, blockNum)
+		r, err := blockRangeEntitiesFromBlockNum(txc.Tx, kv.BorCheckpoints, makeEntity, blockNum)
 		responseStream <- response{result: r, err: err}
 		return nil
 	})
@@ -459,8 +460,8 @@ func (s polygonSyncStageMilestoneStore) GetLastEntityId(ctx context.Context) (ui
 		err error
 	}
 
-	r, err := awaitTxAction(ctx, s.txActionStream, func(tx kv.RwTx, responseStream chan<- response) error {
-		id, ok, err := s.milestoneReader.LastMilestoneId(ctx, tx)
+	r, err := awaitTxAction(ctx, s.txActionStream, func(txc wrap.TxContainer, responseStream chan<- response) error {
+		id, ok, err := s.milestoneReader.LastMilestoneId(ctx, txc.Tx)
 		responseStream <- response{id: id, ok: ok, err: err}
 		return nil
 	})
@@ -489,8 +490,8 @@ func (s polygonSyncStageMilestoneStore) GetEntity(ctx context.Context, id uint64
 		err error
 	}
 
-	r, err := awaitTxAction(ctx, s.txActionStream, func(tx kv.RwTx, responseStream chan<- response) error {
-		v, err := s.milestoneReader.Milestone(ctx, tx, id)
+	r, err := awaitTxAction(ctx, s.txActionStream, func(txc wrap.TxContainer, responseStream chan<- response) error {
+		v, err := s.milestoneReader.Milestone(ctx, txc.Tx, id)
 		responseStream <- response{v: v, err: err}
 		return nil
 	})
@@ -523,8 +524,8 @@ func (s polygonSyncStageMilestoneStore) PutEntity(ctx context.Context, id uint64
 		err error
 	}
 
-	r, err := awaitTxAction(ctx, s.txActionStream, func(tx kv.RwTx, responseStream chan<- response) error {
-		responseStream <- response{err: tx.Put(kv.BorMilestones, k[:], v)}
+	r, err := awaitTxAction(ctx, s.txActionStream, func(txc wrap.TxContainer, responseStream chan<- response) error {
+		responseStream <- response{err: txc.Tx.Put(kv.BorMilestones, k[:], v)}
 		return nil
 	})
 	if err != nil {
@@ -540,9 +541,9 @@ func (s polygonSyncStageMilestoneStore) RangeFromBlockNum(ctx context.Context, b
 		err    error
 	}
 
-	r, err := awaitTxAction(ctx, s.txActionStream, func(tx kv.RwTx, responseStream chan<- response) error {
+	r, err := awaitTxAction(ctx, s.txActionStream, func(txc wrap.TxContainer, responseStream chan<- response) error {
 		makeEntity := func() *heimdall.Milestone { return &heimdall.Milestone{} }
-		r, err := blockRangeEntitiesFromBlockNum(tx, kv.BorMilestones, makeEntity, blockNum)
+		r, err := blockRangeEntitiesFromBlockNum(txc.Tx, kv.BorMilestones, makeEntity, blockNum)
 		responseStream <- response{result: r, err: err}
 		return nil
 	})
@@ -573,8 +574,8 @@ func (s polygonSyncStageSpanStore) GetLastEntityId(ctx context.Context) (id uint
 		err error
 	}
 
-	r, err := awaitTxAction(ctx, s.txActionStream, func(tx kv.RwTx, responseStream chan<- response) error {
-		id, ok, err := s.spanReader.LastSpanId(ctx, tx)
+	r, err := awaitTxAction(ctx, s.txActionStream, func(txc wrap.TxContainer, responseStream chan<- response) error {
+		id, ok, err := s.spanReader.LastSpanId(ctx, txc.Tx)
 		responseStream <- response{id: id, ok: ok, err: err}
 		return nil
 	})
@@ -603,8 +604,8 @@ func (s polygonSyncStageSpanStore) GetEntity(ctx context.Context, id uint64) (*h
 		err error
 	}
 
-	r, err := awaitTxAction(ctx, s.txActionStream, func(tx kv.RwTx, responseStream chan<- response) error {
-		v, err := s.spanReader.Span(ctx, tx, id)
+	r, err := awaitTxAction(ctx, s.txActionStream, func(txc wrap.TxContainer, responseStream chan<- response) error {
+		v, err := s.spanReader.Span(ctx, txc.Tx, id)
 		responseStream <- response{v: v, err: err}
 		return nil
 	})
@@ -637,8 +638,8 @@ func (s polygonSyncStageSpanStore) PutEntity(ctx context.Context, id uint64, ent
 		err error
 	}
 
-	r, err := awaitTxAction(ctx, s.txActionStream, func(tx kv.RwTx, responseStream chan<- response) error {
-		responseStream <- response{err: tx.Put(kv.BorSpans, k[:], v)}
+	r, err := awaitTxAction(ctx, s.txActionStream, func(txc wrap.TxContainer, responseStream chan<- response) error {
+		responseStream <- response{err: txc.Tx.Put(kv.BorSpans, k[:], v)}
 		return nil
 	})
 	if err != nil {
@@ -654,9 +655,9 @@ func (s polygonSyncStageSpanStore) RangeFromBlockNum(ctx context.Context, blockN
 		err    error
 	}
 
-	r, err := awaitTxAction(ctx, s.txActionStream, func(tx kv.RwTx, responseStream chan<- response) error {
+	r, err := awaitTxAction(ctx, s.txActionStream, func(txc wrap.TxContainer, responseStream chan<- response) error {
 		makeEntity := func() *heimdall.Span { return &heimdall.Span{} }
-		r, err := blockRangeEntitiesFromBlockNum(tx, kv.BorSpans, makeEntity, blockNum)
+		r, err := blockRangeEntitiesFromBlockNum(txc.Tx, kv.BorSpans, makeEntity, blockNum)
 		responseStream <- response{result: r, err: err}
 		return nil
 	})
@@ -728,8 +729,8 @@ func (e *polygonSyncStageExecutionEngine) InsertBlocks(ctx context.Context, bloc
 		err error
 	}
 
-	r, err := awaitTxAction(ctx, e.txActionStream, func(tx kv.RwTx, responseStream chan<- response) error {
-		responseStream <- response{err: e.insertBlocks(blocks, tx)}
+	r, err := awaitTxAction(ctx, e.txActionStream, func(txc wrap.TxContainer, responseStream chan<- response) error {
+		responseStream <- response{err: e.insertBlocks(blocks, txc.Tx)}
 		return nil
 	})
 	if err != nil {
@@ -787,8 +788,8 @@ func (e *polygonSyncStageExecutionEngine) UpdateForkChoice(ctx context.Context, 
 		err error
 	}
 
-	r, err := awaitTxAction(ctx, e.txActionStream, func(tx kv.RwTx, responseStream chan<- response) error {
-		err := e.updateForkChoice(ctx, tx, tip)
+	r, err := awaitTxAction(ctx, e.txActionStream, func(txc wrap.TxContainer, responseStream chan<- response) error {
+		err := e.updateForkChoice(ctx, txc, tip)
 		responseStream <- response{err: err}
 		if err == nil {
 			return updateForkChoiceSuccessErr
@@ -802,7 +803,8 @@ func (e *polygonSyncStageExecutionEngine) UpdateForkChoice(ctx context.Context, 
 	return r.err
 }
 
-func (e *polygonSyncStageExecutionEngine) updateForkChoice(ctx context.Context, tx kv.RwTx, tip *types.Header) error {
+func (e *polygonSyncStageExecutionEngine) updateForkChoice(ctx context.Context, txc wrap.TxContainer, tip *types.Header) error {
+	tx := txc.Tx
 	tipBlockNum := tip.Number.Uint64()
 	tipHash := tip.Hash()
 
@@ -820,7 +822,7 @@ func (e *polygonSyncStageExecutionEngine) updateForkChoice(ctx context.Context, 
 	if len(badNodes) > 0 {
 		badNode := badNodes[len(badNodes)-1]
 		e.cachedForkChoice = tip
-		return e.unwinder.UnwindTo(badNode.number, ForkReset(badNode.hash), tx)
+		return e.unwinder.UnwindTo(badNode.number, ForkReset(badNode.hash), txc.Doms)
 	}
 
 	if len(newNodes) == 0 {
@@ -889,8 +891,8 @@ func (e *polygonSyncStageExecutionEngine) CurrentHeader(ctx context.Context) (*t
 		err    error
 	}
 
-	r, err := awaitTxAction(ctx, e.txActionStream, func(tx kv.RwTx, responseStream chan<- response) error {
-		r, err := e.currentHeader(ctx, tx)
+	r, err := awaitTxAction(ctx, e.txActionStream, func(txc wrap.TxContainer, responseStream chan<- response) error {
+		r, err := e.currentHeader(ctx, txc.Tx)
 		responseStream <- response{result: r, err: err}
 		return nil
 	})
@@ -978,12 +980,12 @@ func (e *polygonSyncStageExecutionEngine) downloadStateSyncEvents(
 func awaitTxAction[T any](
 	ctx context.Context,
 	txActionStream chan<- polygonSyncStageTxAction,
-	cb func(tx kv.RwTx, responseStream chan<- T) error,
+	cb func(txc wrap.TxContainer, responseStream chan<- T) error,
 ) (T, error) {
 	responseStream := make(chan T)
 	txAction := polygonSyncStageTxAction{
-		apply: func(tx kv.RwTx) error {
-			return cb(tx, responseStream)
+		apply: func(txc wrap.TxContainer) error {
+			return cb(txc, responseStream)
 		},
 	}
 

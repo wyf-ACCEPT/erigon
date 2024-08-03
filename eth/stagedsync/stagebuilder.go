@@ -63,7 +63,7 @@ func MiningStages(
 				if badBlockUnwind {
 					return nil
 				}
-				return MiningBorHeimdallForward(ctx, borHeimdallCfg, s, u, txc.Tx, logger)
+				return MiningBorHeimdallForward(ctx, borHeimdallCfg, s, u, txc, logger)
 			},
 			Unwind: func(u *UnwindState, s *StageState, txc wrap.TxContainer, logger log.Logger) error {
 				return BorHeimdallUnwind(u, ctx, s, txc.Tx, borHeimdallCfg)

@@ -18,6 +18,7 @@ package stagedsync
 
 import (
 	"github.com/erigontech/erigon-lib/log/v3"
+	"github.com/erigontech/erigon-lib/state"
 
 	libcommon "github.com/erigontech/erigon-lib/common"
 	"github.com/erigontech/erigon-lib/kv"
@@ -113,7 +114,7 @@ func ForkReset(badBlock libcommon.Hash) UnwindReason {
 // Unwinder allows the stage to cause an unwind.
 type Unwinder interface {
 	// UnwindTo begins staged sync unwind to the specified block.
-	UnwindTo(unwindPoint uint64, reason UnwindReason, tx kv.Tx) error
+	UnwindTo(unwindPoint uint64, reason UnwindReason, doms *state.SharedDomains) error
 	HasUnwindPoint() bool
 	LogPrefix() string
 }

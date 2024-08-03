@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/erigontech/erigon-lib/wrap"
 	"slices"
 	"sort"
 	"time"
@@ -117,7 +118,7 @@ func BorHeimdallForward(
 	s *StageState,
 	u Unwinder,
 	ctx context.Context,
-	tx kv.RwTx,
+	txc wrap.TxContainer,
 	cfg BorHeimdallCfg,
 	logger log.Logger,
 ) (err error) {
@@ -125,7 +126,7 @@ func BorHeimdallForward(
 	if cfg.borConfig == nil || cfg.heimdallClient == nil {
 		return
 	}
-
+	tx := txc.Tx
 	useExternalTx := tx != nil
 	if !useExternalTx {
 		var err error
@@ -161,7 +162,7 @@ func BorHeimdallForward(
 				PeerID:  cfg.hd.SourcePeerId(hash),
 			}})
 			dataflow.HeaderDownloadStates.AddChange(headNumber, dataflow.HeaderInvalidated)
-			if err := s.state.UnwindTo(unwindPoint, ForkReset(hash), tx); err != nil {
+			if err := s.state.UnwindTo(unwindPoint, ForkReset(hash), txc.Doms); err != nil {
 				return err
 			}
 			var reset uint64 = 0
@@ -282,7 +283,7 @@ func BorHeimdallForward(
 			}})
 
 			dataflow.HeaderDownloadStates.AddChange(blockNum, dataflow.HeaderInvalidated)
-			if err := s.state.UnwindTo(blockNum-1, ForkReset(header.Hash()), tx); err != nil {
+			if err := s.state.UnwindTo(blockNum-1, ForkReset(header.Hash()), txc.Doms); err != nil {
 				return err
 			}
 			return fmt.Errorf("verification failed for header %d: %x", blockNum, header.Hash())
@@ -331,7 +332,7 @@ func BorHeimdallForward(
 			if err = persistValidatorSets(
 				snap,
 				u,
-				tx,
+				txc,
 				cfg.borConfig,
 				chain,
 				blockNum,
@@ -461,7 +462,7 @@ func loadSnapshot(
 func persistValidatorSets(
 	snap *bor.Snapshot,
 	u Unwinder,
-	chainDBTx kv.Tx,
+	txc wrap.TxContainer,
 	config *borcfg.BorConfig,
 	chain consensus.ChainHeaderReader,
 	blockNum uint64,
@@ -472,7 +473,6 @@ func persistValidatorSets(
 	logger log.Logger,
 	logPrefix string,
 ) error {
-
 	logEvery := time.NewTicker(logInterval)
 	defer logEvery.Stop()
 	// Search for a snapshot in memory or on disk for checkpoints
@@ -569,7 +569,7 @@ func persistValidatorSets(
 						break
 					}
 				}
-				if err := u.UnwindTo(snap.Number, BadBlock(badHash, err), chainDBTx); err != nil {
+				if err := u.UnwindTo(snap.Number, BadBlock(badHash, err), txc.Doms); err != nil {
 					return err
 				}
 			} else {

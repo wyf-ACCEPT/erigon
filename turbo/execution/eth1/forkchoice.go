@@ -187,6 +187,13 @@ func (e *EthereumExecutionModule) updateForkChoice(ctx context.Context, original
 	}
 	defer tx.Rollback()
 
+	doms, err := state.NewSharedDomains(tx, e.logger)
+	if err != nil {
+		sendForkchoiceErrorWithoutWaiting(e.logger, outcomeCh, err, false)
+		return
+	}
+	defer doms.Close()
+
 	blockHash := originalBlockHash
 
 	finishProgressBefore, err := stages.GetStageProgress(tx, stages.Finish)
@@ -297,7 +304,7 @@ func (e *EthereumExecutionModule) updateForkChoice(ctx context.Context, original
 			}
 		}
 
-		if err := e.executionPipeline.UnwindTo(currentParentNumber, stagedsync.ForkChoice, tx); err != nil {
+		if err := e.executionPipeline.UnwindTo(currentParentNumber, stagedsync.ForkChoice, doms); err != nil {
 			sendForkchoiceErrorWithoutWaiting(e.logger, outcomeCh, err, false)
 			return
 		}

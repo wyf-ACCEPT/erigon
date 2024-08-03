@@ -830,11 +830,11 @@ Loop:
 					return err
 				}
 				if errors.Is(err, consensus.ErrInvalidBlock) {
-					if err := u.UnwindTo(blockNum-1, BadBlock(header.Hash(), err), applyTx); err != nil {
+					if err := u.UnwindTo(blockNum-1, BadBlock(header.Hash(), err), doms); err != nil {
 						return err
 					}
 				} else {
-					if err := u.UnwindTo(blockNum-1, ExecUnwind, applyTx); err != nil {
+					if err := u.UnwindTo(blockNum-1, ExecUnwind, doms); err != nil {
 						return err
 					}
 				}
@@ -1136,7 +1136,7 @@ func flushAndCheckCommitmentV3(ctx context.Context, header *types.Header, applyT
 		return false, fmt.Errorf("%w: requested=%d, minAllowed=%d", ErrTooDeepUnwind, unwindTo, allowedUnwindTo)
 	}
 	logger.Warn("Unwinding due to incorrect root hash", "to", unwindTo)
-	if err := u.UnwindTo(allowedUnwindTo, BadBlock(header.Hash(), ErrInvalidStateRootHash), applyTx); err != nil {
+	if err := u.UnwindTo(allowedUnwindTo, BadBlock(header.Hash(), ErrInvalidStateRootHash), doms); err != nil {
 		return false, err
 	}
 	return false, nil

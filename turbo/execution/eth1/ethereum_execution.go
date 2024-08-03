@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/erigontech/erigon-lib/state"
 	"math/big"
 	"sync/atomic"
 
@@ -173,8 +174,9 @@ func (e *EthereumExecutionModule) canonicalHash(ctx context.Context, tx kv.Tx, b
 	return canonical, nil
 }
 
-func (e *EthereumExecutionModule) unwindToCommonCanonical(tx kv.RwTx, header *types.Header) error {
+func (e *EthereumExecutionModule) unwindToCommonCanonical(txc wrap.TxContainer, header *types.Header) error {
 	currentHeader := header
+	tx := txc.Tx
 
 	for isCanonical, err := e.isCanonicalHash(e.bacgroundCtx, tx, currentHeader.Hash()); !isCanonical && err == nil; isCanonical, err = e.isCanonicalHash(e.bacgroundCtx, tx, currentHeader.Hash()) {
 		if err != nil {
@@ -193,7 +195,7 @@ func (e *EthereumExecutionModule) unwindToCommonCanonical(tx kv.RwTx, header *ty
 			return err
 		}
 	}
-	if err := e.executionPipeline.UnwindTo(currentHeader.Number.Uint64(), stagedsync.ExecUnwind, tx); err != nil {
+	if err := e.executionPipeline.UnwindTo(currentHeader.Number.Uint64(), stagedsync.ExecUnwind, txc.Doms); err != nil {
 		return err
 	}
 	if err := e.executionPipeline.RunUnwind(nil, wrap.TxContainer{Tx: tx}); err != nil {
@@ -258,7 +260,12 @@ func (e *EthereumExecutionModule) ValidateChain(ctx context.Context, req *execut
 	}
 
 	if err := e.db.Update(ctx, func(tx kv.RwTx) error {
-		return e.unwindToCommonCanonical(tx, header)
+		doms, err := state.NewSharedDomains(tx, e.logger)
+		if err != nil {
+			return err
+		}
+		defer doms.Close()
+		return e.unwindToCommonCanonical(wrap.TxContainer{Tx: tx, Doms: doms}, header)
 	}); err != nil {
 		return nil, err
 	}

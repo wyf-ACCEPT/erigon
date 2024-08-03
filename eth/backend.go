@@ -1025,8 +1025,12 @@ func (s *Ethereum) Init(stack *node.Node, config *ethconfig.Config, chainConfig 
 		if err = chainKv.View(ctx, func(tx kv.Tx) error {
 			badBlockHeader, hErr := rawdb.ReadHeaderByHash(tx, config.BadBlockHash)
 			if badBlockHeader != nil {
+				doms, err := libstate.NewSharedDomains(tx, s.logger)
+				if err != nil {
+					return err
+				}
 				unwindPoint := badBlockHeader.Number.Uint64() - 1
-				if err := s.stagedSync.UnwindTo(unwindPoint, stagedsync.BadBlock(config.BadBlockHash, errors.New("Init unwind")), tx); err != nil {
+				if err := s.stagedSync.UnwindTo(unwindPoint, stagedsync.BadBlock(config.BadBlockHash, errors.New("Init unwind")), doms); err != nil {
 					return err
 				}
 			}
@@ -1327,7 +1331,9 @@ func (s *Ethereum) StartMining(ctx context.Context, db kv.RwDB, stateDiffClient 
 				mineEvery.Reset(miner.MiningConfig.Recommit)
 				go func() {
 					s.logger.Error("come from goroutine in StartMining")
-					err = stages2.MiningStep(ctx, db, mining, tmpDir, logger)
+					miningCtx, cancel := context.WithCancel(ctx)
+					defer cancel()
+					err = stages2.MiningStep(miningCtx, db, mining, tmpDir, logger)
 
 					waiting.Store(true)
 					defer func() {
@@ -1351,6 +1357,8 @@ func (s *Ethereum) StartMining(ctx context.Context, db kv.RwDB, stateDiffClient 
 							return
 						case <-workCtx.Done():
 							errc <- workCtx.Err()
+							return
+						case <-miningCtx.Done():
 							return
 						}
 					}

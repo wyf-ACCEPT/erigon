@@ -321,7 +321,7 @@ Loop:
 		}
 		defer doms.Close()
 
-		if err := u.UnwindTo(unwindTo, StagedUnwind, tx); err != nil {
+		if err := u.UnwindTo(unwindTo, StagedUnwind, doms); err != nil {
 			return err
 		}
 

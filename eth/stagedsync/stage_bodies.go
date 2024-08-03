@@ -19,6 +19,7 @@ package stagedsync
 import (
 	"context"
 	"fmt"
+	"github.com/erigontech/erigon-lib/wrap"
 	"runtime"
 	"time"
 
@@ -68,7 +69,7 @@ func StageBodiesCfg(db kv.RwDB, bd *bodydownload.BodyDownload,
 }
 
 // BodiesForward progresses Bodies stage in the forward direction
-func BodiesForward(s *StageState, u Unwinder, ctx context.Context, tx kv.RwTx, cfg BodiesCfg, test bool, logger log.Logger) error {
+func BodiesForward(s *StageState, u Unwinder, ctx context.Context, txc wrap.TxContainer, cfg BodiesCfg, test bool, logger log.Logger) error {
 	var doUpdate bool
 
 	startTime := time.Now()
@@ -77,6 +78,7 @@ func BodiesForward(s *StageState, u Unwinder, ctx context.Context, tx kv.RwTx, c
 		s.BlockNumber = cfg.blockReader.FrozenBlocks()
 		doUpdate = true
 	}
+	tx := txc.Tx
 
 	var d1, d2, d3, d4, d5, d6 time.Duration
 	var err error
@@ -238,7 +240,7 @@ func BodiesForward(s *StageState, u Unwinder, ctx context.Context, tx kv.RwTx, c
 				err = cfg.bd.Engine.VerifyUncles(cr, header, rawBody.Uncles)
 				if err != nil {
 					logger.Error(fmt.Sprintf("[%s] Uncle verification failed", logPrefix), "number", blockHeight, "hash", header.Hash().String(), "err", err)
-					if err := u.UnwindTo(blockHeight-1, BadBlock(header.Hash(), fmt.Errorf("Uncle verification failed: %w", err)), tx); err != nil {
+					if err := u.UnwindTo(blockHeight-1, BadBlock(header.Hash(), fmt.Errorf("Uncle verification failed: %w", err)), txc.Doms); err != nil {
 						return false, err
 					}
 					return true, nil

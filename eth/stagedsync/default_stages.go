@@ -78,7 +78,7 @@ func DefaultStages(ctx context.Context,
 				if badBlockUnwind {
 					return nil
 				}
-				return BorHeimdallForward(s, u, ctx, txc.Tx, borHeimdallCfg, logger)
+				return BorHeimdallForward(s, u, ctx, txc, borHeimdallCfg, logger)
 			},
 			Unwind: func(u *UnwindState, s *StageState, txc wrap.TxContainer, logger log.Logger) error {
 				return BorHeimdallUnwind(u, ctx, s, txc.Tx, borHeimdallCfg)
@@ -104,7 +104,7 @@ func DefaultStages(ctx context.Context,
 			ID:          stages.Bodies,
 			Description: "Download block bodies",
 			Forward: func(badBlockUnwind bool, s *StageState, u Unwinder, txc wrap.TxContainer, logger log.Logger) error {
-				return BodiesForward(s, u, ctx, txc.Tx, bodies, test, logger)
+				return BodiesForward(s, u, ctx, txc, bodies, test, logger)
 			},
 			Unwind: func(u *UnwindState, s *StageState, txc wrap.TxContainer, logger log.Logger) error {
 				return UnwindBodiesStage(u, txc.Tx, bodies, ctx)
@@ -117,7 +117,7 @@ func DefaultStages(ctx context.Context,
 			ID:          stages.Senders,
 			Description: "Recover senders from txn signatures",
 			Forward: func(badBlockUnwind bool, s *StageState, u Unwinder, txc wrap.TxContainer, logger log.Logger) error {
-				return SpawnRecoverSendersStage(senders, s, u, txc.Tx, 0, ctx, logger)
+				return SpawnRecoverSendersStage(senders, s, u, txc, 0, ctx, logger)
 			},
 			Unwind: func(u *UnwindState, s *StageState, txc wrap.TxContainer, logger log.Logger) error {
 				return UnwindSendersStage(u, txc.Tx, senders, ctx)
@@ -222,7 +222,7 @@ func PipelineStages(ctx context.Context, snapshots SnapshotsCfg, blockHashCfg Bl
 			ID:          stages.Senders,
 			Description: "Recover senders from txn signatures",
 			Forward: func(badBlockUnwind bool, s *StageState, u Unwinder, txc wrap.TxContainer, logger log.Logger) error {
-				return SpawnRecoverSendersStage(senders, s, u, txc.Tx, 0, ctx, logger)
+				return SpawnRecoverSendersStage(senders, s, u, txc, 0, ctx, logger)
 			},
 			Unwind: func(u *UnwindState, s *StageState, txc wrap.TxContainer, logger log.Logger) error {
 				return UnwindSendersStage(u, txc.Tx, senders, ctx)
@@ -326,7 +326,7 @@ func UploaderPipelineStages(ctx context.Context, snapshots SnapshotsCfg, headers
 			ID:          stages.Bodies,
 			Description: "Download block bodies",
 			Forward: func(badBlockUnwind bool, s *StageState, u Unwinder, txc wrap.TxContainer, logger log.Logger) error {
-				return BodiesForward(s, u, ctx, txc.Tx, bodies, test, logger)
+				return BodiesForward(s, u, ctx, txc, bodies, test, logger)
 			},
 			Unwind: func(u *UnwindState, s *StageState, txc wrap.TxContainer, logger log.Logger) error {
 				return UnwindBodiesStage(u, txc.Tx, bodies, ctx)
@@ -339,7 +339,7 @@ func UploaderPipelineStages(ctx context.Context, snapshots SnapshotsCfg, headers
 			ID:          stages.Senders,
 			Description: "Recover senders from txn signatures",
 			Forward: func(badBlockUnwind bool, s *StageState, u Unwinder, txc wrap.TxContainer, logger log.Logger) error {
-				return SpawnRecoverSendersStage(senders, s, u, txc.Tx, 0, ctx, logger)
+				return SpawnRecoverSendersStage(senders, s, u, txc, 0, ctx, logger)
 			},
 			Unwind: func(u *UnwindState, s *StageState, txc wrap.TxContainer, logger log.Logger) error {
 				return UnwindSendersStage(u, txc.Tx, senders, ctx)
@@ -427,7 +427,7 @@ func StateStages(ctx context.Context, headers HeadersCfg, bodies BodiesCfg, bloc
 			ID:          stages.Senders,
 			Description: "Recover senders from txn signatures",
 			Forward: func(badBlockUnwind bool, s *StageState, u Unwinder, txc wrap.TxContainer, logger log.Logger) error {
-				return SpawnRecoverSendersStage(senders, s, u, txc.Tx, 0, ctx, logger)
+				return SpawnRecoverSendersStage(senders, s, u, txc, 0, ctx, logger)
 			},
 			Unwind: func(u *UnwindState, s *StageState, txc wrap.TxContainer, logger log.Logger) error {
 				return UnwindSendersStage(u, txc.Tx, senders, ctx)
@@ -476,7 +476,7 @@ func PolygonSyncStages(
 			ID:          stages.PolygonSync,
 			Description: "Use polygon sync component to sync headers, bodies and heimdall data",
 			Forward: func(badBlockUnwind bool, s *StageState, u Unwinder, txc wrap.TxContainer, logger log.Logger) error {
-				return SpawnPolygonSyncStage(ctx, txc.Tx, s, u, polygonSyncStageCfg)
+				return SpawnPolygonSyncStage(ctx, txc, s, u, polygonSyncStageCfg)
 			},
 			Unwind: func(u *UnwindState, s *StageState, txc wrap.TxContainer, logger log.Logger) error {
 				return UnwindPolygonSyncStage()
@@ -489,7 +489,7 @@ func PolygonSyncStages(
 			ID:          stages.Senders,
 			Description: "Recover senders from txn signatures",
 			Forward: func(badBlockUnwind bool, s *StageState, u Unwinder, txc wrap.TxContainer, logger log.Logger) error {
-				return SpawnRecoverSendersStage(senders, s, u, txc.Tx, 0, ctx, logger)
+				return SpawnRecoverSendersStage(senders, s, u, txc, 0, ctx, logger)
 			},
 			Unwind: func(u *UnwindState, s *StageState, txc wrap.TxContainer, logger log.Logger) error {
 				return UnwindSendersStage(u, txc.Tx, senders, ctx)
