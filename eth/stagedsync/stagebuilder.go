@@ -79,7 +79,7 @@ func MiningStages(
 				return SpawnMiningExecStage(s, txc, execCfg, sendersCfg, executeBlockCfg, ctx, logger, u)
 			},
 			Unwind: func(u *UnwindState, s *StageState, txc wrap.TxContainer, logger log.Logger) error {
-				return nil
+				return UnwindExecutionStage(u, s, txc, ctx, executeBlockCfg, logger)
 			},
 			Prune: func(u *PruneState, tx kv.RwTx, logger log.Logger) error { return nil },
 		},

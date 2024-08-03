@@ -104,6 +104,7 @@ func SpawnMiningExecStage(s *StageState, txc wrap.TxContainer, cfg MiningExecCfg
 	txs := current.PreparedTxs
 	noempty := true
 	var domains *state2.SharedDomains
+	domains = txc.Doms
 	var (
 		stateReader state.StateReader
 	)
@@ -141,11 +142,6 @@ func SpawnMiningExecStage(s *StageState, txc wrap.TxContainer, cfg MiningExecCfg
 			m := membatchwithdb.NewMemoryBatch(txc.Tx, cfg.tmpdir, logger)
 			defer m.Rollback()
 			var err error
-			domains, err = state2.NewSharedDomains(m, logger)
-			if err != nil {
-				return err
-			}
-			defer domains.Close()
 			simStateReader = state.NewReaderV4(domains)
 			simStateWriter = state.NewWriterV4(domains)
 
