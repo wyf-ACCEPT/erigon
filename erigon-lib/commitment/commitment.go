@@ -189,8 +189,9 @@ func (be *BranchEncoder) initCollector() {
 	if be.updates != nil {
 		be.updates.Close()
 	}
-	be.updates = etl.NewCollector("commitment.BranchEncoder", be.tmpdir, etl.NewOldestEntryBuffer(etl.BufferOptimalSize/2), log.Root().New("branch-encoder"))
+	be.updates = etl.NewCollector("commitment.BranchEncoder", be.tmpdir, etl.NewOldestEntryBuffer(etl.BufferOptimalSize/4), log.Root().New("branch-encoder"))
 	be.updates.LogLvl(log.LvlDebug)
+	be.updates.SortAndFlushInBackground(true)
 }
 
 func (be *BranchEncoder) Load(pc PatriciaContext, args etl.TransformArgs) error {
@@ -872,7 +873,7 @@ func (t *Updates) initCollector() {
 		t.etl.Close()
 		t.etl = nil
 	}
-	t.etl = etl.NewCollector("commitment", t.tmpdir, etl.NewSortableBuffer(etl.BufferOptimalSize/2), log.Root().New("update-tree"))
+	t.etl = etl.NewCollector("commitment", t.tmpdir, etl.NewSortableBuffer(etl.BufferOptimalSize/4), log.Root().New("update-tree"))
 	t.etl.LogLvl(log.LvlDebug)
 	t.etl.SortAndFlushInBackground(true)
 }
