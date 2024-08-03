@@ -906,7 +906,6 @@ func (hph *HexPatriciaHashed) computeCellHash(cell *Cell, depth int, buf []byte)
 						return nil, err
 					}
 					cell.lhLen = 0
-					fmt.Printf("EXTENSION HASH %x DROPS LEAF\n", storageRootHash)
 					hadToReset.Add(1)
 				} else {
 					return nil, fmt.Errorf("computeCellHash extension without hash")
