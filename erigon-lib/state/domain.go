@@ -1426,11 +1426,6 @@ func (dt *DomainRoTx) getFromFiles(filekey []byte) (v []byte, found bool, fileSt
 				if dt.l0CacheHit%1_000_000 == 0 || dt.l0CacheMiss%1_000_000 == 0 {
 					log.Warn("[dbg] l0Cache", "a", dt.d.filenameBase, "hit", dt.l0CacheHit, "miss", dt.l0CacheMiss, "ratio", fmt.Sprintf("%.2f", float64(dt.l0CacheHit)/float64(dt.l0CacheHit+dt.l0CacheMiss)))
 				}
-				if dt.d.filenameBase == kv.CommitmentDomain.String() {
-					if dt.l0CacheHit%1_000 == 0 || dt.l0CacheMiss%1_000 == 0 {
-						log.Warn("[dbg] l0Cache", "a", dt.d.filenameBase, "hit", dt.l0CacheHit, "miss", dt.l0CacheMiss, "ratio", fmt.Sprintf("%.2f", float64(dt.l0CacheHit)/float64(dt.l0CacheHit+dt.l0CacheMiss)))
-					}
-				}
 				return v, true, dt.files[i].startTxNum, dt.files[i].endTxNum, nil
 			}
 			dt.l0CacheMiss++
