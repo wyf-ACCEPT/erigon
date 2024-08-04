@@ -671,7 +671,7 @@ var codeSize int
 
 func (r *StateReaderV3) ReadAccountCodeSize(address common.Address, incarnation uint64, codeHash common.Hash) (int, error) {
 	codeSize++
-	if codeSize%1_000 == 0 {
+	if codeSize%100_000 == 0 {
 		log.Warn("[dbg] codeSize calls ratio", "code", code, "codeSize", codeSize, "ratio", fmt.Sprintf("%.2f", float64(codeSize)/float64(code)))
 	}
 
