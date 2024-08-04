@@ -33,6 +33,7 @@ import (
 	"time"
 
 	"github.com/erigontech/erigon-lib/metrics"
+	"github.com/hashicorp/golang-lru/v2/simplelru"
 
 	btree2 "github.com/tidwall/btree"
 	"golang.org/x/sync/errgroup"
@@ -705,6 +706,9 @@ type DomainRoTx struct {
 	comBuf []byte
 
 	valsC kv.Cursor
+
+	l0Cache                 *simplelru.LRU[uint64, []byte]
+	l0CacheHit, l0CacheMiss int
 }
 
 func domainReadMetric(name string, level int) metrics.Summary {
@@ -855,6 +859,7 @@ func (d *Domain) BeginFilesRo() *DomainRoTx {
 			files[i].src.refcount.Add(1)
 		}
 	}
+
 	return &DomainRoTx{
 		d:     d,
 		ht:    d.History.BeginFilesRo(),
@@ -1407,7 +1412,25 @@ func (dt *DomainRoTx) getFromFiles(filekey []byte) (v []byte, found bool, fileSt
 			}
 		}
 
-		//t := time.Now()
+		if i == 0 {
+			if dt.l0Cache == nil {
+				dt.l0Cache, err = simplelru.NewLRU[uint64, []byte](32, nil)
+				if err != nil {
+					panic(err)
+				}
+			}
+			var ok bool
+			v, ok = dt.l0Cache.Get(hi)
+			if ok {
+				dt.l0CacheHit++
+				if dt.l0CacheHit%100 == 0 {
+					log.Warn("[dbg] l0Cache", "a", dt.d.filenameBase, "hit", dt.l0CacheHit, "miss", dt.l0CacheMiss, "ratio", fmt.Sprintf("%.2f", float64(dt.l0CacheHit)/float64(dt.l0CacheHit+dt.l0CacheMiss)))
+				}
+				return v, true, dt.files[i].startTxNum, dt.files[i].endTxNum, nil
+			}
+			dt.l0CacheMiss++
+		}
+
 		v, found, err = dt.getFromFile(i, filekey)
 		if err != nil {
 			return nil, false, 0, 0, err
@@ -1416,13 +1439,15 @@ func (dt *DomainRoTx) getFromFiles(filekey []byte) (v []byte, found bool, fileSt
 			if traceGetLatest == dt.d.filenameBase {
 				fmt.Printf("GetLatest(%s, %x) -> not found in file %s\n", dt.d.filenameBase, filekey, dt.files[i].src.decompressor.FileName())
 			}
-			//	LatestStateReadGrindNotFound.ObserveDuration(t)
 			continue
 		}
 		if traceGetLatest == dt.d.filenameBase {
 			fmt.Printf("GetLatest(%s, %x) -> found in file %s\n", dt.d.filenameBase, filekey, dt.files[i].src.decompressor.FileName())
 		}
-		//LatestStateReadGrind.ObserveDuration(t)
+
+		if i == 0 {
+			dt.l0Cache.Add(hi, v)
+		}
 		return v, true, dt.files[i].startTxNum, dt.files[i].endTxNum, nil
 	}
 	if traceGetLatest == dt.d.filenameBase {
