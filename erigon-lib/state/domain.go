@@ -1423,13 +1423,13 @@ func (dt *DomainRoTx) getFromFiles(filekey []byte) (v []byte, found bool, fileSt
 			var ok bool
 			v, ok = dt.lEachCache[i].Get(hi)
 			if ok {
-				//dt.lAllCacheHit++
-				//if dt.lAllCacheHit%1_000_000 == 0 {
-				//	log.Warn("[dbg] lAllCache", "a", dt.d.filenameBase, "hit", dt.lAllCacheHit, "miss", dt.lAllCacheMiss, "ratio", fmt.Sprintf("%.2f", float64(dt.lAllCacheHit)/float64(dt.lAllCacheHit+dt.lAllCacheMiss)))
-				//}
+				dt.lEachCacheHit++
+				if dt.lEachCacheMiss%100_000 == 0 {
+					log.Warn("[dbg] lAllCache", "a", dt.d.filenameBase, "hit", dt.lEachCacheHit, "miss", dt.lEachCacheMiss, "ratio", fmt.Sprintf("%.2f", float64(dt.lEachCacheHit)/float64(dt.lEachCacheHit+dt.lEachCacheMiss)))
+				}
 				return v, true, dt.files[i].startTxNum, dt.files[i].endTxNum, nil
 			}
-			//dt.lAllCacheMiss++
+			dt.lEachCacheMiss++
 		}
 
 		v, found, err = dt.getFromFile(i, filekey)
