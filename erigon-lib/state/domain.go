@@ -1424,8 +1424,14 @@ func (dt *DomainRoTx) getFromFiles(filekey []byte) (v []byte, found bool, fileSt
 			v, ok = dt.lEachCache[i].Get(hi)
 			if ok {
 				dt.lEachCacheHit[i]++
-				if dt.lEachCacheMiss[i]%100_000 == 0 {
-					log.Warn("[dbg] lEachCache", "a", dt.d.filenameBase, "lvl", i, "hit", dt.lEachCacheHit[i], "miss", dt.lEachCacheMiss[i], "ratio", fmt.Sprintf("%.2f", float64(dt.lEachCacheHit[i])/float64(dt.lEachCacheHit[i]+dt.lEachCacheMiss[i])))
+				if dt.d.name == kv.CommitmentDomain {
+					if dt.lEachCacheMiss[i]%10_000 == 0 {
+						log.Warn("[dbg] lEachCache", "a", dt.d.filenameBase, "lvl", i, "hit", dt.lEachCacheHit[i], "miss", dt.lEachCacheMiss[i], "ratio", fmt.Sprintf("%.2f", float64(dt.lEachCacheHit[i])/float64(dt.lEachCacheHit[i]+dt.lEachCacheMiss[i])))
+					}
+				} else {
+					if dt.lEachCacheMiss[i]%100_000 == 0 {
+						log.Warn("[dbg] lEachCache", "a", dt.d.filenameBase, "lvl", i, "hit", dt.lEachCacheHit[i], "miss", dt.lEachCacheMiss[i], "ratio", fmt.Sprintf("%.2f", float64(dt.lEachCacheHit[i])/float64(dt.lEachCacheHit[i]+dt.lEachCacheMiss[i])))
+					}
 				}
 				return v, true, dt.files[i].startTxNum, dt.files[i].endTxNum, nil
 			}
