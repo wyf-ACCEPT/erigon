@@ -1425,7 +1425,7 @@ func (dt *DomainRoTx) getFromFiles(filekey []byte) (v []byte, found bool, fileSt
 			if ok {
 				dt.lEachCacheHit[i]++
 				if dt.d.name == kv.CommitmentDomain {
-					if dt.lEachCacheMiss[i]%10_000 == 0 {
+					if dt.lEachCacheMiss[i]%100 == 0 {
 						log.Warn("[dbg] lEachCache", "a", dt.d.filenameBase, "lvl", i, "hit", dt.lEachCacheHit[i], "miss", dt.lEachCacheMiss[i], "ratio", fmt.Sprintf("%.2f", float64(dt.lEachCacheHit[i])/float64(dt.lEachCacheHit[i]+dt.lEachCacheMiss[i])))
 					}
 				} else {
