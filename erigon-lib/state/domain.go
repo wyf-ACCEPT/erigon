@@ -698,6 +698,7 @@ func (ch *CursorHeap) Pop() interface{} {
 
 // DomainRoTx allows accesing the same domain from multiple go-routines
 type DomainRoTx struct {
+	name       kv.Domain
 	ht         *HistoryRoTx
 	d          *Domain
 	files      visibleFiles
@@ -723,7 +724,7 @@ func domainReadMetric(name kv.Domain, level int) metrics.Summary {
 
 func (dt *DomainRoTx) getFromFile(i int, filekey []byte) ([]byte, bool, error) {
 	if dbg.KVReadLevelledMetrics {
-		defer domainReadMetric(dt.d.name, i).ObserveDuration(time.Now())
+		defer domainReadMetric(dt.name, i).ObserveDuration(time.Now())
 	}
 
 	g := dt.statelessGetter(i)
@@ -862,6 +863,7 @@ func (d *Domain) BeginFilesRo() *DomainRoTx {
 	}
 
 	return &DomainRoTx{
+		name:  d.name,
 		d:     d,
 		ht:    d.History.BeginFilesRo(),
 		files: files,
@@ -1394,23 +1396,23 @@ func (dt *DomainRoTx) getFromFiles(filekey []byte) (v []byte, found bool, fileSt
 		if dt.d.indexList&withExistence != 0 {
 			if dt.files[i].src.existence != nil {
 				if !dt.files[i].src.existence.ContainsHash(hi) {
-					if traceGetLatest == dt.d.name {
+					if traceGetLatest == dt.name {
 						fmt.Printf("GetLatest(%s, %x) -> existence index %s -> false\n", dt.d.filenameBase, filekey, dt.files[i].src.existence.FileName)
 					}
 					continue
 				} else {
-					if traceGetLatest == dt.d.name {
+					if traceGetLatest == dt.name {
 						fmt.Printf("GetLatest(%s, %x) -> existence index %s -> true\n", dt.d.filenameBase, filekey, dt.files[i].src.existence.FileName)
 					}
 				}
 			} else {
-				if traceGetLatest == dt.d.name {
+				if traceGetLatest == dt.name {
 					fmt.Printf("GetLatest(%s, %x) -> existence index is nil %s\n", dt.d.filenameBase, filekey, dt.files[i].src.decompressor.FileName())
 				}
 			}
 		}
 
-		if dt.d.name != kv.CommitmentDomain && i < len(dt.lEachCache) {
+		if dt.name != kv.CommitmentDomain && i < len(dt.lEachCache) {
 			if dt.lEachCache[i] == nil {
 				dt.lEachCache[i], err = simplelru.NewLRU[uint64, []byte](64, nil)
 				if err != nil {
@@ -1434,21 +1436,21 @@ func (dt *DomainRoTx) getFromFiles(filekey []byte) (v []byte, found bool, fileSt
 			return nil, false, 0, 0, err
 		}
 		if !found {
-			if traceGetLatest == dt.d.name {
+			if traceGetLatest == dt.name {
 				fmt.Printf("GetLatest(%s, %x) -> not found in file %s\n", dt.d.filenameBase, filekey, dt.files[i].src.decompressor.FileName())
 			}
 			continue
 		}
-		if traceGetLatest == dt.d.name {
+		if traceGetLatest == dt.name {
 			fmt.Printf("GetLatest(%s, %x) -> found in file %s\n", dt.d.filenameBase, filekey, dt.files[i].src.decompressor.FileName())
 		}
 
-		if dt.d.name != kv.CommitmentDomain && i < len(dt.lEachCache) {
+		if dt.name != kv.CommitmentDomain && i < len(dt.lEachCache) {
 			dt.lEachCache[i].Add(hi, v)
 		}
 		return v, true, dt.files[i].startTxNum, dt.files[i].endTxNum, nil
 	}
-	if traceGetLatest == dt.d.name {
+	if traceGetLatest == dt.name {
 		fmt.Printf("GetLatest(%s, %x) -> not found in %d files\n", dt.d.filenameBase, filekey, len(dt.files))
 	}
 
@@ -1618,7 +1620,7 @@ func (dt *DomainRoTx) GetLatest(key1, key2 []byte, roTx kv.Tx) ([]byte, uint64, 
 	var found bool
 	var err error
 
-	if traceGetLatest == dt.d.name {
+	if traceGetLatest == dt.name {
 		defer func() {
 			fmt.Printf("GetLatest(%s, '%x' -> '%x') (from db=%t; istep=%x stepInFiles=%d)\n",
 				dt.d.filenameBase, key, v, found, foundStep, dt.files.EndTxNum()/dt.d.aggregationStep)
