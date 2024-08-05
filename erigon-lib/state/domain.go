@@ -707,8 +707,13 @@ type DomainRoTx struct {
 
 	valsC kv.Cursor
 
-	l0Cache                 *simplelru.LRU[uint64, []byte]
+	l0Cache                 *simplelru.LRU[uint64, fileCacheItem]
 	l0CacheHit, l0CacheMiss int
+}
+
+type fileCacheItem struct {
+	lvl uint8
+	v   []byte
 }
 
 func domainReadMetric(name string, level int) metrics.Summary {
@@ -1388,6 +1393,21 @@ var (
 
 func (dt *DomainRoTx) getFromFiles(filekey []byte) (v []byte, found bool, fileStartTxNum uint64, fileEndTxNum uint64, err error) {
 	hi, _ := dt.ht.iit.hashKey(filekey)
+	if dt.l0Cache == nil {
+		dt.l0Cache, err = simplelru.NewLRU[uint64, fileCacheItem](32, nil)
+		if err != nil {
+			panic(err)
+		}
+	}
+	cv, ok := dt.l0Cache.Get(hi)
+	if ok {
+		dt.l0CacheHit++
+		if dt.l0CacheHit%1_000 == 0 {
+			log.Warn("[dbg] l0Cache", "a", dt.d.filenameBase, "hit", dt.l0CacheHit, "miss", dt.l0CacheMiss, "ratio", fmt.Sprintf("%.2f", float64(dt.l0CacheHit)/float64(dt.l0CacheHit+dt.l0CacheMiss)))
+		}
+		return v, true, dt.files[cv.lvl].startTxNum, dt.files[cv.lvl].endTxNum, nil
+	}
+	dt.l0CacheMiss++
 
 	for i := len(dt.files) - 1; i >= 0; i-- {
 		if dt.d.indexList&withExistence != 0 {
@@ -1412,25 +1432,6 @@ func (dt *DomainRoTx) getFromFiles(filekey []byte) (v []byte, found bool, fileSt
 			}
 		}
 
-		if i == 0 {
-			if dt.l0Cache == nil {
-				dt.l0Cache, err = simplelru.NewLRU[uint64, []byte](32, nil)
-				if err != nil {
-					panic(err)
-				}
-			}
-			var ok bool
-			v, ok = dt.l0Cache.Get(hi)
-			if ok {
-				dt.l0CacheHit++
-				if dt.l0CacheHit%100 == 0 {
-					log.Warn("[dbg] l0Cache", "a", dt.d.filenameBase, "hit", dt.l0CacheHit, "miss", dt.l0CacheMiss, "ratio", fmt.Sprintf("%.2f", float64(dt.l0CacheHit)/float64(dt.l0CacheHit+dt.l0CacheMiss)))
-				}
-				return v, true, dt.files[i].startTxNum, dt.files[i].endTxNum, nil
-			}
-			dt.l0CacheMiss++
-		}
-
 		v, found, err = dt.getFromFile(i, filekey)
 		if err != nil {
 			return nil, false, 0, 0, err
@@ -1446,7 +1447,7 @@ func (dt *DomainRoTx) getFromFiles(filekey []byte) (v []byte, found bool, fileSt
 		}
 
 		if i == 0 {
-			dt.l0Cache.Add(hi, v)
+			dt.l0Cache.Add(hi, fileCacheItem{lvl: uint8(i), v: v})
 		}
 		return v, true, dt.files[i].startTxNum, dt.files[i].endTxNum, nil
 	}
