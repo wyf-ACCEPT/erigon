@@ -707,8 +707,8 @@ type DomainRoTx struct {
 
 	valsC kv.Cursor
 
-	lAllCache                   *simplelru.LRU[uint64, fileCacheItem]
-	lAllCacheHit, lAllCacheMiss int
+	lEachCache                    [4]*simplelru.LRU[uint64, []byte]
+	lEachCacheHit, lEachCacheMiss int
 }
 
 type fileCacheItem struct {
@@ -1393,21 +1393,6 @@ var (
 
 func (dt *DomainRoTx) getFromFiles(filekey []byte) (v []byte, found bool, fileStartTxNum uint64, fileEndTxNum uint64, err error) {
 	hi, _ := dt.ht.iit.hashKey(filekey)
-	if dt.lAllCache == nil {
-		dt.lAllCache, err = simplelru.NewLRU[uint64, fileCacheItem](32, nil)
-		if err != nil {
-			panic(err)
-		}
-	}
-	cv, ok := dt.lAllCache.Get(hi)
-	if ok {
-		dt.lAllCacheHit++
-		if dt.lAllCacheHit%1_000_000 == 0 {
-			log.Warn("[dbg] lAllCache", "a", dt.d.filenameBase, "hit", dt.lAllCacheHit, "miss", dt.lAllCacheMiss, "ratio", fmt.Sprintf("%.2f", float64(dt.lAllCacheHit)/float64(dt.lAllCacheHit+dt.lAllCacheMiss)))
-		}
-		return v, true, dt.files[cv.lvl].startTxNum, dt.files[cv.lvl].endTxNum, nil
-	}
-	dt.lAllCacheMiss++
 
 	for i := len(dt.files) - 1; i >= 0; i-- {
 		if dt.d.indexList&withExistence != 0 {
@@ -1432,6 +1417,25 @@ func (dt *DomainRoTx) getFromFiles(filekey []byte) (v []byte, found bool, fileSt
 			}
 		}
 
+		if i < len(dt.lEachCache) {
+			if dt.lEachCache[i] == nil {
+				dt.lEachCache[i], err = simplelru.NewLRU[uint64, []byte](32, nil)
+				if err != nil {
+					panic(err)
+				}
+			}
+			var ok bool
+			v, ok = dt.lEachCache[i].Get(hi)
+			if ok {
+				//dt.lAllCacheHit++
+				//if dt.lAllCacheHit%1_000_000 == 0 {
+				//	log.Warn("[dbg] lAllCache", "a", dt.d.filenameBase, "hit", dt.lAllCacheHit, "miss", dt.lAllCacheMiss, "ratio", fmt.Sprintf("%.2f", float64(dt.lAllCacheHit)/float64(dt.lAllCacheHit+dt.lAllCacheMiss)))
+				//}
+				return v, true, dt.files[i].startTxNum, dt.files[i].endTxNum, nil
+			}
+			//dt.lAllCacheMiss++
+		}
+
 		v, found, err = dt.getFromFile(i, filekey)
 		if err != nil {
 			return nil, false, 0, 0, err
@@ -1446,8 +1450,8 @@ func (dt *DomainRoTx) getFromFiles(filekey []byte) (v []byte, found bool, fileSt
 			fmt.Printf("GetLatest(%s, %x) -> found in file %s\n", dt.d.filenameBase, filekey, dt.files[i].src.decompressor.FileName())
 		}
 
-		if i == 0 {
-			dt.lAllCache.Add(hi, fileCacheItem{lvl: uint8(i), v: v})
+		if i < len(dt.lEachCache) {
+			dt.lEachCache[i].Add(hi, v)
 		}
 		return v, true, dt.files[i].startTxNum, dt.files[i].endTxNum, nil
 	}
