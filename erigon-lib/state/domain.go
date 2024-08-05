@@ -711,11 +711,6 @@ type DomainRoTx struct {
 	lEachCacheHit, lEachCacheMiss int
 }
 
-type fileCacheItem struct {
-	lvl uint8
-	v   []byte
-}
-
 func domainReadMetric(name string, level int) metrics.Summary {
 	if level > 4 {
 		level = 5
