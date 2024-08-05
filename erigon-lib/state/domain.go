@@ -707,8 +707,8 @@ type DomainRoTx struct {
 
 	valsC kv.Cursor
 
-	l0Cache                 *simplelru.LRU[uint64, fileCacheItem]
-	l0CacheHit, l0CacheMiss int
+	lAllCache                   *simplelru.LRU[uint64, fileCacheItem]
+	lAllCacheHit, lAllCacheMiss int
 }
 
 type fileCacheItem struct {
@@ -1393,21 +1393,21 @@ var (
 
 func (dt *DomainRoTx) getFromFiles(filekey []byte) (v []byte, found bool, fileStartTxNum uint64, fileEndTxNum uint64, err error) {
 	hi, _ := dt.ht.iit.hashKey(filekey)
-	if dt.l0Cache == nil {
-		dt.l0Cache, err = simplelru.NewLRU[uint64, fileCacheItem](32, nil)
+	if dt.lAllCache == nil {
+		dt.lAllCache, err = simplelru.NewLRU[uint64, fileCacheItem](32, nil)
 		if err != nil {
 			panic(err)
 		}
 	}
-	cv, ok := dt.l0Cache.Get(hi)
+	cv, ok := dt.lAllCache.Get(hi)
 	if ok {
-		dt.l0CacheHit++
-		if dt.l0CacheHit%1_000_000 == 0 {
-			log.Warn("[dbg] l0Cache", "a", dt.d.filenameBase, "hit", dt.l0CacheHit, "miss", dt.l0CacheMiss, "ratio", fmt.Sprintf("%.2f", float64(dt.l0CacheHit)/float64(dt.l0CacheHit+dt.l0CacheMiss)))
+		dt.lAllCacheHit++
+		if dt.lAllCacheHit%1_000_000 == 0 {
+			log.Warn("[dbg] lAllCache", "a", dt.d.filenameBase, "hit", dt.lAllCacheHit, "miss", dt.lAllCacheMiss, "ratio", fmt.Sprintf("%.2f", float64(dt.lAllCacheHit)/float64(dt.lAllCacheHit+dt.lAllCacheMiss)))
 		}
 		return v, true, dt.files[cv.lvl].startTxNum, dt.files[cv.lvl].endTxNum, nil
 	}
-	dt.l0CacheMiss++
+	dt.lAllCacheMiss++
 
 	for i := len(dt.files) - 1; i >= 0; i-- {
 		if dt.d.indexList&withExistence != 0 {
@@ -1447,7 +1447,7 @@ func (dt *DomainRoTx) getFromFiles(filekey []byte) (v []byte, found bool, fileSt
 		}
 
 		if i == 0 {
-			dt.l0Cache.Add(hi, fileCacheItem{lvl: uint8(i), v: v})
+			dt.lAllCache.Add(hi, fileCacheItem{lvl: uint8(i), v: v})
 		}
 		return v, true, dt.files[i].startTxNum, dt.files[i].endTxNum, nil
 	}
