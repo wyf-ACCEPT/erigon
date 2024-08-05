@@ -60,10 +60,10 @@ const StepsInColdFile = 64
 var (
 	asserts          = dbg.EnvBool("AGG_ASSERTS", false)
 	traceFileLife    = dbg.EnvString("AGG_TRACE_FILE_LIFE", "")
-	traceGetLatest   = dbg.EnvString("AGG_TRACE_GET_LATEST", "")
 	traceGetAsOf     = dbg.EnvString("AGG_TRACE_GET_AS_OF", "")
 	tracePutWithPrev = dbg.EnvString("AGG_TRACE_PUT_WITH_PREV", "")
 )
+var traceGetLatest, _ = kv.String2Domain(dbg.EnvString("AGG_TRACE_GET_LATEST", ""))
 
 // Domain is a part of the state (examples are Accounts, Storage, Code)
 // Domain should not have any go routines or locks
@@ -698,6 +698,7 @@ func (ch *CursorHeap) Pop() interface{} {
 
 // DomainRoTx allows accesing the same domain from multiple go-routines
 type DomainRoTx struct {
+	name       kv.Domain
 	ht         *HistoryRoTx
 	d          *Domain
 	files      visibleFiles
@@ -710,8 +711,13 @@ type DomainRoTx struct {
 
 	valsC kv.Cursor
 
-	lEachCache                    [4]*simplelru.LRU[uint64, []byte]
-	lEachCacheHit, lEachCacheMiss [4]int
+	lAllCache                    *simplelru.LRU[uint64, fileCacheItem]
+	lAllCacheHit, lAllCacheTotal int
+}
+
+type fileCacheItem struct {
+	lvl uint8
+	v   []byte
 }
 
 func domainReadMetric(name kv.Domain, level int) metrics.Summary {
@@ -723,7 +729,7 @@ func domainReadMetric(name kv.Domain, level int) metrics.Summary {
 
 func (dt *DomainRoTx) getFromFile(i int, filekey []byte) ([]byte, bool, error) {
 	if dbg.KVReadLevelledMetrics {
-		defer domainReadMetric(dt.d.name, i).ObserveDuration(time.Now())
+		defer domainReadMetric(dt.name, i).ObserveDuration(time.Now())
 	}
 
 	g := dt.statelessGetter(i)
@@ -862,6 +868,7 @@ func (d *Domain) BeginFilesRo() *DomainRoTx {
 	}
 
 	return &DomainRoTx{
+		name:  d.name,
 		d:     d,
 		ht:    d.History.BeginFilesRo(),
 		files: files,
@@ -1389,53 +1396,46 @@ var (
 
 func (dt *DomainRoTx) getFromFiles(filekey []byte) (v []byte, found bool, fileStartTxNum uint64, fileEndTxNum uint64, err error) {
 	hi, _ := dt.ht.iit.hashKey(filekey)
+	if dt.name != kv.CommitmentDomain {
+		if dt.lAllCache == nil {
+			dt.lAllCache, err = simplelru.NewLRU[uint64, fileCacheItem](1024*1024, nil)
+			if err != nil {
+				panic(err)
+			}
+		}
+		cv, ok := dt.lAllCache.Get(hi)
+		if dbg.KVReadLevelledMetrics {
+			dt.lAllCacheTotal++
+		}
+		if ok {
+			if dbg.KVReadLevelledMetrics {
+				dt.lAllCacheHit++
+				if dt.lAllCacheTotal%1_000_000 == 0 {
+					log.Warn("[dbg] lEachCache", "a", dt.d.filenameBase, "hit", dt.lAllCacheHit, "total", dt.lAllCacheTotal, "ratio", fmt.Sprintf("%.2f", float64(dt.lAllCacheHit)/float64(dt.lAllCacheTotal)))
+				}
+			}
+			return cv.v, true, dt.files[cv.lvl].startTxNum, dt.files[cv.lvl].endTxNum, nil
+		}
+	}
 
 	for i := len(dt.files) - 1; i >= 0; i-- {
 		if dt.d.indexList&withExistence != 0 {
-			//if dt.files[i].src.existence == nil {
-			//	panic(dt.files[i].src.decompressor.FileName())
-			//}
 			if dt.files[i].src.existence != nil {
 				if !dt.files[i].src.existence.ContainsHash(hi) {
-					if traceGetLatest == dt.d.filenameBase {
+					if traceGetLatest == dt.name {
 						fmt.Printf("GetLatest(%s, %x) -> existence index %s -> false\n", dt.d.filenameBase, filekey, dt.files[i].src.existence.FileName)
 					}
 					continue
 				} else {
-					if traceGetLatest == dt.d.filenameBase {
+					if traceGetLatest == dt.name {
 						fmt.Printf("GetLatest(%s, %x) -> existence index %s -> true\n", dt.d.filenameBase, filekey, dt.files[i].src.existence.FileName)
 					}
 				}
 			} else {
-				if traceGetLatest == dt.d.filenameBase {
+				if traceGetLatest == dt.name {
 					fmt.Printf("GetLatest(%s, %x) -> existence index is nil %s\n", dt.d.filenameBase, filekey, dt.files[i].src.decompressor.FileName())
 				}
 			}
-		}
-
-		if i < len(dt.lEachCache) {
-			if dt.lEachCache[i] == nil {
-				dt.lEachCache[i], err = simplelru.NewLRU[uint64, []byte](64, nil)
-				if err != nil {
-					panic(err)
-				}
-			}
-			var ok bool
-			v, ok = dt.lEachCache[i].Get(hi)
-			if ok {
-				dt.lEachCacheHit[i]++
-				if dt.d.name == kv.CommitmentDomain {
-					if dt.lEachCacheMiss[i]%100 == 0 {
-						log.Warn("[dbg] lEachCache", "a", dt.d.filenameBase, "lvl", i, "hit", dt.lEachCacheHit[i], "miss", dt.lEachCacheMiss[i], "ratio", fmt.Sprintf("%.2f", float64(dt.lEachCacheHit[i])/float64(dt.lEachCacheHit[i]+dt.lEachCacheMiss[i])))
-					}
-				} else {
-					if dt.lEachCacheMiss[i]%100_000 == 0 {
-						log.Warn("[dbg] lEachCache", "a", dt.d.filenameBase, "lvl", i, "hit", dt.lEachCacheHit[i], "miss", dt.lEachCacheMiss[i], "ratio", fmt.Sprintf("%.2f", float64(dt.lEachCacheHit[i])/float64(dt.lEachCacheHit[i]+dt.lEachCacheMiss[i])))
-					}
-				}
-				return v, true, dt.files[i].startTxNum, dt.files[i].endTxNum, nil
-			}
-			dt.lEachCacheMiss[i]++
 		}
 
 		v, found, err = dt.getFromFile(i, filekey)
@@ -1443,24 +1443,27 @@ func (dt *DomainRoTx) getFromFiles(filekey []byte) (v []byte, found bool, fileSt
 			return nil, false, 0, 0, err
 		}
 		if !found {
-			if traceGetLatest == dt.d.filenameBase {
+			if traceGetLatest == dt.name {
 				fmt.Printf("GetLatest(%s, %x) -> not found in file %s\n", dt.d.filenameBase, filekey, dt.files[i].src.decompressor.FileName())
 			}
 			continue
 		}
-		if traceGetLatest == dt.d.filenameBase {
+		if traceGetLatest == dt.name {
 			fmt.Printf("GetLatest(%s, %x) -> found in file %s\n", dt.d.filenameBase, filekey, dt.files[i].src.decompressor.FileName())
 		}
 
-		if i < len(dt.lEachCache) {
-			dt.lEachCache[i].Add(hi, v)
+		if dt.d.name != kv.CommitmentDomain {
+			dt.lAllCache.Add(hi, fileCacheItem{lvl: uint8(i), v: v})
 		}
 		return v, true, dt.files[i].startTxNum, dt.files[i].endTxNum, nil
 	}
-	if traceGetLatest == dt.d.filenameBase {
+	if traceGetLatest == dt.name {
 		fmt.Printf("GetLatest(%s, %x) -> not found in %d files\n", dt.d.filenameBase, filekey, len(dt.files))
 	}
 
+	if dt.d.name != kv.CommitmentDomain {
+		dt.lAllCache.Add(hi, fileCacheItem{lvl: 0, v: nil})
+	}
 	return nil, false, 0, 0, nil
 }
 
@@ -1627,7 +1630,7 @@ func (dt *DomainRoTx) GetLatest(key1, key2 []byte, roTx kv.Tx) ([]byte, uint64, 
 	var found bool
 	var err error
 
-	if traceGetLatest == dt.d.filenameBase {
+	if traceGetLatest == dt.name {
 		defer func() {
 			fmt.Printf("GetLatest(%s, '%x' -> '%x') (from db=%t; istep=%x stepInFiles=%d)\n",
 				dt.d.filenameBase, key, v, found, foundStep, dt.files.EndTxNum()/dt.d.aggregationStep)
