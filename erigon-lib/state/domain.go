@@ -1403,7 +1403,7 @@ func (dt *DomainRoTx) getFromFiles(filekey []byte) (v []byte, found bool, fileSt
 	cv, ok := dt.lAllCache.Get(hi)
 	if ok {
 		dt.lAllCacheHit++
-		if dt.lAllCacheHit%1_000_000 == 0 {
+		if dt.lAllCacheMiss%100_000 == 0 {
 			log.Warn("[dbg] lAllCache", "a", dt.d.filenameBase, "hit", dt.lAllCacheHit, "miss", dt.lAllCacheMiss, "ratio", fmt.Sprintf("%.2f", float64(dt.lAllCacheHit)/float64(dt.lAllCacheHit+dt.lAllCacheMiss)))
 		}
 		return v, true, dt.files[cv.lvl].startTxNum, dt.files[cv.lvl].endTxNum, nil
