@@ -711,9 +711,11 @@ type DomainRoTx struct {
 
 	valsC kv.Cursor
 
-	lEachCache                     [2]*simplelru.LRU[uint64, []byte]
-	lEachCacheHit, lEachCacheTotal [2]int
+	lEachCache                     [LevelsWithLRU]*simplelru.LRU[uint64, []byte]
+	lEachCacheHit, lEachCacheTotal [LevelsWithLRU]int
 }
+
+const LevelsWithLRU = 2
 
 func domainReadMetric(name kv.Domain, level int) metrics.Summary {
 	if level > 4 {
@@ -1421,12 +1423,16 @@ func (dt *DomainRoTx) getFromFiles(filekey []byte) (v []byte, found bool, fileSt
 			}
 			var ok bool
 			v, ok = dt.lEachCache[i].Get(hi)
-			//dt.lEachCacheTotal[i]++
+			if dbg.KVReadLevelledMetrics {
+				dt.lEachCacheTotal[i]++
+			}
 			if ok {
-				//dt.lEachCacheHit[i]++
-				//if dt.lEachCacheHit[i]%100_000 == 0 {
-				//	log.Warn("[dbg] lEachCache", "a", dt.d.filenameBase, "hit", dt.lEachCacheHit[i], "total", dt.lEachCacheTotal[i], "ratio", fmt.Sprintf("%.2f", float64(dt.lEachCacheHit[i])/float64(dt.lEachCacheTotal[i])))
-				//}
+				if dbg.KVReadLevelledMetrics {
+					dt.lEachCacheHit[i]++
+					if dt.lEachCacheTotal[i]%1_000_000 == 0 {
+						log.Warn("[dbg] lEachCache", "a", dt.d.filenameBase, "hit", dt.lEachCacheHit[i], "total", dt.lEachCacheTotal[i], "ratio", fmt.Sprintf("%.2f", float64(dt.lEachCacheHit[i])/float64(dt.lEachCacheTotal[i])))
+					}
+				}
 				return v, true, dt.files[i].startTxNum, dt.files[i].endTxNum, nil
 			}
 		}
