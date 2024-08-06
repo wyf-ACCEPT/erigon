@@ -33,8 +33,6 @@ import (
 	"time"
 
 	"github.com/erigontech/erigon-lib/metrics"
-	"github.com/hashicorp/golang-lru/v2/simplelru"
-
 	btree2 "github.com/tidwall/btree"
 	"golang.org/x/sync/errgroup"
 
@@ -495,7 +493,7 @@ func (dt *DomainRoTx) newWriter(tmpdir string, discard bool) *domainBufferedWrit
 		aux:       make([]byte, 0, 128),
 		valsTable: dt.d.valsTable,
 		largeVals: dt.d.largeVals,
-		values:    etl.NewCollector(dt.d.filenameBase+"domain.flush", tmpdir, etl.NewSortableBuffer(WALCollectorRAM), dt.d.logger).LogLvl(log.LvlTrace),
+		values:    etl.NewCollector(dt.name.String()+"domain.flush", tmpdir, etl.NewSortableBuffer(WALCollectorRAM), dt.d.logger).LogLvl(log.LvlTrace),
 
 		h: dt.ht.newWriter(tmpdir, discardHistory),
 	}
@@ -712,8 +710,7 @@ type DomainRoTx struct {
 	valsC kv.Cursor
 
 	// latestStateCache can be very big if .kv is not compressed - because can store pointer to `mmap` instead of data
-	latestStateCache *simplelru.LRU[uint64, fileCacheItem]
-	//latestStateCacheHit, latestStateCacheTotal int
+	latestStateCache *freelru.LRU[uint64, fileCacheItem]
 }
 
 const latestStateCachePerDomain = 16 * 1024
@@ -1397,6 +1394,12 @@ var (
 	UseBtree = true // if true, will use btree for all files
 )
 
+func u32h(u uint32) uint32 { return u }
+func u64h(u uint64) uint32 { return uint32(u) }
+func u128h(u u128) uint32  { return uint32(u.hi) }
+
+type u128 struct{ hi, lo uint64 }
+
 func (dt *DomainRoTx) getFromFiles(filekey []byte) (v []byte, found bool, fileStartTxNum uint64, fileEndTxNum uint64, err error) {
 	if len(dt.files) == 0 {
 		return
@@ -1405,22 +1408,19 @@ func (dt *DomainRoTx) getFromFiles(filekey []byte) (v []byte, found bool, fileSt
 	hi, _ := dt.ht.iit.hashKey(filekey)
 	if dt.name != kv.CommitmentDomain {
 		if dt.latestStateCache == nil {
-			dt.latestStateCache, err = simplelru.NewLRU[uint64, fileCacheItem](latestStateCachePerDomain, nil)
+			dt.latestStateCache, err = freelru.New[uint64, fileCacheItem](latestStateCachePerDomain, u64h)
 			if err != nil {
 				panic(err)
 			}
 		}
 		cv, ok := dt.latestStateCache.Get(hi)
-		//if dbg.KVReadLevelledMetrics {
-		//	dt.latestStateCacheTotal++
-		//}
 		if ok {
-			//if dbg.KVReadLevelledMetrics {
-			//	dt.latestStateCacheHit++
-			//	if dt.latestStateCacheTotal%1_000_000 == 0 {
-			//		log.Warn("[dbg] lEachCache", "a", dt.d.filenameBase, "hit", dt.latestStateCacheHit, "total", dt.latestStateCacheTotal, "ratio", fmt.Sprintf("%.2f", float64(dt.latestStateCache)/float64(dt.latestStateCacheTotal)))
-			//	}
-			//}
+			if dbg.KVReadLevelledMetrics {
+				m := dt.latestStateCache.Metrics()
+				if m.Misses%1_000 == 0 {
+					log.Warn("[dbg] lEachCache", "a", dt.name.String(), "hit", m.Hits, "total", m.Hits+m.Misses, "Collisions", m.Collisions, "Evictions", m.Evictions, "Inserts", m.Inserts, "limit", latestStateCachePerDomain, "ratio", fmt.Sprintf("%.2f", float64(m.Hits)/float64(m.Hits+m.Misses)))
+				}
+			}
 			return cv.v, true, dt.files[cv.lvl].startTxNum, dt.files[cv.lvl].endTxNum, nil
 		}
 	}
@@ -1440,7 +1440,7 @@ func (dt *DomainRoTx) getFromFiles(filekey []byte) (v []byte, found bool, fileSt
 				}
 			} else {
 				if traceGetLatest == dt.name {
-					fmt.Printf("GetLatest(%s, %x) -> existence index is nil %s\n", dt.d.filenameBase, filekey, dt.files[i].src.decompressor.FileName())
+					fmt.Printf("GetLatest(%s, %x) -> existence index is nil %s\n", dt.name.String(), filekey, dt.files[i].src.decompressor.FileName())
 				}
 			}
 		}
@@ -1451,24 +1451,24 @@ func (dt *DomainRoTx) getFromFiles(filekey []byte) (v []byte, found bool, fileSt
 		}
 		if !found {
 			if traceGetLatest == dt.name {
-				fmt.Printf("GetLatest(%s, %x) -> not found in file %s\n", dt.d.filenameBase, filekey, dt.files[i].src.decompressor.FileName())
+				fmt.Printf("GetLatest(%s, %x) -> not found in file %s\n", dt.name.String(), filekey, dt.files[i].src.decompressor.FileName())
 			}
 			continue
 		}
 		if traceGetLatest == dt.name {
-			fmt.Printf("GetLatest(%s, %x) -> found in file %s\n", dt.d.filenameBase, filekey, dt.files[i].src.decompressor.FileName())
+			fmt.Printf("GetLatest(%s, %x) -> found in file %s\n", dt.name.String(), filekey, dt.files[i].src.decompressor.FileName())
 		}
 
-		if dt.d.name != kv.CommitmentDomain {
+		if dt.name != kv.CommitmentDomain {
 			dt.latestStateCache.Add(hi, fileCacheItem{lvl: uint8(i), v: v})
 		}
 		return v, true, dt.files[i].startTxNum, dt.files[i].endTxNum, nil
 	}
 	if traceGetLatest == dt.name {
-		fmt.Printf("GetLatest(%s, %x) -> not found in %d files\n", dt.d.filenameBase, filekey, len(dt.files))
+		fmt.Printf("GetLatest(%s, %x) -> not found in %d files\n", dt.name.String(), filekey, len(dt.files))
 	}
 
-	if dt.d.name != kv.CommitmentDomain {
+	if dt.name != kv.CommitmentDomain {
 		dt.latestStateCache.Add(hi, fileCacheItem{lvl: 0, v: nil})
 	}
 	return nil, false, 0, 0, nil
@@ -1640,7 +1640,7 @@ func (dt *DomainRoTx) GetLatest(key1, key2 []byte, roTx kv.Tx) ([]byte, uint64, 
 	if traceGetLatest == dt.name {
 		defer func() {
 			fmt.Printf("GetLatest(%s, '%x' -> '%x') (from db=%t; istep=%x stepInFiles=%d)\n",
-				dt.d.filenameBase, key, v, found, foundStep, dt.files.EndTxNum()/dt.d.aggregationStep)
+				dt.name.String(), key, v, found, foundStep, dt.files.EndTxNum()/dt.d.aggregationStep)
 		}()
 	}
 
@@ -1809,18 +1809,18 @@ func (dt *DomainRoTx) Prune(ctx context.Context, rwTx kv.RwTx, step, txFrom, txT
 
 	var valsCursor kv.RwCursor
 
-	ancientDomainValsCollector := etl.NewCollector(dt.d.filenameBase+".domain.collate", dt.d.dirs.Tmp, etl.NewSortableBuffer(etl.BufferOptimalSize), dt.d.logger).LogLvl(log.LvlTrace)
+	ancientDomainValsCollector := etl.NewCollector(dt.name.String()+".domain.collate", dt.d.dirs.Tmp, etl.NewSortableBuffer(etl.BufferOptimalSize), dt.d.logger).LogLvl(log.LvlTrace)
 	defer ancientDomainValsCollector.Close()
 
 	if dt.d.largeVals {
 		valsCursor, err = rwTx.RwCursor(dt.d.valsTable)
 		if err != nil {
-			return stat, fmt.Errorf("create %s domain values cursor: %w", dt.d.filenameBase, err)
+			return stat, fmt.Errorf("create %s domain values cursor: %w", dt.name.String(), err)
 		}
 	} else {
 		valsCursor, err = rwTx.RwCursorDupSort(dt.d.valsTable)
 		if err != nil {
-			return stat, fmt.Errorf("create %s domain values cursor: %w", dt.d.filenameBase, err)
+			return stat, fmt.Errorf("create %s domain values cursor: %w", dt.name.String(), err)
 		}
 	}
 	defer valsCursor.Close()
@@ -1834,7 +1834,7 @@ func (dt *DomainRoTx) Prune(ctx context.Context, rwTx kv.RwTx, step, txFrom, txT
 
 	prunedKey, err := GetExecV3PruneProgress(rwTx, dt.d.valsTable)
 	if err != nil {
-		dt.d.logger.Error("get domain pruning progress", "name", dt.d.filenameBase, "error", err)
+		dt.d.logger.Error("get domain pruning progress", "name", dt.name.String(), "error", err)
 	}
 
 	var k, v []byte
@@ -1849,7 +1849,7 @@ func (dt *DomainRoTx) Prune(ctx context.Context, rwTx kv.RwTx, step, txFrom, txT
 	var stepBytes []byte
 	for ; k != nil; k, v, err = valsCursor.Next() {
 		if err != nil {
-			return stat, fmt.Errorf("iterate over %s domain keys: %w", dt.d.filenameBase, err)
+			return stat, fmt.Errorf("iterate over %s domain keys: %w", dt.name.String(), err)
 		}
 
 		if dt.d.largeVals {
@@ -1867,7 +1867,7 @@ func (dt *DomainRoTx) Prune(ctx context.Context, rwTx kv.RwTx, step, txFrom, txT
 				return stat, fmt.Errorf("load domain values: %w", err)
 			}
 			if err := SaveExecV3PruneProgress(rwTx, dt.d.valsTable, k); err != nil {
-				return stat, fmt.Errorf("save domain pruning progress: %s, %w", dt.d.filenameBase, err)
+				return stat, fmt.Errorf("save domain pruning progress: %s, %w", dt.name.String(), err)
 			}
 			return stat, nil
 		}
@@ -1883,7 +1883,7 @@ func (dt *DomainRoTx) Prune(ctx context.Context, rwTx kv.RwTx, step, txFrom, txT
 			// consider ctx exiting as incorrect outcome, error is returned
 			return stat, ctx.Err()
 		case <-logEvery.C:
-			dt.d.logger.Info("[snapshots] prune domain", "name", dt.d.filenameBase,
+			dt.d.logger.Info("[snapshots] prune domain", "name", dt.name.String(),
 				"pruned keys", stat.Values,
 				"steps", fmt.Sprintf("%.2f-%.2f", float64(txFrom)/float64(dt.d.aggregationStep), float64(txTo)/float64(dt.d.aggregationStep)))
 		default:
