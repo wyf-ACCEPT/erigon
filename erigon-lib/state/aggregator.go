@@ -1408,7 +1408,7 @@ func (r RangesV3) String() string {
 	}
 	for p, mr := range r.appendable {
 		if mr != nil && mr.needMerge {
-			ss = append(ss, mr.String(kv.Appendable(p), aggStep))
+			ss = append(ss, mr.String(kv.Appendable(p).String(), aggStep))
 		}
 	}
 	return strings.Join(ss, ", ")
