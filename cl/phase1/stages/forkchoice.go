@@ -200,6 +200,7 @@ func saveHeadStateOnDiskIfNeeded(cfg *Cfg, headState *state.CachingBeaconState) 
 // postForkchoiceOperations performs the post fork choice operations such as updating the head state, producing and caching attestation data,
 // these sets of operations can take as long as they need to run, as by-now we are already synced.
 func postForkchoiceOperations(ctx context.Context, tx kv.RwTx, logger log.Logger, cfg *Cfg, headSlot uint64, headRoot common.Hash) error {
+	log.Info("[test] postForkchoiceOperations", "slot", headSlot, "root", headRoot)
 	// Retrieve the head state
 	headState, err := cfg.forkChoice.GetStateAtBlockRoot(headRoot, false)
 	if err != nil {
