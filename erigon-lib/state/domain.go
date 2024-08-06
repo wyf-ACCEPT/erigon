@@ -711,13 +711,16 @@ type DomainRoTx struct {
 
 	valsC kv.Cursor
 
-	lAllCache                    *simplelru.LRU[uint64, fileCacheItem]
-	lAllCacheHit, lAllCacheTotal int
+	// latestStateCache can be very big if .kv is not compressed - because can store pointer to `mmap` instead of data
+	latestStateCache *simplelru.LRU[uint64, fileCacheItem]
+	//latestStateCacheHit, latestStateCacheTotal int
 }
+
+const latestStateCachePerDomain = 16 * 1024
 
 type fileCacheItem struct {
 	lvl uint8
-	v   []byte
+	v   []byte // pointer to `mmap` - if .kv file is not compressed
 }
 
 func domainReadMetric(name kv.Domain, level int) metrics.Summary {
@@ -1396,28 +1399,28 @@ var (
 
 func (dt *DomainRoTx) getFromFiles(filekey []byte) (v []byte, found bool, fileStartTxNum uint64, fileEndTxNum uint64, err error) {
 	if len(dt.files) == 0 {
-		return nil, false, 0, 0, nil
+		return
 	}
 
 	hi, _ := dt.ht.iit.hashKey(filekey)
 	if dt.name != kv.CommitmentDomain {
-		if dt.lAllCache == nil {
-			dt.lAllCache, err = simplelru.NewLRU[uint64, fileCacheItem](64*1024, nil)
+		if dt.latestStateCache == nil {
+			dt.latestStateCache, err = simplelru.NewLRU[uint64, fileCacheItem](latestStateCachePerDomain, nil)
 			if err != nil {
 				panic(err)
 			}
 		}
-		cv, ok := dt.lAllCache.Get(hi)
-		if dbg.KVReadLevelledMetrics {
-			dt.lAllCacheTotal++
-		}
+		cv, ok := dt.latestStateCache.Get(hi)
+		//if dbg.KVReadLevelledMetrics {
+		//	dt.latestStateCacheTotal++
+		//}
 		if ok {
-			if dbg.KVReadLevelledMetrics {
-				dt.lAllCacheHit++
-				if dt.lAllCacheTotal%1_000_000 == 0 {
-					log.Warn("[dbg] lEachCache", "a", dt.d.filenameBase, "hit", dt.lAllCacheHit, "total", dt.lAllCacheTotal, "ratio", fmt.Sprintf("%.2f", float64(dt.lAllCacheHit)/float64(dt.lAllCacheTotal)))
-				}
-			}
+			//if dbg.KVReadLevelledMetrics {
+			//	dt.latestStateCacheHit++
+			//	if dt.latestStateCacheTotal%1_000_000 == 0 {
+			//		log.Warn("[dbg] lEachCache", "a", dt.d.filenameBase, "hit", dt.latestStateCacheHit, "total", dt.latestStateCacheTotal, "ratio", fmt.Sprintf("%.2f", float64(dt.latestStateCache)/float64(dt.latestStateCacheTotal)))
+			//	}
+			//}
 			return cv.v, true, dt.files[cv.lvl].startTxNum, dt.files[cv.lvl].endTxNum, nil
 		}
 	}
@@ -1457,7 +1460,7 @@ func (dt *DomainRoTx) getFromFiles(filekey []byte) (v []byte, found bool, fileSt
 		}
 
 		if dt.d.name != kv.CommitmentDomain {
-			dt.lAllCache.Add(hi, fileCacheItem{lvl: uint8(i), v: v})
+			dt.latestStateCache.Add(hi, fileCacheItem{lvl: uint8(i), v: v})
 		}
 		return v, true, dt.files[i].startTxNum, dt.files[i].endTxNum, nil
 	}
@@ -1466,7 +1469,7 @@ func (dt *DomainRoTx) getFromFiles(filekey []byte) (v []byte, found bool, fileSt
 	}
 
 	if dt.d.name != kv.CommitmentDomain {
-		dt.lAllCache.Add(hi, fileCacheItem{lvl: 0, v: nil})
+		dt.latestStateCache.Add(hi, fileCacheItem{lvl: 0, v: nil})
 	}
 	return nil, false, 0, 0, nil
 }
