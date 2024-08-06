@@ -97,7 +97,7 @@ func (a *ApiHandler) EventSourceGetV1Events(w http.ResponseWriter, r *http.Reque
 			}
 			if _, err := fmt.Fprintf(w, "event: %s\ndata: %s\n\n", event.Event, string(buf)); err != nil {
 				log.Warn("failed to write event", "err", err)
-				continue
+				return
 			}
 			w.(http.Flusher).Flush()
 		case <-ticker.C:
@@ -114,9 +114,9 @@ func (a *ApiHandler) EventSourceGetV1Events(w http.ResponseWriter, r *http.Reque
 			log.Warn("event error", "err", err)
 			http.Error(w, fmt.Sprintf("event error %v", err), http.StatusInternalServerError)
 			return
-		case <-r.Context().Done():
-			log.Info("Client disconnected")
-			return
+			//case <-r.Context().Done():
+			//	log.Info("Client disconnected")
+			//	return
 		}
 	}
 }
