@@ -14,13 +14,14 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with Erigon. If not, see <http://www.gnu.org/licenses/>.
 
-package tests
+package silkworm
 
 import (
 	"context"
 	"math/big"
 	"testing"
 
+	"github.com/erigontech/erigon-lib/common"
 	"github.com/erigontech/erigon-lib/common/datadir"
 	"github.com/erigontech/erigon-lib/kv"
 	"github.com/erigontech/erigon-lib/log/v3"
@@ -31,21 +32,20 @@ import (
 	"github.com/erigontech/erigon/params"
 
 	mdbx2 "github.com/erigontech/erigon-lib/kv/mdbx"
-	"github.com/erigontech/erigon/turbo/silkworm"
 	"github.com/erigontech/mdbx-go/mdbx"
-	silkworm_go "github.com/erigontech/silkworm-go"
 
 	"github.com/erigontech/erigon/core/rawdb"
 )
 
-func setup(t *testing.T) (*silkworm.Silkworm, kv.RwDB, *types.Block) {
+func setup(t *testing.T) (ForkValidatorService, *types.Block) {
 	defer log.Root().SetHandler(log.Root().GetHandler())
 	log.Root().SetHandler(log.LvlFilterHandler(log.LvlError, log.StderrHandler))
+
 	dirs := datadir.New(t.TempDir())
 	num_contexts := 1
 	log_level := log.LvlInfo
 
-	silkworm, err := silkworm.New(dirs.DataDir, mdbx.Version(), uint32(num_contexts), log_level)
+	silkworm, err := New(dirs.DataDir, mdbx.Version(), uint32(num_contexts), log_level)
 	require.NoError(t, err)
 
 	db := mdbx2.NewMDBX(log.New()).Path(dirs.DataDir).Exclusive().InMem(dirs.DataDir).Label(kv.ChainDB).MustOpen()
@@ -65,7 +65,9 @@ func setup(t *testing.T) (*silkworm.Silkworm, kv.RwDB, *types.Block) {
 	require.EqualValues(t, genesisBlock.Hash(), *expect, network)
 	tx.Commit()
 
-	return silkworm, db, genesisBlock
+	silkwormService := NewForkValidatorService(silkworm, db, ForkValidatorTestSettings())
+
+	return silkwormService, genesisBlock
 }
 
 func SampleBlock(parent *types.Header) *types.Block {
@@ -82,8 +84,8 @@ func SampleBlock(parent *types.Header) *types.Block {
 	})
 }
 
-func ForkValidatorTestSettings() silkworm_go.ForkValidatorSettings {
-	return silkworm_go.ForkValidatorSettings{
+func ForkValidatorTestSettings() ForkValidatorSettings {
+	return ForkValidatorSettings{
 		BatchSize:               512 * 1024 * 1024,
 		EtlBufferSize:           256 * 1024 * 1024,
 		SyncLoopThrottleSeconds: 0,
@@ -92,31 +94,45 @@ func ForkValidatorTestSettings() silkworm_go.ForkValidatorSettings {
 }
 
 func TestSilkwormInitialization(t *testing.T) {
-	silkworm, _, _ := setup(t)
-	require.NotNil(t, silkworm)
+	forkValidatorService, _ := setup(t)
+	require.NotNil(t, forkValidatorService)
+	require.NotNil(t, forkValidatorService.silkworm)
+	require.NotNil(t, forkValidatorService.db)
+
+	forkValidatorService.silkworm.Close()
+	forkValidatorService.silkworm = nil
+	forkValidatorService.db.Close()
 }
 
 func TestSilkwormForkValidatorInitialization(t *testing.T) {
-	silkwormInstance, db, _ := setup(t)
+	forkValidatorService, _ := setup(t)
 
-	err := silkwormInstance.StartForkValidator(db.CHandle(), ForkValidatorTestSettings())
+	err := forkValidatorService.Start()
 	require.NoError(t, err)
+
+	forkValidatorService.silkworm.Close()
+	forkValidatorService.silkworm = nil
+	forkValidatorService.db.Close()
 }
 
 func TestSilkwormForkValidatorTermination(t *testing.T) {
-	silkwormInstance, db, _ := setup(t)
+	forkValidatorService, _ := setup(t)
 
-	err := silkwormInstance.StartForkValidator(db.CHandle(), ForkValidatorTestSettings())
+	err := forkValidatorService.Start()
 	require.NoError(t, err)
 
-	err = silkwormInstance.StopForkValidator()
+	err = forkValidatorService.Stop()
 	require.NoError(t, err)
+
+	forkValidatorService.silkworm.Close()
+	forkValidatorService.silkworm = nil
+	forkValidatorService.db.Close()
 }
 
 func TestSilkwormVerifyChainSingleBlock(t *testing.T) {
-	silkwormInstance, db, genesisBlock := setup(t)
+	forkValidatorService, genesisBlock := setup(t)
 
-	tx, err := db.BeginRw(context.Background())
+	tx, err := forkValidatorService.db.BeginRw(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -128,17 +144,23 @@ func TestSilkwormVerifyChainSingleBlock(t *testing.T) {
 	require.NoError(t, err)
 	tx.Commit()
 
-	err2 := silkwormInstance.StartForkValidator(db.CHandle(), ForkValidatorTestSettings())
-	require.NoError(t, err2)
+	err = forkValidatorService.Start()
+	require.NoError(t, err)
 
-	err3 := silkwormInstance.VerifyChain(silkworm_go.Hash(newBlock.Header().Hash()))
-	require.NoError(t, err3)
+	validationResult, err := forkValidatorService.VerifyChain(newBlock.Header().Hash())
+	require.NoError(t, err)
+	require.True(t, validationResult.ExecutionStatus == 0)
+	require.Equal(t, newBlock.Header().Hash(), common.Hash(validationResult.LastValidHash))
+
+	forkValidatorService.silkworm.Close()
+	forkValidatorService.silkworm = nil
+	forkValidatorService.db.Close()
 }
 
 func TestSilkwormForkChoiceUpdateSingleBlock(t *testing.T) {
-	silkwormInstance, db, genesisBlock := setup(t)
+	forkValidatorService, genesisBlock := setup(t)
 
-	tx, err := db.BeginRw(context.Background())
+	tx, err := forkValidatorService.db.BeginRw(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -150,20 +172,26 @@ func TestSilkwormForkChoiceUpdateSingleBlock(t *testing.T) {
 	require.NoError(t, err)
 	tx.Commit()
 
-	err = silkwormInstance.StartForkValidator(db.CHandle(), ForkValidatorTestSettings())
+	err = forkValidatorService.Start()
 	require.NoError(t, err)
 
-	err = silkwormInstance.VerifyChain(silkworm_go.Hash(newBlock.Header().Hash()))
+	validationResult, err := forkValidatorService.VerifyChain(newBlock.Header().Hash())
+	require.NoError(t, err)
+	require.True(t, validationResult.ExecutionStatus == 0)
+	require.Equal(t, newBlock.Header().Hash(), common.Hash(validationResult.LastValidHash))
+
+	err = forkValidatorService.ForkChoiceUpdate(newBlock.Header().Hash(), common.Hash{}, common.Hash{})
 	require.NoError(t, err)
 
-	err = silkwormInstance.ForkChoiceUpdate(silkworm_go.Hash(newBlock.Header().Hash()), silkworm_go.Hash{}, silkworm_go.Hash{})
-	require.NoError(t, err)
+	forkValidatorService.silkworm.Close()
+	forkValidatorService.silkworm = nil
+	forkValidatorService.db.Close()
 }
 
 func TestSilkwormVerifyChainTwoBlocks(t *testing.T) {
-	silkwormInstance, db, genesisBlock := setup(t)
+	forkValidatorService, genesisBlock := setup(t)
 
-	tx, err := db.BeginRw(context.Background())
+	tx, err := forkValidatorService.db.BeginRw(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -179,20 +207,28 @@ func TestSilkwormVerifyChainTwoBlocks(t *testing.T) {
 
 	tx.Commit()
 
-	err = silkwormInstance.StartForkValidator(db.CHandle(), ForkValidatorTestSettings())
+	err = forkValidatorService.Start()
 	require.NoError(t, err)
 
-	err = silkwormInstance.VerifyChain(silkworm_go.Hash(newBlock2.Header().Hash()))
+	validationResult, err := forkValidatorService.VerifyChain(newBlock2.Header().Hash())
 	require.NoError(t, err)
+	require.True(t, validationResult.ExecutionStatus == 0)
+	require.Equal(t, newBlock2.Header().Hash(), common.Hash(validationResult.LastValidHash))
 
-	err = silkwormInstance.VerifyChain(silkworm_go.Hash(newBlock1.Header().Hash()))
+	validationResult, err = forkValidatorService.VerifyChain(newBlock1.Header().Hash())
 	require.NoError(t, err)
+	require.True(t, validationResult.ExecutionStatus == 0)
+	require.Equal(t, newBlock2.Header().Hash(), common.Hash(validationResult.LastValidHash))
+
+	forkValidatorService.silkworm.Close()
+	forkValidatorService.silkworm = nil
+	forkValidatorService.db.Close()
 }
 
 func TestSilkwormVerifyTwoChains(t *testing.T) {
-	silkwormInstance, db, genesisBlock := setup(t)
+	forkValidatorService, genesisBlock := setup(t)
 
-	tx, err := db.BeginRw(context.Background())
+	tx, err := forkValidatorService.db.BeginRw(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -208,23 +244,32 @@ func TestSilkwormVerifyTwoChains(t *testing.T) {
 
 	tx.Commit()
 
-	err = silkwormInstance.StartForkValidator(db.CHandle(), ForkValidatorTestSettings())
+	err = forkValidatorService.Start()
 	require.NoError(t, err)
 
-	err = silkwormInstance.VerifyChain(silkworm_go.Hash(newBlock1.Header().Hash()))
+	validationResult, err := forkValidatorService.VerifyChain(newBlock1.Header().Hash())
 	require.NoError(t, err)
+	require.True(t, validationResult.ExecutionStatus == 0)
+	require.Equal(t, newBlock1.Header().Hash(), common.Hash(validationResult.LastValidHash))
 
-	err = silkwormInstance.VerifyChain(silkworm_go.Hash(newBlock2.Header().Hash()))
+	validationResult, err = forkValidatorService.VerifyChain(newBlock2.Header().Hash())
 	require.NoError(t, err)
+	require.True(t, validationResult.ExecutionStatus == 0)
+	require.Equal(t, newBlock2.Header().Hash(), common.Hash(validationResult.LastValidHash))
+
+	forkValidatorService.silkworm.Close()
+	forkValidatorService.silkworm = nil
+	forkValidatorService.db.Close()
 }
 
 func TestSilkwormForkChoiceUpdateTwoChains(t *testing.T) {
-	silkwormInstance, db, genesisBlock := setup(t)
+	forkValidatorService, genesisBlock := setup(t)
 
-	tx, err := db.BeginRw(context.Background())
+	tx, err := forkValidatorService.db.BeginRw(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	defer tx.Rollback()
 
 	newBlock1 := SampleBlock(genesisBlock.Header())
@@ -237,12 +282,18 @@ func TestSilkwormForkChoiceUpdateTwoChains(t *testing.T) {
 
 	tx.Commit()
 
-	err = silkwormInstance.StartForkValidator(db.CHandle(), ForkValidatorTestSettings())
+	err = forkValidatorService.Start()
 	require.NoError(t, err)
 
-	err = silkwormInstance.VerifyChain(silkworm_go.Hash(newBlock1.Header().Hash()))
+	validationResult, err := forkValidatorService.VerifyChain(newBlock1.Header().Hash())
+	require.NoError(t, err)
+	require.True(t, validationResult.ExecutionStatus == 0)
+	require.Equal(t, newBlock1.Header().Hash(), common.Hash(validationResult.LastValidHash))
+
+	err = forkValidatorService.ForkChoiceUpdate(newBlock2.Header().Hash(), newBlock2.Header().Hash(), newBlock2.Header().Hash())
 	require.NoError(t, err)
 
-	err = silkwormInstance.ForkChoiceUpdate(silkworm_go.Hash(newBlock2.Header().Hash()), silkworm_go.Hash(newBlock2.Header().Hash()), silkworm_go.Hash(newBlock2.Header().Hash()))
-	require.NoError(t, err)
+	forkValidatorService.silkworm.Close()
+	forkValidatorService.silkworm = nil
+	forkValidatorService.db.Close()
 }
