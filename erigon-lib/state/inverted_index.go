@@ -589,8 +589,8 @@ func (iit *InvertedIndexRoTx) seekInFiles(key []byte, txNum uint64) (found bool,
 		}
 	}
 
-	r, ok := iit.iiNotFoundCache.Get(hi)
-	if ok && r.requested <= txNum && txNum <= r.found {
+	fromCache, ok := iit.iiNotFoundCache.Get(hi)
+	if ok && fromCache.requested <= txNum && txNum <= fromCache.found {
 		//if dbg.KVReadLevelledMetrics {
 		m := iit.iiNotFoundCache.Metrics()
 		//if iit.ii.filenameBase != "code" {
@@ -599,7 +599,7 @@ func (iit *InvertedIndexRoTx) seekInFiles(key []byte, txNum uint64) (found bool,
 		}
 		//}
 		//}
-		return true, r.found
+		return true, fromCache.found
 		//return false, 0
 	}
 	miss++
@@ -623,7 +623,7 @@ func (iit *InvertedIndexRoTx) seekInFiles(key []byte, txNum uint64) (found bool,
 		equalOrHigherTxNum, found = eliasfano32.Seek(eliasVal, txNum)
 
 		if found {
-			iit.iiNotFoundCache.Add(hi, equalOrHigherTxNum)
+			iit.iiNotFoundCache.Add(hi, r{requested: txNum, found: equalOrHigherTxNum})
 			return true, equalOrHigherTxNum
 		}
 	}
