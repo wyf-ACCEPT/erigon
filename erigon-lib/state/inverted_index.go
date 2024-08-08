@@ -531,7 +531,10 @@ type InvertedIndexRoTx struct {
 	getters []ArchiveGetter
 	readers []*recsplit.IndexReader
 
-	iiNotFoundCache *freelru.LRU[uint64, uint64]
+	iiNotFoundCache *freelru.LRU[uint64, r]
+}
+type r struct {
+	requested, found uint64
 }
 
 // hashKey - change of salt will require re-gen of indices
@@ -577,27 +580,27 @@ func (iit *InvertedIndexRoTx) seekInFiles(key []byte, txNum uint64) (found bool,
 
 	hi, lo := iit.hashKey(key)
 
-	const limit = 10_000
+	const limit = 1024
 	if iit.iiNotFoundCache == nil {
 		var err error
-		iit.iiNotFoundCache, err = freelru.New[uint64, uint64](limit, u64noHash)
+		iit.iiNotFoundCache, err = freelru.New[uint64, r](limit, u64noHash)
 		if err != nil {
 			panic(err)
 		}
 	}
 
-	lastRequestedTxNum, ok := iit.iiNotFoundCache.Get(hi)
-	if ok && lastRequestedTxNum <= txNum {
-		hit++
+	r, ok := iit.iiNotFoundCache.Get(hi)
+	if ok && r.requested <= txNum && txNum <= r.found {
 		//if dbg.KVReadLevelledMetrics {
 		m := iit.iiNotFoundCache.Metrics()
-		if iit.ii.filenameBase != "code" {
-			if hit%10_000 == 0 {
-				log.Warn("[dbg] lEachCache", "a", iit.ii.filenameBase, "hit", hit, "total", hit+miss, "Collisions", m.Collisions, "Evictions", m.Evictions, "Inserts", m.Inserts, "limit", limit, "ratio", fmt.Sprintf("%.2f", float64(m.Hits)/float64(m.Hits+m.Misses)))
-			}
+		//if iit.ii.filenameBase != "code" {
+		if hit%10_000 == 0 {
+			log.Warn("[dbg] lEachCache", "a", iit.ii.filenameBase, "hit", hit, "total", hit+miss, "Collisions", m.Collisions, "Evictions", m.Evictions, "Inserts", m.Inserts, "limit", limit, "ratio", fmt.Sprintf("%.2f", float64(m.Hits)/float64(m.Hits+m.Misses)))
 		}
 		//}
-		return false, 0
+		//}
+		return true, r.found
+		//return false, 0
 	}
 	miss++
 
@@ -620,11 +623,12 @@ func (iit *InvertedIndexRoTx) seekInFiles(key []byte, txNum uint64) (found bool,
 		equalOrHigherTxNum, found = eliasfano32.Seek(eliasVal, txNum)
 
 		if found {
+			iit.iiNotFoundCache.Add(hi, equalOrHigherTxNum)
 			return true, equalOrHigherTxNum
 		}
 	}
 
-	iit.iiNotFoundCache.Add(hi, txNum)
+	//iit.iiNotFoundCache.Add(hi, txNum)
 	return false, 0
 }
 
