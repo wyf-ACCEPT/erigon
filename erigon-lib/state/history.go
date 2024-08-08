@@ -1194,9 +1194,10 @@ func (ht *HistoryRoTx) historySeekInFiles(key []byte, txNum uint64) ([]byte, boo
 
 	hi, lo := ht.iit.hashKey(key)
 	const limit = 128
+
 	if ht.historyStateCache == nil {
 		var err error
-		ht.historyStateCache, err = freelru.New[uint64, r](256, u64noHash)
+		ht.historyStateCache, err = freelru.New[uint64, r](1024, u64noHash)
 		if err != nil {
 			panic(err)
 		}
@@ -1218,6 +1219,7 @@ func (ht *HistoryRoTx) historySeekInFiles(key []byte, txNum uint64) ([]byte, boo
 		// it means II can't return index of file, but can return TxNum which History will use to find own file
 		ok, histTxNum = ht.iit.seekInFiles(hi, lo, key, txNum)
 		if !ok {
+			fmt.Printf("not found")
 			return nil, false, nil
 		}
 		ht.historyStateCache.Add(hi, r{requested: txNum, found: histTxNum})
