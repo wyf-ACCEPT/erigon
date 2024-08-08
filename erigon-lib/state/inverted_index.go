@@ -603,6 +603,7 @@ func (iit *InvertedIndexRoTx) seekInFiles(key []byte, txNum uint64) (found bool,
 			//}
 			return true, fromCache.found
 		} else if fromCache.found == 0 {
+			hit++
 			return false, 0
 		}
 	}
