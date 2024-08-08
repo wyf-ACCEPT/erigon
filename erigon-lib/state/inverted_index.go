@@ -565,6 +565,8 @@ func (iit *InvertedIndexRoTx) statelessIdxReader(i int) *recsplit.IndexReader {
 	return r
 }
 
+var hit, miss int
+
 func (iit *InvertedIndexRoTx) seekInFiles(key []byte, txNum uint64) (found bool, equalOrHigherTxNum uint64) {
 	if len(iit.files) == 0 {
 		return false, 0
@@ -586,14 +588,16 @@ func (iit *InvertedIndexRoTx) seekInFiles(key []byte, txNum uint64) (found bool,
 
 	lastRequestedTxNum, ok := iit.iiNotFoundCache.Get(hi)
 	if ok && lastRequestedTxNum <= txNum {
+		hit++
 		//if dbg.KVReadLevelledMetrics {
 		m := iit.iiNotFoundCache.Metrics()
 		if m.Misses%1_000_000 == 0 {
-			log.Warn("[dbg] lEachCache", "a", iit.ii.filenameBase, "hit", m.Hits, "total", m.Hits+m.Misses, "Collisions", m.Collisions, "Evictions", m.Evictions, "Inserts", m.Inserts, "limit", limit, "ratio", fmt.Sprintf("%.2f", float64(m.Hits)/float64(m.Hits+m.Misses)))
+			log.Warn("[dbg] lEachCache", "a", iit.ii.filenameBase, "hit", hit, "total", hit+miss, "Collisions", m.Collisions, "Evictions", m.Evictions, "Inserts", m.Inserts, "limit", limit, "ratio", fmt.Sprintf("%.2f", float64(m.Hits)/float64(m.Hits+m.Misses)))
 		}
 		//}
 		return false, 0
 	}
+	miss++
 
 	for i := 0; i < len(iit.files); i++ {
 		if iit.files[i].endTxNum <= txNum {
