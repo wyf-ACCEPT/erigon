@@ -1408,24 +1408,24 @@ func (dt *DomainRoTx) getFromFiles(filekey []byte) (v []byte, found bool, fileSt
 	}
 
 	hi, _ := dt.ht.iit.hashKey(filekey)
-	if dt.name != kv.CommitmentDomain {
-		if dt.latestStateCache == nil {
-			dt.latestStateCache, err = freelru.New[uint64, fileCacheItem](latestStateCachePerDomain, u64noHash)
-			if err != nil {
-				panic(err)
-			}
-		}
-		cv, ok := dt.latestStateCache.Get(hi)
-		if ok {
-			//if dbg.KVReadLevelledMetrics {
-			//m := dt.latestStateCache.Metrics()
-			//if m.Hits%1000 == 0 {
-			//	log.Warn("[dbg] lEachCache", "a", dt.name.String(), "hit", m.Hits, "total", m.Hits+m.Misses, "Collisions", m.Collisions, "Evictions", m.Evictions, "Inserts", m.Inserts, "limit", latestStateCachePerDomain, "ratio", fmt.Sprintf("%.2f", float64(m.Hits)/float64(m.Hits+m.Misses)))
-			//}
-			//}
-			return cv.v, true, dt.files[cv.lvl].startTxNum, dt.files[cv.lvl].endTxNum, nil
-		}
-	}
+	//if dt.name != kv.CommitmentDomain {
+	//	if dt.latestStateCache == nil {
+	//		dt.latestStateCache, err = freelru.New[uint64, fileCacheItem](latestStateCachePerDomain, u64noHash)
+	//		if err != nil {
+	//			panic(err)
+	//		}
+	//	}
+	//	cv, ok := dt.latestStateCache.Get(hi)
+	//	if ok {
+	//		//if dbg.KVReadLevelledMetrics {
+	//		//m := dt.latestStateCache.Metrics()
+	//		//if m.Hits%1000 == 0 {
+	//		//	log.Warn("[dbg] lEachCache", "a", dt.name.String(), "hit", m.Hits, "total", m.Hits+m.Misses, "Collisions", m.Collisions, "Evictions", m.Evictions, "Inserts", m.Inserts, "limit", latestStateCachePerDomain, "ratio", fmt.Sprintf("%.2f", float64(m.Hits)/float64(m.Hits+m.Misses)))
+	//		//}
+	//		//}
+	//		return cv.v, true, dt.files[cv.lvl].startTxNum, dt.files[cv.lvl].endTxNum, nil
+	//	}
+	//}
 
 	for i := len(dt.files) - 1; i >= 0; i-- {
 		if dt.d.indexList&withExistence != 0 {
@@ -1461,18 +1461,18 @@ func (dt *DomainRoTx) getFromFiles(filekey []byte) (v []byte, found bool, fileSt
 			fmt.Printf("GetLatest(%s, %x) -> found in file %s\n", dt.name.String(), filekey, dt.files[i].src.decompressor.FileName())
 		}
 
-		if dt.name != kv.CommitmentDomain {
-			dt.latestStateCache.Add(hi, fileCacheItem{lvl: uint8(i), v: v})
-		}
+		//if dt.name != kv.CommitmentDomain {
+		//	dt.latestStateCache.Add(hi, fileCacheItem{lvl: uint8(i), v: v})
+		//}
 		return v, true, dt.files[i].startTxNum, dt.files[i].endTxNum, nil
 	}
 	if traceGetLatest == dt.name {
 		fmt.Printf("GetLatest(%s, %x) -> not found in %d files\n", dt.name.String(), filekey, len(dt.files))
 	}
 
-	if dt.name != kv.CommitmentDomain {
-		dt.latestStateCache.Add(hi, fileCacheItem{lvl: 0, v: nil})
-	}
+	//if dt.name != kv.CommitmentDomain {
+	//	dt.latestStateCache.Add(hi, fileCacheItem{lvl: 0, v: nil})
+	//}
 	return nil, false, 0, 0, nil
 }
 
