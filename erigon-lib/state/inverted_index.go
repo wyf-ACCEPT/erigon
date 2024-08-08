@@ -588,7 +588,7 @@ func (iit *InvertedIndexRoTx) seekInFiles(key []byte, txNum uint64) (found bool,
 	if ok && lastRequestedTxNum <= txNum {
 		//if dbg.KVReadLevelledMetrics {
 		m := iit.iiNotFoundCache.Metrics()
-		if m.Misses%1_000 == 0 {
+		if m.Misses%1_000_000 == 0 {
 			log.Warn("[dbg] lEachCache", "a", iit.ii.filenameBase, "hit", m.Hits, "total", m.Hits+m.Misses, "Collisions", m.Collisions, "Evictions", m.Evictions, "Inserts", m.Inserts, "limit", limit, "ratio", fmt.Sprintf("%.2f", float64(m.Hits)/float64(m.Hits+m.Misses)))
 		}
 		//}
