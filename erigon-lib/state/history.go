@@ -1204,10 +1204,10 @@ func (ht *HistoryRoTx) historySeekInFiles(key []byte, txNum uint64) ([]byte, boo
 	v, ok := ht.historyStateCache.Get(cacheKey)
 	if ok {
 		//if dbg.KVReadLevelledMetrics {
-		//	m := ht.historyStateCache.Metrics()
-		//	if m.Misses%10 == 0 {
-		//		log.Warn("[dbg] lEachCache", "a", ht.h.filenameBase, "hit", m.Hits, "total", m.Hits+m.Misses, "Collisions", m.Collisions, "Evictions", m.Evictions, "Inserts", m.Inserts, "limit", limit, "ratio", fmt.Sprintf("%.2f", float64(m.Hits)/float64(m.Hits+m.Misses)))
-		//	}
+		m := ht.historyStateCache.Metrics()
+		if m.Misses%10 == 0 {
+			log.Warn("[dbg] lEachCache", "a", ht.h.filenameBase, "hit", m.Hits, "total", m.Hits+m.Misses, "Collisions", m.Collisions, "Evictions", m.Evictions, "Inserts", m.Inserts, "limit", limit, "ratio", fmt.Sprintf("%.2f", float64(m.Hits)/float64(m.Hits+m.Misses)))
+		}
 		//}
 		return v, v != nil, nil
 	}
