@@ -34,6 +34,7 @@ import (
 	"time"
 
 	"github.com/RoaringBitmap/roaring/roaring64"
+	"github.com/elastic/go-freelru"
 	"github.com/spaolacci/murmur3"
 	btree2 "github.com/tidwall/btree"
 	"golang.org/x/sync/errgroup"
@@ -529,6 +530,8 @@ type InvertedIndexRoTx struct {
 	files   visibleFiles
 	getters []ArchiveGetter
 	readers []*recsplit.IndexReader
+
+	iiNotFoundCache *freelru.LRU[uint64, uint64]
 }
 
 // hashKey - change of salt will require re-gen of indices
@@ -562,8 +565,33 @@ func (iit *InvertedIndexRoTx) statelessIdxReader(i int) *recsplit.IndexReader {
 	return r
 }
 
-func (iit *InvertedIndexRoTx) seekInFiles(hi, lo uint64, key []byte, txNum uint64) (found bool, equalOrHigherTxNum uint64) {
+func (iit *InvertedIndexRoTx) seekInFiles(key []byte, txNum uint64) (found bool, equalOrHigherTxNum uint64) {
 	if len(iit.files) == 0 {
+		return false, 0
+	}
+	if iit.files[len(iit.files)-1].endTxNum <= txNum {
+		return false, 0
+	}
+
+	hi, lo := iit.hashKey(key)
+	const limit = 128
+
+	if iit.iiNotFoundCache == nil {
+		var err error
+		iit.iiNotFoundCache, err = freelru.New[uint64, uint64](4096, u64noHash)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	lastRequestedTxNum, ok := iit.iiNotFoundCache.Get(hi)
+	if ok && lastRequestedTxNum <= txNum {
+		//if dbg.KVReadLevelledMetrics {
+		m := iit.iiNotFoundCache.Metrics()
+		if m.Misses%1_000 == 0 {
+			log.Warn("[dbg] lEachCache", "a", iit.ii.filenameBase, "hit", m.Hits, "total", m.Hits+m.Misses, "Collisions", m.Collisions, "Evictions", m.Evictions, "Inserts", m.Inserts, "limit", limit, "ratio", fmt.Sprintf("%.2f", float64(m.Hits)/float64(m.Hits+m.Misses)))
+		}
+		//}
 		return false, 0
 	}
 
@@ -589,6 +617,8 @@ func (iit *InvertedIndexRoTx) seekInFiles(hi, lo uint64, key []byte, txNum uint6
 			return true, equalOrHigherTxNum
 		}
 	}
+
+	iit.iiNotFoundCache.Add(hi, txNum)
 	return false, 0
 }
 

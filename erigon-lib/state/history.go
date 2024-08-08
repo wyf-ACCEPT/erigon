@@ -30,7 +30,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/elastic/go-freelru"
 	btree2 "github.com/tidwall/btree"
 	"golang.org/x/sync/errgroup"
 
@@ -972,11 +971,6 @@ type HistoryRoTx struct {
 	valsCDup kv.CursorDupSort
 
 	_bufTs []byte
-
-	historyStateCache *freelru.LRU[uint64, r]
-}
-type r struct {
-	requested, found uint64
 }
 
 func (h *History) BeginFilesRo() *HistoryRoTx {
@@ -1192,37 +1186,11 @@ func (ht *HistoryRoTx) historySeekInFiles(key []byte, txNum uint64) ([]byte, boo
 		return nil, false, nil
 	}
 
-	hi, lo := ht.iit.hashKey(key)
-	const limit = 128
-
-	if ht.historyStateCache == nil {
-		var err error
-		ht.historyStateCache, err = freelru.New[uint64, r](4096, u64noHash)
-		if err != nil {
-			panic(err)
-		}
-	}
-
-	var histTxNum uint64
-
-	fromCache, ok := ht.historyStateCache.Get(hi)
-	if ok && fromCache.requested <= txNum && txNum <= fromCache.found {
-		histTxNum = fromCache.found
-		//if dbg.KVReadLevelledMetrics {
-		m := ht.historyStateCache.Metrics()
-		if m.Misses%1_000 == 0 {
-			log.Warn("[dbg] lEachCache", "a", ht.h.filenameBase, "hit", m.Hits, "total", m.Hits+m.Misses, "Collisions", m.Collisions, "Evictions", m.Evictions, "Inserts", m.Inserts, "limit", limit, "ratio", fmt.Sprintf("%.2f", float64(m.Hits)/float64(m.Hits+m.Misses)))
-		}
-		//}
-	} else {
-		// Files list of II and History is different
-		// it means II can't return index of file, but can return TxNum which History will use to find own file
-		ok, histTxNum = ht.iit.seekInFiles(hi, lo, key, txNum)
-		if !ok {
-			fmt.Printf("not found")
-			return nil, false, nil
-		}
-		ht.historyStateCache.Add(hi, r{requested: txNum, found: histTxNum})
+	// Files list of II and History is different
+	// it means II can't return index of file, but can return TxNum which History will use to find own file
+	ok, histTxNum := ht.iit.seekInFiles(key, txNum)
+	if !ok {
+		return nil, false, nil
 	}
 
 	historyItem, ok := ht.getFile(histTxNum)
