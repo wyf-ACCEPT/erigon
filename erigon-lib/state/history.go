@@ -1197,7 +1197,7 @@ func (ht *HistoryRoTx) historySeekInFiles(key []byte, txNum uint64) ([]byte, boo
 
 	if ht.historyStateCache == nil {
 		var err error
-		ht.historyStateCache, err = freelru.New[uint64, r](1024, u64noHash)
+		ht.historyStateCache, err = freelru.New[uint64, r](4096, u64noHash)
 		if err != nil {
 			panic(err)
 		}
