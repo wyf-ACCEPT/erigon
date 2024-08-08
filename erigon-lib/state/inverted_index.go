@@ -603,6 +603,10 @@ func (iit *InvertedIndexRoTx) seekInFiles(key []byte, txNum uint64) (found bool,
 			//}
 			return true, fromCache.found
 		} else if fromCache.found == 0 {
+			m := iit.iiNotFoundCache.Metrics()
+			if hit%10_000 == 0 {
+				log.Warn("[dbg] lEachCache", "a", iit.ii.filenameBase, "hit", hit, "total", hit+miss, "Collisions", m.Collisions, "Evictions", m.Evictions, "Inserts", m.Inserts, "limit", limit, "ratio", fmt.Sprintf("%.2f", float64(m.Hits)/float64(m.Hits+m.Misses)))
+			}
 			hit++
 			return false, 0
 		}
