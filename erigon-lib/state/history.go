@@ -973,7 +973,7 @@ type HistoryRoTx struct {
 
 	_bufTs []byte
 
-	historyStateCache *freelru.LRU[u192, []byte]
+	historyStateCache *freelru.LRU[u128, []byte]
 }
 
 func (h *History) BeginFilesRo() *HistoryRoTx {
@@ -1191,11 +1191,11 @@ func (ht *HistoryRoTx) historySeekInFiles(key []byte, txNum uint64) ([]byte, boo
 
 	hi, lo := ht.iit.hashKey(key)
 
-	cacheKey := u192{hi: hi, lo: lo, ext: txNum}
+	cacheKey := u128{hi: hi, lo: txNum}
 	const limit = 128
 	if ht.historyStateCache == nil {
 		var err error
-		ht.historyStateCache, err = freelru.New[u192, []byte](128, u192noHash)
+		ht.historyStateCache, err = freelru.New[u128, []byte](256, u128noHash)
 		if err != nil {
 			panic(err)
 		}
@@ -1205,7 +1205,7 @@ func (ht *HistoryRoTx) historySeekInFiles(key []byte, txNum uint64) ([]byte, boo
 	if ok {
 		//if dbg.KVReadLevelledMetrics {
 		m := ht.historyStateCache.Metrics()
-		if m.Misses%100 == 0 {
+		if m.Misses%1_000 == 0 {
 			log.Warn("[dbg] lEachCache", "a", ht.h.filenameBase, "hit", m.Hits, "total", m.Hits+m.Misses, "Collisions", m.Collisions, "Evictions", m.Evictions, "Inserts", m.Inserts, "limit", limit, "ratio", fmt.Sprintf("%.2f", float64(m.Hits)/float64(m.Hits+m.Misses)))
 		}
 		//}
