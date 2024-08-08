@@ -577,7 +577,7 @@ func (iit *InvertedIndexRoTx) seekInFiles(key []byte, txNum uint64) (found bool,
 
 	hi, lo := iit.hashKey(key)
 
-	const limit = 128
+	const limit = 1024
 	if iit.iiNotFoundCache == nil {
 		var err error
 		iit.iiNotFoundCache, err = freelru.New[uint64, uint64](limit, u64noHash)
