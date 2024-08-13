@@ -80,7 +80,7 @@ type JumpDestCache struct {
 }
 
 var (
-	jumpDestCacheLimit = dbg.EnvInt("JD_LRU", 256)
+	jumpDestCacheLimit = dbg.EnvInt("JD_LRU", 128)
 	jumpDestCacheTrace = dbg.EnvBool("JD_LRU_TRACE", false)
 )
 
