@@ -530,7 +530,6 @@ type InvertedIndexRoTx struct {
 	getters []ArchiveGetter
 	readers []*recsplit.IndexReader
 
-	hit, miss       int
 	iiNotFoundCache *IISeekInFilesCache
 }
 
@@ -579,24 +578,19 @@ func (iit *InvertedIndexRoTx) seekInFiles(key []byte, txNum uint64) (found bool,
 		iit.iiNotFoundCache = NewIISeekInFilesCache()
 	}
 
-	//if dbg.KVReadLevelledMetrics {
-	//	m := iit.iiNotFoundCache.Metrics()
-	//	if iit.hit%10_000 == 0 {
-	//		log.Warn("[dbg] lEachCache", "a", iit.ii.filenameBase, "hit", iit.hit, "total", iit.hit+iit.miss, "Collisions", m.Collisions, "Evictions", m.Evictions, "Inserts", m.Inserts, "limit", limit, "ratio", fmt.Sprintf("%.2f", float64(m.Hits)/float64(m.Hits+m.Misses)))
-	//	}
-	//}
+	iit.iiNotFoundCache.LogStats(iit.ii.filenameBase)
 
+	iit.iiNotFoundCache.total++
 	fromCache, ok := iit.iiNotFoundCache.Get(u128{hi: hi, lo: lo})
 	if ok && fromCache.requested <= txNum {
 		if txNum <= fromCache.found {
-			iit.hit++
+			iit.iiNotFoundCache.hit++
 			return true, fromCache.found
 		} else if fromCache.found == 0 {
-			iit.hit++
+			iit.iiNotFoundCache.hit++
 			return false, 0
 		}
 	}
-	iit.miss++
 
 	for i := 0; i < len(iit.files); i++ {
 		if iit.files[i].endTxNum <= txNum {
