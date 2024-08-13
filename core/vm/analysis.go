@@ -19,6 +19,11 @@
 
 package vm
 
+// wrapper for pprof - about code that doesn't have CodeHash
+func unknownCodeBitmap(code []byte) []uint64 {
+	return codeBitmap(code)
+}
+
 // codeBitmap collects data locations in code.
 func codeBitmap(code []byte) []uint64 {
 	// The bitmap is 4 bytes longer than necessary, in case the code
