@@ -84,6 +84,8 @@ var (
 	jumpDestCacheTrace = dbg.EnvBool("JD_LRU_TRACE", false)
 )
 
+func codeHash2u32hash(h libcommon.Hash) uint32 { return binary.BigEndian.Uint32(h[:4]) } //nolint
+
 func NewJumpDestCache(trace bool) *JumpDestCache {
 	//c, err := simplelru.NewLRU[libcommon.Hash, []uint64](jumpDestCacheLimit, nil)
 	//if err != nil {
@@ -138,8 +140,6 @@ func (c *Contract) validJumpdest(dest *uint256.Int) (bool, bool) {
 func isCodeFromAnalysis(analysis []uint64, udest uint64) bool {
 	return analysis[udest/64]&(uint64(1)<<(udest&63)) == 0
 }
-
-func codeHash2u32hash(h libcommon.Hash) uint32 { return binary.BigEndian.Uint32(h[:4]) } //nolint
 
 // isCode returns true if the provided PC location is an actual opcode, as
 // opposed to a data-segment following a PUSHN operation.
