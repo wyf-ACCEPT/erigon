@@ -2,6 +2,7 @@ package state
 
 import (
 	"github.com/elastic/go-freelru"
+	"github.com/erigontech/erigon-lib/common/dbg"
 )
 
 func u32noHash(u uint32) uint32        { return u }            //nolint
@@ -20,7 +21,7 @@ type domainGetFromFileCacheItem struct {
 	v   []byte // pointer to `mmap` - if .kv file is not compressed
 }
 
-const latestStateCachePerDomain = 128
+var latestStateCachePerDomain = int32(dbg.EnvInt("D_LRU", 128))
 
 func NewDomainGetFromFileCache() *DomainGetFromFileCache {
 	c, err := freelru.New[u128, domainGetFromFileCacheItem](latestStateCachePerDomain, u128noHash)
