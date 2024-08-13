@@ -73,18 +73,19 @@ type Contract struct {
 type JumpDestCache struct {
 	*simplelru.LRU[libcommon.Hash, []uint64]
 	hit, total int
+	trace      bool
 }
 
-func NewJumpDestCache() *JumpDestCache {
+func NewJumpDestCache(trace bool) *JumpDestCache {
 	c, err := simplelru.NewLRU[libcommon.Hash, []uint64](256, nil)
 	if err != nil {
 		panic(err)
 	}
-	return &JumpDestCache{LRU: c}
+	return &JumpDestCache{LRU: c, trace: trace}
 }
 
 func (c *JumpDestCache) LogStats() {
-	if c == nil {
+	if c == nil || !c.trace {
 		return
 	}
 	log.Warn("[dbg] JumpDestCache", "hit", c.hit, "total", c.total, "limit", 256, "ratio", fmt.Sprintf("%.2f", float64(c.hit)/float64(c.total)))
