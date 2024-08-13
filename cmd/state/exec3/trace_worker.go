@@ -22,7 +22,6 @@ import (
 	"github.com/erigontech/erigon-lib/chain"
 	"github.com/erigontech/erigon-lib/common"
 	"github.com/erigontech/erigon-lib/kv"
-
 	"github.com/erigontech/erigon/consensus"
 	"github.com/erigontech/erigon/core"
 	"github.com/erigontech/erigon/core/state"
@@ -82,6 +81,10 @@ func NewTraceWorker(tx kv.TemporalTx, cc *chain.Config, engine consensus.EngineR
 		ie.vmConfig = &vm.Config{Debug: true, Tracer: tracer}
 	}
 	return ie
+}
+
+func (e *TraceWorker) Close() {
+	e.evm.JumpDestCache.LogStats()
 }
 
 func (e *TraceWorker) ChangeBlock(header *types.Header) {
