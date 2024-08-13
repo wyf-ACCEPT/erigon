@@ -106,6 +106,7 @@ func (rw *Worker) ResetState(rs *state.StateV3, accumulator *shards.Accumulator)
 
 func (rw *Worker) Tx() kv.Tx        { return rw.chainTx }
 func (rw *Worker) DiscardReadList() { rw.stateReader.DiscardReadList() }
+func (rw *Worker) LogLRU()          { rw.evm.JumpDestCache.LogStats() }
 func (rw *Worker) ResetTx(chainTx kv.Tx) {
 	if rw.background && rw.chainTx != nil {
 		rw.chainTx.Rollback()

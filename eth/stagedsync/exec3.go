@@ -386,6 +386,7 @@ func ExecV3(ctx context.Context,
 	}
 	applyWorker.ResetState(rs, accumulator)
 	applyWorker.DiscardReadList()
+	defer applyWorker.LogLRU()
 
 	commitThreshold := batchSize.Bytes()
 	progress := NewProgress(blockNum, commitThreshold, workerCount, false, execStage.LogPrefix(), logger)
