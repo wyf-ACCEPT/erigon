@@ -171,7 +171,7 @@ func (c *Contract) isCode(udest uint64) bool {
 	// we don't have to recalculate it for every JUMP instruction in the execution
 	// However, we don't save it within the parent context
 	if c.analysis == nil {
-		c.analysis = codeBitmap(c.Code)
+		c.analysis = unknownCodeBitmap(c.Code)
 	}
 
 	return isCodeFromAnalysis(c.analysis, udest)
