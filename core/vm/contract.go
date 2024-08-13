@@ -20,6 +20,9 @@
 package vm
 
 import (
+	"fmt"
+
+	"github.com/erigontech/erigon-lib/log/v3"
 	"github.com/hashicorp/golang-lru/v2/simplelru"
 	"github.com/holiman/uint256"
 
@@ -69,14 +72,22 @@ type Contract struct {
 
 type JumpDestCache struct {
 	*simplelru.LRU[libcommon.Hash, []uint64]
+	hit, total int
 }
 
 func NewJumpDestCache() *JumpDestCache {
-	c, err := simplelru.NewLRU[libcommon.Hash, []uint64](128, nil)
+	c, err := simplelru.NewLRU[libcommon.Hash, []uint64](256, nil)
 	if err != nil {
 		panic(err)
 	}
-	return &JumpDestCache{c}
+	return &JumpDestCache{LRU: c}
+}
+
+func (c *JumpDestCache) LogStats() {
+	if c == nil {
+		return
+	}
+	log.Warn("[dbg] JumpDestCache", "hit", c.hit, "total", c.total, "limit", 256, "ratio", fmt.Sprintf("%.2f", float64(c.hit)/float64(c.total)))
 }
 
 // NewContract returns a new contract environment for the execution of EVM.
