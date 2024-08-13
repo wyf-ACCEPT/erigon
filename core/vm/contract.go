@@ -20,11 +20,12 @@
 package vm
 
 import (
+	"encoding/binary"
 	"fmt"
 
+	"github.com/elastic/go-freelru"
 	"github.com/erigontech/erigon-lib/common/dbg"
 	"github.com/erigontech/erigon-lib/log/v3"
-	"github.com/hashicorp/golang-lru/v2/simplelru"
 	"github.com/holiman/uint256"
 
 	libcommon "github.com/erigontech/erigon-lib/common"
@@ -72,7 +73,8 @@ type Contract struct {
 }
 
 type JumpDestCache struct {
-	*simplelru.LRU[libcommon.Hash, []uint64]
+	//*simplelru.LRU[libcommon.Hash, []uint64]
+	*freelru.LRU[libcommon.Hash, []uint64]
 	hit, total int
 	trace      bool
 }
@@ -83,7 +85,11 @@ var (
 )
 
 func NewJumpDestCache(trace bool) *JumpDestCache {
-	c, err := simplelru.NewLRU[libcommon.Hash, []uint64](jumpDestCacheLimit, nil)
+	//c, err := simplelru.NewLRU[libcommon.Hash, []uint64](jumpDestCacheLimit, nil)
+	//if err != nil {
+	//	panic(err)
+	//}
+	c, err := freelru.New[libcommon.Hash, []uint64](uint32(jumpDestCacheLimit), codeHash2u32hash)
 	if err != nil {
 		panic(err)
 	}
@@ -132,6 +138,8 @@ func (c *Contract) validJumpdest(dest *uint256.Int) (bool, bool) {
 func isCodeFromAnalysis(analysis []uint64, udest uint64) bool {
 	return analysis[udest/64]&(uint64(1)<<(udest&63)) == 0
 }
+
+func codeHash2u32hash(h libcommon.Hash) uint32 { return binary.BigEndian.Uint32(h[:4]) } //nolint
 
 // isCode returns true if the provided PC location is an actual opcode, as
 // opposed to a data-segment following a PUSHN operation.
