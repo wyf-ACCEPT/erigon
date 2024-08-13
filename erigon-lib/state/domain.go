@@ -1400,23 +1400,7 @@ func (dt *DomainRoTx) getFromFiles(filekey []byte) (v []byte, found bool, fileSt
 		return
 	}
 
-	hi, lo := dt.ht.iit.hashKey(filekey)
-	if dt.name != kv.CommitmentDomain {
-		if dt.getFromFileCache == nil {
-			dt.getFromFileCache = NewDomainGetFromFileCache()
-		}
-		cv, ok := dt.getFromFileCache.Get(u128{hi: hi, lo: lo})
-		if ok {
-			//if dbg.KVReadLevelledMetrics {
-			//m := dt.getFromFileCache.Metrics()
-			//if m.Hits%1000 == 0 {
-			//	log.Warn("[dbg] lEachCache", "a", dt.name.String(), "hit", m.Hits, "total", m.Hits+m.Misses, "Collisions", m.Collisions, "Evictions", m.Evictions, "Inserts", m.Inserts, "limit", latestStateCachePerDomain, "ratio", fmt.Sprintf("%.2f", float64(m.Hits)/float64(m.Hits+m.Misses)))
-			//}
-			//}
-			return cv.v, true, dt.files[cv.lvl].startTxNum, dt.files[cv.lvl].endTxNum, nil
-		}
-	}
-
+	hi, _ := dt.ht.iit.hashKey(filekey)
 	for i := len(dt.files) - 1; i >= 0; i-- {
 		if dt.d.indexList&withExistence != 0 {
 			if dt.files[i].src.existence != nil {
@@ -1450,19 +1434,12 @@ func (dt *DomainRoTx) getFromFiles(filekey []byte) (v []byte, found bool, fileSt
 		if traceGetLatest == dt.name {
 			fmt.Printf("GetLatest(%s, %x) -> found in file %s\n", dt.name.String(), filekey, dt.files[i].src.decompressor.FileName())
 		}
-
-		if dt.name != kv.CommitmentDomain {
-			dt.getFromFileCache.Add(u128{hi: hi, lo: lo}, domainGetFromFileCacheItem{lvl: uint8(i), v: v})
-		}
 		return v, true, dt.files[i].startTxNum, dt.files[i].endTxNum, nil
 	}
 	if traceGetLatest == dt.name {
 		fmt.Printf("GetLatest(%s, %x) -> not found in %d files\n", dt.name.String(), filekey, len(dt.files))
 	}
 
-	if dt.name != kv.CommitmentDomain {
-		dt.getFromFileCache.Add(u128{hi: hi, lo: lo}, domainGetFromFileCacheItem{lvl: 0, v: nil})
-	}
 	return nil, false, 0, 0, nil
 }
 
