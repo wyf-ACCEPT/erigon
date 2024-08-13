@@ -5,6 +5,7 @@ import (
 
 	"github.com/elastic/go-freelru"
 	"github.com/erigontech/erigon-lib/common/dbg"
+	"github.com/erigontech/erigon-lib/kv"
 	"github.com/erigontech/erigon-lib/log/v3"
 )
 
@@ -17,6 +18,7 @@ type u192 struct{ hi, lo, ext uint64 } //nolint
 
 type DomainGetFromFileCache struct {
 	*freelru.LRU[u128, domainGetFromFileCacheItem]
+	trace bool
 }
 
 type domainGetFromFileCacheItem struct {
@@ -26,12 +28,21 @@ type domainGetFromFileCacheItem struct {
 
 var domainGetFromFileCacheLimit = uint32(dbg.EnvInt("D_LRU", 128))
 
-func NewDomainGetFromFileCache() *DomainGetFromFileCache {
+func NewDomainGetFromFileCache(trace bool) *DomainGetFromFileCache {
 	c, err := freelru.New[u128, domainGetFromFileCacheItem](domainGetFromFileCacheLimit, u128noHash)
 	if err != nil {
 		panic(err)
 	}
-	return &DomainGetFromFileCache{c}
+	return &DomainGetFromFileCache{LRU: c, trace: trace}
+}
+
+func (c *DomainGetFromFileCache) LogStats(dt *kv.Domain) {
+	if c == nil || !c.trace {
+		return
+	}
+
+	m := c.Metrics()
+	log.Warn("[dbg] lEachCache", "a", dt.String(), "hit", m.Hits, "total", m.Hits+m.Misses, "Collisions", m.Collisions, "Evictions", m.Evictions, "Inserts", m.Inserts, "limit", domainGetFromFileCacheLimit, "ratio", fmt.Sprintf("%.2f", float64(m.Hits)/float64(m.Hits+m.Misses)))
 }
 
 var iiGetFromFileCacheLimit = uint32(dbg.EnvInt("II_LRU", 512))
