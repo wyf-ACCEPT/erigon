@@ -23,7 +23,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/erigontech/erigon-lib/common"
 	"io"
 	"io/fs"
 	"math/big"
@@ -36,6 +35,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/erigontech/erigon-lib/common"
 
 	"github.com/anacrolix/torrent"
 	"golang.org/x/sync/errgroup"
