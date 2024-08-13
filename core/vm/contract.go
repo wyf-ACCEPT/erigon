@@ -166,7 +166,7 @@ func (c *Contract) isCode(udest uint64) bool {
 		c.analysis = analysis
 		return isCodeFromAnalysis(analysis, udest)
 	} else {
-		fmt.Printf("[dbg] what?\n")
+		fmt.Printf("[dbg] what? %s\n", dbg.Stack())
 	}
 
 	// We don't have the code hash, most likely a piece of initcode not already
