@@ -68,5 +68,5 @@ func (c *IISeekInFilesCache) LogStats(fileBaseName string) {
 		return
 	}
 	m := c.Metrics()
-	log.Warn("[dbg] IISeekInFilesCache", "a", fileBaseName, "hit", c.hit, "total", c.total, "Collisions", m.Collisions, "Evictions", m.Evictions, "Inserts", m.Inserts, "limit", iiGetFromFileCacheLimit, "ratio", fmt.Sprintf("%.2f", float64(m.Hits)/float64(m.Hits+m.Misses)))
+	log.Warn("[dbg] IISeekInFilesCache", "a", fileBaseName, "hit", c.hit, "total", c.total, "Collisions", m.Collisions, "Evictions", m.Evictions, "Inserts", m.Inserts, "limit", iiGetFromFileCacheLimit, "ratio", fmt.Sprintf("%.2f", float64(c.hit)/float64(c.total)))
 }
