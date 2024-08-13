@@ -586,7 +586,7 @@ func (iit *InvertedIndexRoTx) seekInFiles(key []byte, txNum uint64) (found bool,
 	//	}
 	//}
 
-	fromCache, ok := iit.iiNotFoundCache.Get(hi)
+	fromCache, ok := iit.iiNotFoundCache.Get(u128{hi: hi, lo: lo})
 	if ok && fromCache.requested <= txNum {
 		if txNum <= fromCache.found {
 			iit.hit++
@@ -617,12 +617,12 @@ func (iit *InvertedIndexRoTx) seekInFiles(key []byte, txNum uint64) (found bool,
 		equalOrHigherTxNum, found = eliasfano32.Seek(eliasVal, txNum)
 
 		if found {
-			iit.iiNotFoundCache.Add(hi, iiSeekInFilesCacheItem{requested: txNum, found: equalOrHigherTxNum})
+			iit.iiNotFoundCache.Add(u128{hi: hi, lo: lo}, iiSeekInFilesCacheItem{requested: txNum, found: equalOrHigherTxNum})
 			return true, equalOrHigherTxNum
 		}
 	}
 
-	iit.iiNotFoundCache.Add(hi, iiSeekInFilesCacheItem{requested: txNum, found: 0})
+	iit.iiNotFoundCache.Add(u128{hi: hi, lo: lo}, iiSeekInFilesCacheItem{requested: txNum, found: 0})
 	return false, 0
 }
 

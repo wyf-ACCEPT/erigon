@@ -34,14 +34,14 @@ func NewDomainGetFromFileCache() *DomainGetFromFileCache {
 var iiGetFromFileCacheLimit = uint32(dbg.EnvInt("II_LRU", 512))
 
 type IISeekInFilesCache struct {
-	*freelru.LRU[uint64, iiSeekInFilesCacheItem]
+	*freelru.LRU[u128, iiSeekInFilesCacheItem]
 }
 type iiSeekInFilesCacheItem struct {
 	requested, found uint64
 }
 
 func NewIISeekInFilesCache() *IISeekInFilesCache {
-	c, err := freelru.New[uint64, iiSeekInFilesCacheItem](iiGetFromFileCacheLimit, u64noHash)
+	c, err := freelru.New[u128, iiSeekInFilesCacheItem](iiGetFromFileCacheLimit, u128noHash)
 	if err != nil {
 		panic(err)
 	}
