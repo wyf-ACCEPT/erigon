@@ -26,14 +26,17 @@ type domainGetFromFileCacheItem struct {
 	v   []byte // pointer to `mmap` - if .kv file is not compressed
 }
 
-var domainGetFromFileCacheLimit = uint32(dbg.EnvInt("D_LRU", 128))
+var (
+	domainGetFromFileCacheLimit = uint32(dbg.EnvInt("D_LRU", 128))
+	domainGetFromFileCacheTrace = dbg.EnvBool("D_LRU_TRACE", false)
+)
 
 func NewDomainGetFromFileCache(trace bool) *DomainGetFromFileCache {
 	c, err := freelru.New[u128, domainGetFromFileCacheItem](domainGetFromFileCacheLimit, u128noHash)
 	if err != nil {
 		panic(err)
 	}
-	return &DomainGetFromFileCache{LRU: c, trace: trace}
+	return &DomainGetFromFileCache{LRU: c, trace: trace || domainGetFromFileCacheTrace}
 }
 
 func (c *DomainGetFromFileCache) LogStats(dt kv.Domain) {
@@ -45,7 +48,10 @@ func (c *DomainGetFromFileCache) LogStats(dt kv.Domain) {
 	log.Warn("[dbg] DomainGetFromFileCache", "a", dt.String(), "hit", m.Hits, "total", m.Hits+m.Misses, "Collisions", m.Collisions, "Evictions", m.Evictions, "Inserts", m.Inserts, "limit", domainGetFromFileCacheLimit, "ratio", fmt.Sprintf("%.2f", float64(m.Hits)/float64(m.Hits+m.Misses)))
 }
 
-var iiGetFromFileCacheLimit = uint32(dbg.EnvInt("II_LRU", 128))
+var (
+	iiGetFromFileCacheLimit = uint32(dbg.EnvInt("II_LRU", 128))
+	iiGetFromFileCacheTrace = dbg.EnvBool("II_LRU_TRACE", false)
+)
 
 type IISeekInFilesCache struct {
 	*freelru.LRU[u128, iiSeekInFilesCacheItem]
@@ -61,7 +67,7 @@ func NewIISeekInFilesCache(trace bool) *IISeekInFilesCache {
 	if err != nil {
 		panic(err)
 	}
-	return &IISeekInFilesCache{LRU: c, trace: trace}
+	return &IISeekInFilesCache{LRU: c, trace: trace || iiGetFromFileCacheTrace}
 }
 func (c *IISeekInFilesCache) LogStats(fileBaseName string) {
 	if c == nil || !c.trace {
