@@ -36,7 +36,7 @@ func NewDomainGetFromFileCache(trace bool) *DomainGetFromFileCache {
 	return &DomainGetFromFileCache{LRU: c, trace: trace}
 }
 
-func (c *DomainGetFromFileCache) LogStats(dt *kv.Domain) {
+func (c *DomainGetFromFileCache) LogStats(dt kv.Domain) {
 	if c == nil || !c.trace {
 		return
 	}
