@@ -1509,6 +1509,7 @@ func (dt *DomainRoTx) Close() {
 		}
 	}
 	dt.ht.Close()
+	dt.getFromFileCache.LogStats(dt.name)
 }
 
 func (dt *DomainRoTx) statelessGetter(i int) ArchiveGetter {
