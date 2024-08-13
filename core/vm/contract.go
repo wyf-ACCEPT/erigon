@@ -87,6 +87,8 @@ var (
 func codeHash2u32hash(h libcommon.Hash) uint32 { return binary.BigEndian.Uint32(h[:4]) } //nolint
 
 func NewJumpDestCache(trace bool) *JumpDestCache {
+	log.Warn("[dbg] JumpDestCache2", "jumpDestCacheTrace", jumpDestCacheTrace)
+
 	//c, err := simplelru.NewLRU[libcommon.Hash, []uint64](jumpDestCacheLimit, nil)
 	//if err != nil {
 	//	panic(err)
@@ -100,6 +102,7 @@ func NewJumpDestCache(trace bool) *JumpDestCache {
 
 func (c *JumpDestCache) LogStats() {
 	if c == nil || !c.trace {
+		log.Warn("[dbg] JumpDestCache1", "is_nil", c == nil)
 		return
 	}
 	log.Warn("[dbg] JumpDestCache", "hit", c.hit, "total", c.total, "limit", 256, "ratio", fmt.Sprintf("%.2f", float64(c.hit)/float64(c.total)))
