@@ -1188,7 +1188,6 @@ func (ht *HistoryRoTx) historySeekInFiles(key []byte, txNum uint64) ([]byte, boo
 		return nil, false, nil
 	}
 	offset, ok := reader.Lookup(ht.encodeTs(histTxNum, key))
-	//offset, ok := reader.Lookup2(ht.encodeTs(histTxNum, key))
 	if !ok {
 		return nil, false, nil
 	}
