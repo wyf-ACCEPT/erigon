@@ -85,6 +85,7 @@ var (
 )
 
 func NewJumpDestCache(trace bool) *JumpDestCache {
+	panic(jumpDestCacheLimit)
 	//c, err := simplelru.NewLRU[libcommon.Hash, []uint64](jumpDestCacheLimit, nil)
 	//if err != nil {
 	//	panic(err)
