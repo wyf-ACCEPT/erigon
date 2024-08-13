@@ -45,7 +45,7 @@ func (c *DomainGetFromFileCache) LogStats(dt *kv.Domain) {
 	log.Warn("[dbg] lEachCache", "a", dt.String(), "hit", m.Hits, "total", m.Hits+m.Misses, "Collisions", m.Collisions, "Evictions", m.Evictions, "Inserts", m.Inserts, "limit", domainGetFromFileCacheLimit, "ratio", fmt.Sprintf("%.2f", float64(m.Hits)/float64(m.Hits+m.Misses)))
 }
 
-var iiGetFromFileCacheLimit = uint32(dbg.EnvInt("II_LRU", 512))
+var iiGetFromFileCacheLimit = uint32(dbg.EnvInt("II_LRU", 128))
 
 type IISeekInFilesCache struct {
 	*freelru.LRU[u128, iiSeekInFilesCacheItem]
