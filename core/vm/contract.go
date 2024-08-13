@@ -22,6 +22,7 @@ package vm
 import (
 	"fmt"
 
+	"github.com/erigontech/erigon-lib/common/dbg"
 	"github.com/erigontech/erigon-lib/log/v3"
 	"github.com/hashicorp/golang-lru/v2/simplelru"
 	"github.com/holiman/uint256"
@@ -76,12 +77,17 @@ type JumpDestCache struct {
 	trace      bool
 }
 
+var (
+	jumpDestCacheLimit = dbg.EnvInt("JD_LRU", 256)
+	jumpDestCacheTrace = dbg.EnvBool("JD_LRU_TRACE", false)
+)
+
 func NewJumpDestCache(trace bool) *JumpDestCache {
-	c, err := simplelru.NewLRU[libcommon.Hash, []uint64](256, nil)
+	c, err := simplelru.NewLRU[libcommon.Hash, []uint64](jumpDestCacheLimit, nil)
 	if err != nil {
 		panic(err)
 	}
-	return &JumpDestCache{LRU: c, trace: trace}
+	return &JumpDestCache{LRU: c, trace: trace || jumpDestCacheTrace}
 }
 
 func (c *JumpDestCache) LogStats() {
