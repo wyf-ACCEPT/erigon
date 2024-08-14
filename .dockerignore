@@ -4,7 +4,7 @@
 **/*.o
 **/*.dSYM
 
-build
+
 tests/testdata
 cmd/prometheus
 vendor
