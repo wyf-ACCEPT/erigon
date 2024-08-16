@@ -344,7 +344,9 @@ func WaitForDownloader(ctx context.Context, logPrefix string, dirs datadir.Dirs,
 		}
 		if err := RequestSnapshotsDownload(ctx, downloadRequest, snapshotDownloader); err != nil {
 			log.Error(fmt.Sprintf("[%s] call downloader", logPrefix), "err", err)
-			time.Sleep(10 * time.Second)
+			if err := common.Sleep(ctx, 10*time.Second); err != nil {
+				return err
+			}
 			continue
 		}
 		break
