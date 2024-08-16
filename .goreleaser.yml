@@ -323,3 +323,36 @@ archives:
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     wrap_in_directory: true
     format: tar.gz
+
+  - id: linux-arm64
+    builds:
+      - linux-arm64-erigon
+      - linux-arm64-downloader
+      - linux-arm64-devnet
+      - linux-arm64-evm
+      - linux-arm64-caplin
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    wrap_in_directory: true
+    format: tar.gz
+
+  - id: linux-amd64
+    builds:
+      - linux-amd64-erigon
+      - linux-amd64-downloader
+      - linux-amd64-devnet
+      - linux-amd64-evm
+      - linux-amd64-caplin
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    wrap_in_directory: true
+    format: tar.gz
+
+  - id: windows-amd64
+    builds:
+      - windows-amd64-erigon
+      - windows-amd64-downloader
+      - windows-amd64-devnet
+      - windows-amd64-evm
+      - windows-amd64-caplin
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    wrap_in_directory: true
+    format: zip
