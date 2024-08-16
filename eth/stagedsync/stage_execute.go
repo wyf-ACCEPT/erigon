@@ -107,6 +107,7 @@ func StageExecuteBlocksCfg(
 	syncCfg ethconfig.Sync,
 	silkworm *silkworm.Silkworm,
 ) ExecuteBlockCfg {
+	fmt.Printf("[dbg] %s\n", dbg.Stack())
 	if dirs.SnapDomain == "" {
 		panic("empty `dirs` variable")
 	}
