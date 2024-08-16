@@ -14,7 +14,7 @@ env:
   - GIT_BRANCH={{ .Env.GIT_BRANCH }}
   - GIT_TAG={{ .Env.GIT_TAG }}
   - DARWING_LDFLAGS="-O3 -g -mmacosx-version-min=13.3"
-  - PACKAGE="github.com/erigontech/erigon"
+  - PACKAGE={{ .Env.PACKAGE }}
   - GO_FLAGS=-trimpath -buildvcs=false -ldflags "-X {{ .Env.PACKAGE }}/params.GitCommit={{ .Env.GIT_COMMIT }} -X {{ .Env.PACKAGE }}/params.GitBranch={{ .Env.GIT_BRANCH }} -X {{ .Env.PACKAGE }}/params.GitTag={{ .Env.GIT_TAG }}"
 
 builds:
