@@ -9,6 +9,7 @@ release:
 
 env:
   - CGO_ENABLED=1
+  - BUILD_VERSION={{ .Env.BUILD_VERSION }}
 
 builds:
 
@@ -309,7 +310,7 @@ archives:
       - darwin-amd64-devnet
       - darwin-amd64-evm
       - darwin-amd64-caplin
-    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    name_template: "{{ .ProjectName }}_{{ .Env.BUILD_VERSION }}_{{ .Os }}_{{ .Arch }}"
     wrap_in_directory: true
     format: tar.gz
   
@@ -320,7 +321,7 @@ archives:
       - darwin-arm64-devnet
       - darwin-arm64-evm
       - darwin-arm64-caplin
-    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    name_template: "{{ .ProjectName }}_{{ .Env.BUILD_VERSION }}_{{ .Os }}_{{ .Arch }}"
     wrap_in_directory: true
     format: tar.gz
 
@@ -331,7 +332,7 @@ archives:
       - linux-arm64-devnet
       - linux-arm64-evm
       - linux-arm64-caplin
-    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    name_template: "{{ .ProjectName }}_{{ .Env.BUILD_VERSION }}_{{ .Os }}_{{ .Arch }}"
     wrap_in_directory: true
     format: tar.gz
 
@@ -342,7 +343,7 @@ archives:
       - linux-amd64-devnet
       - linux-amd64-evm
       - linux-amd64-caplin
-    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    name_template: "{{ .ProjectName }}_{{ .Env.BUILD_VERSION }}_{{ .Os }}_{{ .Arch }}"
     wrap_in_directory: true
     format: tar.gz
 
@@ -353,6 +354,6 @@ archives:
       - windows-amd64-devnet
       - windows-amd64-evm
       - windows-amd64-caplin
-    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    name_template: "{{ .ProjectName }}_{{ .Env.BUILD_VERSION }}_{{ .Os }}_{{ .Arch }}"
     wrap_in_directory: true
     format: zip
