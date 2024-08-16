@@ -247,7 +247,7 @@ builds:
 ## Windows AMD64
   - id: windows-amd64-erigon
     main: ./cmd/erigon
-    binary: erigon
+    binary: erigon.exe
     goos: [ windows ]
     goarch: [ amd64 ]
     env:
@@ -258,7 +258,7 @@ builds:
 
   - id: windows-amd64-downloader
     main: ./cmd/downloader
-    binary: downloader
+    binary: downloader.exe
     goos: [ windows ]
     goarch: [ amd64 ]
     env:
@@ -269,7 +269,7 @@ builds:
 
   - id: windows-amd64-devnet
     main: ./cmd/devnet
-    binary: devnet
+    binary: devnet.exe
     goos: [ windows ]
     goarch: [ amd64 ]
     env:
@@ -280,7 +280,7 @@ builds:
 
   - id: windows-amd64-evm
     main: ./cmd/evm
-    binary: evm
+    binary: evm.exe
     goos: [ windows ]
     goarch: [ amd64 ]
     env:
@@ -291,7 +291,7 @@ builds:
 
   - id: windows-amd64-caplin
     main: ./cmd/caplin
-    binary: caplin
+    binary: caplin.exe
     goos: [ windows ]
     goarch: [ amd64 ]
     env:
@@ -302,38 +302,14 @@ builds:
 
 ## End of Windows AMD64
 
-
-dockers:
-  - image_templates:
-      - {{ .DockerProjectName }}:{{ .Version }}-amd64
-    dockerfile: Dockerfile.NEW
-    use: buildx
-    skip_push: false
-    ids:
-      - linux-amd64
-    build_flag_templates:
-      - --platform=linux/amd64
-
-  - image_templates:
-      - {{ .DockerProjectName }}:{{ .Version }}-arm64
-    dockerfile: Dockerfile.NEW
-    skip_push: false
-    use: buildx
-    goarch: arm64
-    ids:
-      - linux-arm64
-    build_flag_templates:
-      - --platform=linux/arm64/v8
-
-docker_manifests:
-  - name_template: {{ .DockerProjectName }}:{{ .Version }}
-    skip_push: true
-    image_templates:
-      - {{ .DockerProjectName }}:{{ .Version }}-amd64
-      - {{ .DockerProjectName }}:{{ .Version }}-arm64
-
-announce:
-  slack:
-    enabled: false
-    # The name of the channel that the user selected as a destination for webhook messages.
-    channel: '#code-releases'
+archives:
+  - id: darwin-amd64
+    builds:
+      - darwin-amd64-erigon
+      - darwin-amd64-downloader
+      - darwin-amd64-devnet
+      - darwin-amd64-evm
+      - darwin-amd64-caplin
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    wrap_in_directory: true
+    format: tar.gz
