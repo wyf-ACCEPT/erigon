@@ -25,7 +25,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"math"
 	"math/big"
 	"net"
 	"os"
@@ -37,8 +36,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/erigontech/erigon-lib/common/dir"
-
 	"github.com/erigontech/mdbx-go/mdbx"
 	lru "github.com/hashicorp/golang-lru/arc/v2"
 	"github.com/holiman/uint256"
@@ -47,6 +44,8 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/protobuf/types/known/emptypb"
+
+	"github.com/erigontech/erigon-lib/common/dir"
 
 	"github.com/erigontech/erigon-lib/chain"
 	"github.com/erigontech/erigon-lib/chain/networkname"
@@ -83,9 +82,7 @@ import (
 	"github.com/erigontech/erigon-lib/wrap"
 	"github.com/erigontech/erigon/cl/clparams"
 	"github.com/erigontech/erigon/cl/persistence/format/snapshot_format/getters"
-	clcore "github.com/erigontech/erigon/cl/phase1/core"
 	executionclient "github.com/erigontech/erigon/cl/phase1/execution_client"
-	"github.com/erigontech/erigon/cl/utils/eth_clock"
 	"github.com/erigontech/erigon/cmd/caplin/caplin1"
 	"github.com/erigontech/erigon/cmd/rpcdaemon/cli"
 	"github.com/erigontech/erigon/common/debug"
@@ -219,6 +216,7 @@ type Ethereum struct {
 	silkwormSentryService    *silkworm.SentryService
 
 	polygonSyncService polygonsync.Service
+	polygonBridge      bridge.PolygonBridge
 	stopNode           func() error
 }
 
@@ -350,8 +348,11 @@ func New(ctx context.Context, stack *node.Node, config *ethconfig.Config, logger
 	}
 	chainKv = backend.chainDB //nolint
 
-	if err := backend.setUpSnapDownloader(ctx, config.Downloader); err != nil {
-		return nil, err
+	// Can happen in some configurations
+	if config.Downloader.ChainName != "" {
+		if err := backend.setUpSnapDownloader(ctx, config.Downloader); err != nil {
+			return nil, err
+		}
 	}
 
 	kvRPC := remotedbserver.NewKvServer(ctx, backend.chainDB, allSnapshots, allBorSnapshots, agg, logger)
@@ -546,8 +547,10 @@ func New(ctx context.Context, stack *node.Node, config *ethconfig.Config, logger
 		}
 
 		if config.PolygonSync {
-			polygonBridge = bridge.Assemble(config.Dirs.DataDir, logger, consensusConfig.(*borcfg.BorConfig), heimdallClient.FetchStateSyncEvents, bor.GenesisContractStateReceiverABI())
-			heimdallService = heimdall.AssembleService(config.HeimdallURL, dirs.DataDir, tmpdir, logger)
+			polygonBridge = bridge.Assemble(config.Dirs.DataDir, logger, consensusConfig.(*borcfg.BorConfig), heimdallClient)
+			heimdallService = heimdall.AssembleService(consensusConfig.(*borcfg.BorConfig), config.HeimdallURL, dirs.DataDir, tmpdir, logger)
+
+			backend.polygonBridge = polygonBridge
 		}
 
 		flags.Milestone = config.WithHeimdallMilestones
@@ -705,7 +708,7 @@ func New(ctx context.Context, stack *node.Node, config *ethconfig.Config, logger
 
 	// proof-of-stake mining
 	assembleBlockPOS := func(param *core.BlockBuilderParameters, interrupt *int32) (*types.BlockWithReceipts, error) {
-		miningStatePos := stagedsync.NewProposingState(&config.Miner)
+		miningStatePos := stagedsync.NewMiningState(&config.Miner)
 		miningStatePos.MiningConfig.Etherbase = param.SuggestedFeeRecipient
 		proposingSync := stagedsync.New(
 			config.Sync,
@@ -736,7 +739,7 @@ func New(ctx context.Context, stack *node.Node, config *ethconfig.Config, logger
 		if err := stages2.MiningStep(ctx, backend.chainDB, proposingSync, tmpdir, logger); err != nil {
 			return nil, err
 		}
-		block := <-miningStatePos.MiningResultPOSCh
+		block := <-miningStatePos.MiningResultCh
 		return block, nil
 	}
 
@@ -934,44 +937,13 @@ func New(ctx context.Context, stack *node.Node, config *ethconfig.Config, logger
 		false,
 		config.Miner.EnabledPOS)
 	backend.engineBackendRPC = engineBackendRPC
-
 	// If we choose not to run a consensus layer, run our embedded.
-	if config.InternalCL && clparams.EmbeddedSupported(config.NetworkID) {
-		networkCfg, beaconCfg := clparams.GetConfigsByNetwork(clparams.NetworkType(config.NetworkID))
-		if err != nil {
-			return nil, err
-		}
-		state, err := clcore.RetrieveBeaconState(ctx, beaconCfg, clparams.NetworkType(config.NetworkID))
-		if err != nil {
-			return nil, err
-		}
-		ethClock := eth_clock.NewEthereumClock(state.GenesisTime(), state.GenesisValidatorsRoot(), beaconCfg)
-
-		pruneBlobDistance := uint64(128600)
-		if config.CaplinConfig.BlobBackfilling || config.CaplinConfig.BlobPruningDisabled {
-			pruneBlobDistance = math.MaxUint64
-		}
-
-		indiciesDB, blobStorage, err := caplin1.OpenCaplinDatabase(ctx, beaconCfg, ethClock, dirs.CaplinIndexing, dirs.CaplinBlobs, executionEngine, false, pruneBlobDistance)
-		if err != nil {
-			return nil, err
-		}
-
+	if config.InternalCL && (clparams.EmbeddedSupported(config.NetworkID) || config.CaplinConfig.IsDevnet()) {
+		config.CaplinConfig.NetworkId = clparams.NetworkType(config.NetworkID)
+		config.CaplinConfig.LoopBlockLimit = uint64(config.LoopBlockLimit)
 		go func() {
-			caplinOpt := []caplin1.CaplinOption{}
-			if config.BeaconRouter.Builder {
-				if config.CaplinConfig.RelayUrlExist() {
-					caplinOpt = append(caplinOpt, caplin1.WithBuilder(config.CaplinConfig.MevRelayUrl, beaconCfg))
-				} else {
-					log.Warn("builder api enable but relay url not set. Skipping builder mode")
-					config.BeaconRouter.Builder = false
-				}
-			}
-			log.Info("Starting caplin")
-			eth1Getter := getters.NewExecutionSnapshotReader(ctx, beaconCfg, blockReader, backend.chainDB)
-			if err := caplin1.RunCaplinPhase1(ctx, executionEngine, config, networkCfg, beaconCfg, ethClock,
-				state, dirs, eth1Getter, backend.downloaderClient, indiciesDB, blobStorage, creds,
-				blockSnapBuildSema, caplinOpt...); err != nil {
+			eth1Getter := getters.NewExecutionSnapshotReader(ctx, blockReader, backend.chainDB)
+			if err := caplin1.RunCaplinService(ctx, executionEngine, config.CaplinConfig, dirs, eth1Getter, backend.downloaderClient, creds, blockSnapBuildSema); err != nil {
 				logger.Error("could not start caplin", "err", err)
 			}
 			ctxCancel()
@@ -1044,7 +1016,7 @@ func (s *Ethereum) Init(stack *node.Node, config *ethconfig.Config, chainConfig 
 		}
 	}
 
-	s.apiList = jsonrpc.APIList(chainKv, ethRpcClient, txPoolRpcClient, miningRpcClient, ff, stateCache, blockReader, &httpRpcCfg, s.engine, s.logger)
+	s.apiList = jsonrpc.APIList(chainKv, ethRpcClient, txPoolRpcClient, miningRpcClient, ff, stateCache, blockReader, &httpRpcCfg, s.engine, s.logger, s.polygonBridge)
 
 	if config.SilkwormRpcDaemon && httpRpcCfg.Enabled {
 		interface_log_settings := silkworm.RpcInterfaceLogSettings{
@@ -1315,8 +1287,8 @@ func (s *Ethereum) StartMining(ctx context.Context, db kv.RwDB, stateDiffClient 
 						select {
 						case block := <-miner.MiningResultCh:
 							if block != nil {
-								s.logger.Debug("Mined block", "block", block.Number())
-								s.minedBlocks <- block
+								s.logger.Debug("Mined block", "block", block.Block.Number())
+								s.minedBlocks <- block.Block
 							}
 							return
 						case <-workCtx.Done():
