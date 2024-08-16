@@ -8,8 +8,8 @@ release:
   prerelease: auto
 
 env:
-  - DeploymentSuffix="-DEV"
-  - DockerProjectName="erigontech/dev-erigon"
+  - CGO_ENABLED=1
+  - GLOBAL_TAGS=nosqlite, noboltdb, nosilkworm
 
 builds:
 
@@ -22,7 +22,7 @@ builds:
     env:
       - CC=o64-clang
       - CXX=o64-clang++
-    tags: [ nosqlite, noboltdb, nosilkworm ]
+    tags: [ {{ env.GLOBAL_TAGS }} ]
     ldflags: -s -w
 
   - id: darwin-amd64-downloader
@@ -33,7 +33,7 @@ builds:
     env:
       - CC=o64-clang
       - CXX=o64-clang++
-    tags: [ nosqlite, noboltdb, nosilkworm ]
+    tags: [ {{ env.GLOBAL_TAGS }} ]
     ldflags: -s -w
 
   - id: darwin-amd64-devnet
@@ -44,7 +44,7 @@ builds:
     env:
       - CC=o64-clang
       - CXX=o64-clang++
-    tags: [ nosqlite, noboltdb, nosilkworm ]
+    tags: [ {{ env.GLOBAL_TAGS }} ]
     ldflags: -s -w
 
   - id: darwin-amd64-evm
@@ -55,7 +55,7 @@ builds:
     env:
       - CC=o64-clang
       - CXX=o64-clang++
-    tags: [ nosqlite, noboltdb, nosilkworm ]
+    tags: [ {{ env.GLOBAL_TAGS }} ]
     ldflags: -s -w
 
   - id: darwin-amd64-caplin
@@ -66,7 +66,7 @@ builds:
     env:
       - CC=o64-clang
       - CXX=o64-clang++
-    tags: [ nosqlite, noboltdb, nosilkworm ]
+    tags: [ {{ env.GLOBAL_TAGS }} ]
     ldflags: -s -w
 
 ## END of Darwin AMD64.
@@ -80,7 +80,7 @@ builds:
     env:
       - CC=oa64-clang
       - CXX=oa64-clang++
-    tags: [ nosqlite, noboltdb, nosilkworm ]
+    tags: [ {{ env.GLOBAL_TAGS }} ]
     ldflags: -s -w
 
   - id: darwin-arm64-downloader
@@ -91,7 +91,7 @@ builds:
     env:
       - CC=oa64-clang
       - CXX=oa64-clang++
-    tags: [ nosqlite, noboltdb, nosilkworm ]
+    tags: [ {{ env.GLOBAL_TAGS }} ]
     ldflags: -s -w
 
   - id: darwin-arm64-devnet
@@ -102,7 +102,7 @@ builds:
     env:
       - CC=oa64-clang
       - CXX=oa64-clang++
-    tags: [ nosqlite, noboltdb, nosilkworm ]
+    tags: [ {{ env.GLOBAL_TAGS }} ]
     ldflags: -s -w
 
   - id: darwin-arm64-evm
@@ -113,7 +113,7 @@ builds:
     env:
       - CC=oa64-clang
       - CXX=oa64-clang++
-    tags: [ nosqlite, noboltdb, nosilkworm ]
+    tags: [ {{ env.GLOBAL_TAGS }} ]
     ldflags: -s -w
 
   - id: darwin-arm64-caplin
@@ -124,7 +124,7 @@ builds:
     env:
       - CC=oa64-clang
       - CXX=oa64-clang++
-    tags: [ nosqlite, noboltdb, nosilkworm ]
+    tags: [ {{ env.GLOBAL_TAGS }} ]
     ldflags: -s -w
 ## END of Darwin ARM64.
 
@@ -137,7 +137,7 @@ builds:
     env:
       - CC=x86_64-linux-gnu-gcc
       - CXX=x86_64-linux-gnu-g++
-    tags: [ nosqlite, noboltdb, nosilkworm ]
+    tags: [ {{ env.GLOBAL_TAGS }} ]
     ldflags: -s -w -extldflags "-static" # We need to build a static binary because we are building in a glibc based system and running in a musl container
 
   - id: linux-amd64-downloader
@@ -148,7 +148,7 @@ builds:
     env:
       - CC=x86_64-linux-gnu-gcc
       - CXX=x86_64-linux-gnu-g++
-    tags: [ nosqlite, noboltdb, nosilkworm ]
+    tags: [ {{ env.GLOBAL_TAGS }} ]
     ldflags: -s -w -extldflags "-static" # We need to build a static binary because we are building in a glibc based system and running in a musl container
 
   - id: linux-amd64-devnet
@@ -159,7 +159,7 @@ builds:
     env:
       - CC=x86_64-linux-gnu-gcc
       - CXX=x86_64-linux-gnu-g++
-    tags: [ nosqlite, noboltdb, nosilkworm ]
+    tags: [ {{ env.GLOBAL_TAGS }} ]
     ldflags: -s -w -extldflags "-static" # We need to build a static binary because we are building in a glibc based system and running in a musl container
 
   - id: linux-amd64-evm
@@ -170,7 +170,7 @@ builds:
     env:
       - CC=x86_64-linux-gnu-gcc
       - CXX=x86_64-linux-gnu-g++
-    tags: [ nosqlite, noboltdb, nosilkworm ]
+    tags: [ {{ env.GLOBAL_TAGS }} ]
     ldflags: -s -w -extldflags "-static" # We need to build a static binary because we are building in a glibc based system and running in a musl container
 
   - id: linux-amd64-caplin
@@ -181,7 +181,7 @@ builds:
     env:
       - CC=x86_64-linux-gnu-gcc
       - CXX=x86_64-linux-gnu-g++
-    tags: [ nosqlite, noboltdb, nosilkworm ]
+    tags: [ {{ env.GLOBAL_TAGS }} ]
     ldflags: -s -w -extldflags "-static" # We need to build a static binary because we are building in a glibc based system and running in a musl container
 
 ## End of Linux AMD64.
@@ -195,7 +195,7 @@ builds:
     env:
       - CC=aarch64-linux-gnu-gcc
       - CXX=aarch64-linux-gnu-g++
-    tags: [ nosqlite, noboltdb, nosilkworm ]
+    tags: [ {{ env.GLOBAL_TAGS }} ]
     ldflags: -s -w -extldflags "-static" # We need to build a static binary because we are building in a glibc based system and running in a musl container
 
   - id: linux-arm64-downloader
@@ -206,7 +206,7 @@ builds:
     env:
       - CC=aarch64-linux-gnu-gcc
       - CXX=aarch64-linux-gnu-g++
-    tags: [ nosqlite, noboltdb, nosilkworm ]
+    tags: [ {{ env.GLOBAL_TAGS }} ]
     ldflags: -s -w -extldflags "-static" # We need to build a static binary because we are building in a glibc based system and running in a musl container
 
   - id: linux-arm64-devnet
@@ -217,7 +217,7 @@ builds:
     env:
       - CC=aarch64-linux-gnu-gcc
       - CXX=aarch64-linux-gnu-g++
-    tags: [ nosqlite, noboltdb, nosilkworm ]
+    tags: [ {{ env.GLOBAL_TAGS }} ]
     ldflags: -s -w -extldflags "-static" # We need to build a static binary because we are building in a glibc based system and running in a musl container
 
   - id: linux-arm64-evm
@@ -228,7 +228,7 @@ builds:
     env:
       - CC=aarch64-linux-gnu-gcc
       - CXX=aarch64-linux-gnu-g++
-    tags: [ nosqlite, noboltdb, nosilkworm ]
+    tags: [ {{ env.GLOBAL_TAGS }} ]
     ldflags: -s -w -extldflags "-static" # We need to build a static binary because we are building in a glibc based system and running in a musl container
 
   - id: linux-arm64-caplin
@@ -239,7 +239,7 @@ builds:
     env:
       - CC=aarch64-linux-gnu-gcc
       - CXX=aarch64-linux-gnu-g++
-    tags: [ nosqlite, noboltdb, nosilkworm ]
+    tags: [ {{ env.GLOBAL_TAGS }} ]
     ldflags: -s -w -extldflags "-static" # We need to build a static binary because we are building in a glibc based system and running in a musl container
 
 ## End of Linux ARM64.
@@ -247,57 +247,57 @@ builds:
 ## Windows AMD64
   - id: windows-amd64-erigon
     main: ./cmd/erigon
-    binary: erigon.exe
+    binary: erigon
     goos: [ windows ]
     goarch: [ amd64 ]
     env:
       - CC=x86_64-w64-mingw32-gcc
       - CXX=x86_64-w64-mingw32-g++
-    tags: [ nosqlite, noboltdb, nosilkworm ]
+    tags: [ {{ env.GLOBAL_TAGS }} ]
     ldflags: -s -w
 
   - id: windows-amd64-downloader
     main: ./cmd/downloader
-    binary: downloader.exe
+    binary: downloader
     goos: [ windows ]
     goarch: [ amd64 ]
     env:
       - CC=x86_64-w64-mingw32-gcc
       - CXX=x86_64-w64-mingw32-g++
-    tags: [ nosqlite, noboltdb, nosilkworm ]
+    tags: [ {{ env.GLOBAL_TAGS }} ]
     ldflags: -s -w
 
   - id: windows-amd64-devnet
     main: ./cmd/devnet
-    binary: devnet.exe
+    binary: devnet
     goos: [ windows ]
     goarch: [ amd64 ]
     env:
       - CC=x86_64-w64-mingw32-gcc
       - CXX=x86_64-w64-mingw32-g++
-    tags: [ nosqlite, noboltdb, nosilkworm ]
+    tags: [ {{ env.GLOBAL_TAGS }} ]
     ldflags: -s -w
 
   - id: windows-amd64-evm
     main: ./cmd/evm
-    binary: evm.exe
+    binary: evm
     goos: [ windows ]
     goarch: [ amd64 ]
     env:
       - CC=x86_64-w64-mingw32-gcc
       - CXX=x86_64-w64-mingw32-g++
-    tags: [ nosqlite, noboltdb, nosilkworm ]
+    tags: [ {{ env.GLOBAL_TAGS }} ]
     ldflags: -s -w
 
   - id: windows-amd64-caplin
     main: ./cmd/caplin
-    binary: caplin.exe
+    binary: caplin
     goos: [ windows ]
     goarch: [ amd64 ]
     env:
       - CC=x86_64-w64-mingw32-gcc
       - CXX=x86_64-w64-mingw32-g++
-    tags: [ nosqlite, noboltdb, nosilkworm ]
+    tags: [ {{ env.GLOBAL_TAGS }} ]
     ldflags: -s -w
 
 ## End of Windows AMD64
@@ -310,6 +310,17 @@ archives:
       - darwin-amd64-devnet
       - darwin-amd64-evm
       - darwin-amd64-caplin
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    wrap_in_directory: true
+    format: tar.gz
+  
+  - id: darwin-arm64
+    builds:
+      - darwin-arm64-erigon
+      - darwin-arm64-downloader
+      - darwin-arm64-devnet
+      - darwin-arm64-evm
+      - darwin-arm64-caplin
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     wrap_in_directory: true
     format: tar.gz
