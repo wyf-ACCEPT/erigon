@@ -13,7 +13,7 @@ env:
   - GIT_COMMIT={{ .Env.GIT_COMMIT }}
   - GIT_BRANCH={{ .Env.GIT_BRANCH }}
   - GIT_TAG={{ .Env.GIT_TAG }}
-  - DARWING_LDFLAGS="-O3 -g -mmacosx-version-min=13.3"
+  - DARWIN_LDFLAGS="-O3 -g -mmacosx-version-min=13.3"
   - PACKAGE={{ .Env.PACKAGE }}
   - GO_FLAGS=-trimpath -buildvcs=false -ldflags "-X {{ .Env.PACKAGE }}/params.GitCommit={{ .Env.GIT_COMMIT }} -X {{ .Env.PACKAGE }}/params.GitBranch={{ .Env.GIT_BRANCH }} -X {{ .Env.PACKAGE }}/params.GitTag={{ .Env.GIT_TAG }}"
 
@@ -28,7 +28,7 @@ builds:
     env:
       - CC=o64-clang
       - CXX=o64-clang++
-      - CGO_LDFLAGS={{ .Env.DARWING_LDFLAGS }}
+      - CGO_LDFLAGS={{ .Env.DARWIN_LDFLAGS }}
       - GO_FLAGS={{ .Env.GO_FLAGS }}
     tags: [ nosqlite, noboltdb, nosilkworm ]
     ldflags: -s -w
@@ -41,7 +41,7 @@ builds:
     env:
       - CC=o64-clang
       - CXX=o64-clang++
-      - CGO_LDFLAGS={{ .Env.DARWING_LDFLAGS }}
+      - CGO_LDFLAGS={{ .Env.DARWIN_LDFLAGS }}
       - GO_FLAGS={{ .Env.GO_FLAGS }}
     tags: [ nosqlite, noboltdb, nosilkworm ]
     ldflags: -s -w
@@ -54,7 +54,7 @@ builds:
     env:
       - CC=o64-clang
       - CXX=o64-clang++
-      - CGO_LDFLAGS={{ .Env.DARWING_LDFLAGS }}
+      - CGO_LDFLAGS={{ .Env.DARWIN_LDFLAGS }}
       - GO_FLAGS={{ .Env.GO_FLAGS }}
     tags: [ nosqlite, noboltdb, nosilkworm ]
     ldflags: -s -w
@@ -67,7 +67,7 @@ builds:
     env:
       - CC=o64-clang
       - CXX=o64-clang++
-      - CGO_LDFLAGS={{ .Env.DARWING_LDFLAGS }}
+      - CGO_LDFLAGS={{ .Env.DARWIN_LDFLAGS }}
       - GO_FLAGS={{ .Env.GO_FLAGS }}
     tags: [ nosqlite, noboltdb, nosilkworm ]
     ldflags: -s -w
@@ -80,7 +80,7 @@ builds:
     env:
       - CC=o64-clang
       - CXX=o64-clang++
-      - CGO_LDFLAGS={{ .Env.DARWING_LDFLAGS }}
+      - CGO_LDFLAGS={{ .Env.DARWIN_LDFLAGS }}
       - GO_FLAGS={{ .Env.GO_FLAGS }}
     tags: [ nosqlite, noboltdb, nosilkworm ]
     ldflags: -s -w
@@ -96,7 +96,7 @@ builds:
     env:
       - CC=oa64-clang
       - CXX=oa64-clang++
-      - CGO_LDFLAGS={{ .Env.DARWING_LDFLAGS }}
+      - CGO_LDFLAGS={{ .Env.DARWIN_LDFLAGS }}
       - GO_FLAGS={{ .Env.GO_FLAGS }}
     tags: [ nosqlite, noboltdb, nosilkworm ]
     ldflags: -s -w
@@ -109,7 +109,7 @@ builds:
     env:
       - CC=oa64-clang
       - CXX=oa64-clang++
-      - CGO_LDFLAGS={{ .Env.DARWING_LDFLAGS }}
+      - CGO_LDFLAGS={{ .Env.DARWIN_LDFLAGS }}
       - GO_FLAGS={{ .Env.GO_FLAGS }}
     tags: [ nosqlite, noboltdb, nosilkworm ]
     ldflags: -s -w
@@ -122,7 +122,7 @@ builds:
     env:
       - CC=oa64-clang
       - CXX=oa64-clang++
-      - CGO_LDFLAGS={{ .Env.DARWING_LDFLAGS }}
+      - CGO_LDFLAGS={{ .Env.DARWIN_LDFLAGS }}
       - GO_FLAGS={{ .Env.GO_FLAGS }}
     tags: [ nosqlite, noboltdb, nosilkworm ]
     ldflags: -s -w
@@ -135,7 +135,7 @@ builds:
     env:
       - CC=oa64-clang
       - CXX=oa64-clang++
-      - CGO_LDFLAGS={{ .Env.DARWING_LDFLAGS }}
+      - CGO_LDFLAGS={{ .Env.DARWIN_LDFLAGS }}
       - GO_FLAGS={{ .Env.GO_FLAGS }}
     tags: [ nosqlite, noboltdb, nosilkworm ]
     ldflags: -s -w
@@ -148,7 +148,7 @@ builds:
     env:
       - CC=oa64-clang
       - CXX=oa64-clang++
-      - CGO_LDFLAGS={{ .Env.DARWING_LDFLAGS }}
+      - CGO_LDFLAGS={{ .Env.DARWIN_LDFLAGS }}
       - GO_FLAGS={{ .Env.GO_FLAGS }}
     tags: [ nosqlite, noboltdb, nosilkworm ]
     ldflags: -s -w
@@ -398,3 +398,50 @@ archives:
     name_template: "{{ .ProjectName }}_{{ .Env.BUILD_VERSION }}_{{ .Os }}_{{ .Arch }}"
     wrap_in_directory: true
     format: zip
+
+
+dockers:
+  - dockerfile: Dockerfile.NEW-gr
+    use: buildx
+    goarch: amd64
+    goos: linux
+    ids:
+      - linux-arm64-erigon
+      - linux-arm64-downloader
+      - linux-arm64-devnet
+      - linux-arm64-evm
+      - linux-arm64-caplin
+    build_flag_templates:
+      - --platform=linux/amd64
+      - --label=org.opencontainers.image.title={{ .ProjectName }}
+      - --label=org.opencontainers.image.description={{ .Env.LABEL_DESCRIPTION }}
+      - --label=org.opencontainers.image.url={{ .Env.PACKAGE }}
+      - --label=org.opencontainers.image.source={{.GitURL}}
+      - --label=org.opencontainers.image.vcs-ref={{ .Env.GIT_COMMIT }}
+      - --label=org.opencontainers.image.created={{ time "2006-01-02T15:04:05Z07:00" }}
+      - --label=org.opencontainers.image.revision={{ .Env.GIT_COMMIT }}
+      - "--build-arg=TARGET_BASE_VERSION={{.Env.TARGET_BASE_VERSION}}"
+    image_templates:
+      - '{{ .Env.DOCKER_URL }}:{{ .Env.BUILD_VERSION }}-amd64'
+  - dockerfile: Dockerfile.NEW-gr
+    use: buildx
+    goarch: arm64
+    goos: linux
+    build_flag_templates:
+      - --platform=linux/arm64
+      - --label=org.opencontainers.image.title={{ .ProjectName }}
+      - --label=org.opencontainers.image.description={{ .Env.LABEL_DESCRIPTION }}
+      - --label=org.opencontainers.image.url={{ .Env.PACKAGE }}
+      - --label=org.opencontainers.image.source={{.GitURL}}
+      - --label=org.opencontainers.image.vcs-ref={{ .Env.GIT_COMMIT }}
+      - --label=org.opencontainers.image.created={{ time "2006-01-02T15:04:05Z07:00" }}
+      - --label=org.opencontainers.image.revision={{ .Env.GIT_COMMIT }}
+      - "--build-arg=TARGET_BASE_VERSION={{.Env.TARGET_BASE_VERSION}}"
+    image_templates:
+      - '{{ .Env.DOCKER_URL }}:{{ .Env.BUILD_VERSION }}-arm64'
+
+docker_manifests:
+  - name_template: "{{ .Env.DOCKER_IMAGE }}:{{ .Env.BUILD_VERSION }}"
+    image_templates:
+      - "{{ .Env.DOCKER_URL }}:{{ .Env.BUILD_VERSION }}-amd64"
+      - "{{ .Env.DOCKER_URL }}:{{ .Env.BUILD_VERSION }}-arm64"
