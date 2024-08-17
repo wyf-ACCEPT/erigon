@@ -141,15 +141,12 @@ func (c *Contract) isCode(udest uint64) bool {
 	// contracts ( not temporary initcode), we store the analysis in a map
 	if c.CodeHash != (libcommon.Hash{}) {
 		// Does parent context have the analysis?
-		c.jumpdests.total++
 		analysis, exist := c.jumpdests.Get(c.CodeHash)
 		if !exist {
 			// Do the analysis and save in parent context
 			// We do not need to store it in c.analysis
 			analysis = codeBitmap(c.Code)
 			c.jumpdests.Add(c.CodeHash, analysis)
-		} else {
-			c.jumpdests.hit++
 		}
 		// Also stash it in current contract for faster access
 		c.analysis = analysis
