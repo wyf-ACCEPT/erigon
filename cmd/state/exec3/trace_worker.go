@@ -79,7 +79,7 @@ func NewTraceWorker(cc *chain.Config, engine consensus.EngineReader, br services
 
 var p = &sync.Pool{New: func() any {
 	return &TraceWorker{
-		evm:      vm.NewEVM(evmtypes.BlockContext{}, evmtypes.TxContext{}, nil, nil, vm.Config{}),
+		evm:      vm.NewEVM(evmtypes.BlockContext{}, evmtypes.TxContext{}, nil, &chain.Config{}, vm.Config{}),
 		vmConfig: &vm.Config{},
 	}
 }}
