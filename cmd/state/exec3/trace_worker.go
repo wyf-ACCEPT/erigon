@@ -56,12 +56,11 @@ type TraceWorker struct {
 	tx          kv.Getter
 
 	// calculated by .changeBlock()
-	blockHash common.Hash
-	blockNum  uint64
-	header    *types.Header
-	rules     *chain.Rules
-	signer    *types.Signer
-	vmConfig  *vm.Config
+	blockNum uint64
+	header   *types.Header
+	rules    *chain.Rules
+	signer   *types.Signer
+	vmConfig *vm.Config
 }
 
 func NewTraceWorker(cc *chain.Config, engine consensus.EngineReader, br services.HeaderReader) *TraceWorker {
@@ -114,7 +113,6 @@ func (e *TraceWorker) Close() {
 func (e *TraceWorker) ChangeBlock(header *types.Header) {
 	e.blockNum = header.Number.Uint64()
 	cc := e.evm.ChainConfig()
-	e.blockHash = header.Hash()
 	e.header = header
 	e.rules = cc.Rules(e.blockNum, header.Time)
 	e.signer = types.MakeSigner(cc, e.blockNum, header.Time)
@@ -132,7 +130,7 @@ func (e *TraceWorker) ExecTxn(txNum uint64, txIndex int, txn types.Transaction) 
 	e.stateReader.SetTxNum(txNum)
 	txHash := txn.Hash()
 	e.ibs.Reset()
-	e.ibs.SetTxContext(txHash, e.blockHash, txIndex)
+	e.ibs.SetTxContext(txHash, e.header.Hash(), txIndex)
 	gp := new(core.GasPool).AddGas(txn.GetGas()).AddBlobGas(txn.GetBlobGas())
 	msg, err := txn.AsMessage(*e.signer, e.header.BaseFee, e.rules)
 	if err != nil {
