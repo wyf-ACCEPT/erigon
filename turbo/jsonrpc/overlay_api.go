@@ -329,9 +329,9 @@ func (api *OverlayAPIImpl) GetLogs(ctx context.Context, crit filters.FilterCrite
 					results[task.idx] = &blockReplayResult{BlockNumber: task.BlockNumber, Error: err.Error()}
 					continue
 				}
-				log.Debug("[GetRawLogs]", "len(blockLogs)", len(blockLogs))
+				log.Debug("[GetLogs]", "len(blockLogs)", len(blockLogs))
 				logs := filterLogs(blockLogs, crit.Addresses, crit.Topics)
-				log.Debug("[GetRawLogs]", "len(logs)", len(logs))
+				log.Debug("[GetLogs]", "len(logs)", len(logs))
 
 				results[task.idx] = &blockReplayResult{BlockNumber: task.BlockNumber, Logs: logs}
 			}
@@ -382,7 +382,7 @@ blockLoop:
 
 	// If execution failed in between, abort
 	if failed != nil {
-		log.Error("[GetRawLogs]", "failed", failed)
+		log.Error("[GetLogs]", "failed", failed)
 		return nil, failed
 	}
 
@@ -539,10 +539,7 @@ func (api *OverlayAPIImpl) replayBlock(ctx context.Context, blockNum uint64, sta
 			log.Debug("[replayBlock] discarding txLogs because txn has status=failed", "transactionHash", txn.Hash())
 		} else {
 			//append logs only if txn has not reverted
-			txLogs := statedb.GetLogs(statedb.TxIndex(), blockNum, header.Hash())
-			for i := 0; i < len(txLogs); i++ {
-				txLogs[i].TxHash = txn.Hash()
-			}
+			txLogs := statedb.GetLogs(statedb.TxIndex(), txn.Hash(), blockNum, header.Hash())
 			log.Debug("[replayBlock]", "len(txLogs)", len(txLogs), "transactionHash", txn.Hash())
 			blockLogs = append(blockLogs, txLogs...)
 		}
