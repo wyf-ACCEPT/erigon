@@ -37,9 +37,34 @@ func codeBitmapInternal(code []byte, bits bitvec2) {
 		if int8(op) < int8(PUSH1) { // If not PUSH (the int8(op) > int(PUSH32) is always false).
 			continue
 		}
-		if op == PUSH1 {
+		switch op {
+		case PUSH1:
 			bits.set1(pc)
 			pc += 1
+			continue
+		case PUSH2:
+			bits.setN(uint64(set2BitsMask), pc)
+			pc += 2
+			continue
+		case PUSH3:
+			bits.setN(uint64(set3BitsMask), pc)
+			pc += 3
+			continue
+		case PUSH4:
+			bits.setN(uint64(set4BitsMask), pc)
+			pc += 4
+			continue
+		case PUSH5:
+			bits.setN(uint64(set5BitsMask), pc)
+			pc += 5
+			continue
+		case PUSH6:
+			bits.setN(uint64(set6BitsMask), pc)
+			pc += 6
+			continue
+		case PUSH7:
+			bits.setN(uint64(set7BitsMask), pc)
+			pc += 7
 			continue
 		}
 
@@ -78,10 +103,10 @@ func (bits bitvec2) set1(pos uint64) {
 }
 
 func (bits bitvec2) setN(flag uint64, pc uint64) {
-	shift := pc % 64
-	bits[pc/64] |= flag << shift
+	idx, shift := pc/64, pc%64
+	bits[idx] |= flag << shift
 	if shift > 32 {
-		bits[pc/64+1] |= flag >> (64 - shift)
+		bits[idx+1] |= flag >> (64 - shift)
 	}
 }
 
