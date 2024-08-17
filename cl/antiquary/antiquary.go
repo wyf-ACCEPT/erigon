@@ -18,6 +18,7 @@ package antiquary
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"math"
 	"strings"
@@ -166,6 +167,7 @@ func (a *Antiquary) Loop() error {
 		if err != nil {
 			return err
 		}
+		fmt.Println(i, header.Header.Slot)
 		if header == nil {
 			continue
 		}
