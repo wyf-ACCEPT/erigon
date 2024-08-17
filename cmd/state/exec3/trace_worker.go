@@ -47,7 +47,6 @@ type TraceWorker struct {
 	stateReader  *state.HistoryReaderV3
 	engine       consensus.EngineReader
 	headerReader services.HeaderReader
-	chainConfig  *chain.Config
 	tracer       GenericTracer
 	ibs          *state.IntraBlockState
 	evm          *vm.EVM
@@ -66,7 +65,6 @@ func NewTraceWorker(cc *chain.Config, engine consensus.EngineReader, br services
 	stateReader := state.NewHistoryReaderV3()
 	ie := &TraceWorker{
 		engine:       engine,
-		chainConfig:  cc,
 		headerReader: br,
 		stateReader:  stateReader,
 		evm:          vm.NewEVM(evmtypes.BlockContext{}, evmtypes.TxContext{}, nil, cc, vm.Config{}),
@@ -120,7 +118,7 @@ func (e *TraceWorker) ExecTxn(txNum uint64, txIndex int, txn types.Transaction) 
 	if msg.FeeCap().IsZero() {
 		// Only zero-gas transactions may be service ones
 		syscall := func(contract common.Address, data []byte) ([]byte, error) {
-			return core.SysCallContract(contract, data, e.chainConfig, e.ibs, e.header, e.engine, true /* constCall */)
+			return core.SysCallContract(contract, data, e.evm.ChainConfig(), e.ibs, e.header, e.engine, true /* constCall */)
 		}
 		msg.SetIsFree(e.engine.IsServiceTransaction(msg.From(), syscall))
 	}
