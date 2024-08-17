@@ -167,10 +167,10 @@ func (a *Antiquary) Loop() error {
 		if err != nil {
 			return err
 		}
-		fmt.Println(i, header.Header.Slot)
 		if header == nil {
 			continue
 		}
+		fmt.Println(i, header.Header.Slot)
 		blockRoot, err := header.Header.HashSSZ()
 		if err != nil {
 			return err
