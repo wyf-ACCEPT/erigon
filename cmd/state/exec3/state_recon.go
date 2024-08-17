@@ -20,8 +20,9 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
-	"github.com/erigontech/erigon-lib/common/datadir"
 	"sync"
+
+	"github.com/erigontech/erigon-lib/common/datadir"
 
 	"github.com/RoaringBitmap/roaring/roaring64"
 
@@ -355,7 +356,8 @@ func (rw *ReconWorker) runTxTask(txTask *state.TxTask) error {
 		ibs.SetTxContext(txTask.Tx.Hash(), txTask.BlockHash, txTask.TxIndex)
 		msg := txTask.TxAsMessage
 
-		rw.evm.ResetBetweenBlocks(txTask.EvmBlockContext, core.NewEVMTxContext(msg), ibs, vmConfig, txTask.Rules)
+		rw.evm.ResetBetweenBlocks(txTask.EvmBlockContext, vmConfig, txTask.Rules)
+		rw.evm.Reset(core.NewEVMTxContext(msg), ibs)
 		vmenv := rw.evm
 		if msg.FeeCap().IsZero() && rw.engine != nil {
 			// Only zero-gas transactions may be service ones

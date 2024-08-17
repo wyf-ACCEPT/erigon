@@ -47,7 +47,6 @@ type TraceWorker struct {
 	stateReader  *state.HistoryReaderV3
 	engine       consensus.EngineReader
 	headerReader services.HeaderReader
-	tx           kv.Getter
 	chainConfig  *chain.Config
 	tracer       GenericTracer
 	ibs          *state.IntraBlockState
@@ -63,40 +62,44 @@ type TraceWorker struct {
 	vmConfig  *vm.Config
 }
 
-func NewTraceWorker(tx kv.TemporalTx, cc *chain.Config, engine consensus.EngineReader, br services.HeaderReader, tracer GenericTracer) *TraceWorker {
+func NewTraceWorker(cc *chain.Config, engine consensus.EngineReader, br services.HeaderReader) *TraceWorker {
 	stateReader := state.NewHistoryReaderV3()
-	stateReader.SetTx(tx)
-
 	ie := &TraceWorker{
-		tx:           tx,
 		engine:       engine,
 		chainConfig:  cc,
 		headerReader: br,
 		stateReader:  stateReader,
-		tracer:       tracer,
 		evm:          vm.NewEVM(evmtypes.BlockContext{}, evmtypes.TxContext{}, nil, cc, vm.Config{}),
 		vmConfig:     &vm.Config{},
 		ibs:          state.New(stateReader),
 	}
-	if tracer != nil {
-		ie.vmConfig = &vm.Config{Debug: true, Tracer: tracer}
-	}
 	return ie
+}
+
+func (e *TraceWorker) SetTracer(tracer GenericTracer) {
+	e.vmConfig.Tracer = tracer
+	e.vmConfig.Debug = tracer != nil
+	if casted, ok := tracer.(GenericTracer); ok {
+		e.tracer = casted
+	}
 }
 
 func (e *TraceWorker) Close() {
 	e.evm.JumpDestCache.LogStats()
 }
 
-func (e *TraceWorker) ChangeBlock(header *types.Header) {
+func (e *TraceWorker) ChangeBlock(tx kv.TemporalTx, header *types.Header) {
+	e.stateReader.SetTx(tx)
 	e.blockNum = header.Number.Uint64()
-	blockCtx := transactions.NewEVMBlockContext(e.engine, header, true /* requireCanonical */, e.tx, e.headerReader, e.evm.ChainConfig())
+	cc := e.evm.ChainConfig()
+	blockCtx := transactions.NewEVMBlockContext(e.engine, header, true /* requireCanonical */, tx, e.headerReader, cc)
 	e.blockCtx = &blockCtx
 	e.blockHash = header.Hash()
 	e.header = header
-	e.rules = e.chainConfig.Rules(e.blockNum, header.Time)
-	e.signer = types.MakeSigner(e.chainConfig, e.blockNum, header.Time)
-	e.vmConfig.SkipAnalysis = core.SkipAnalysis(e.chainConfig, e.blockNum)
+	e.rules = cc.Rules(e.blockNum, header.Time)
+	e.signer = types.MakeSigner(cc, e.blockNum, header.Time)
+	e.vmConfig.SkipAnalysis = core.SkipAnalysis(cc, e.blockNum)
+	e.evm.ResetBetweenBlocks(*e.blockCtx, *e.vmConfig, e.rules)
 }
 
 func (e *TraceWorker) GetLogs(txIdx int, txn types.Transaction) types.Logs {
@@ -113,7 +116,7 @@ func (e *TraceWorker) ExecTxn(txNum uint64, txIndex int, txn types.Transaction) 
 	if err != nil {
 		return nil, err
 	}
-	e.evm.ResetBetweenBlocks(*e.blockCtx, core.NewEVMTxContext(msg), e.ibs, *e.vmConfig, e.rules)
+	e.evm.Reset(core.NewEVMTxContext(msg), e.ibs)
 	if msg.FeeCap().IsZero() {
 		// Only zero-gas transactions may be service ones
 		syscall := func(contract common.Address, data []byte) ([]byte, error) {
@@ -125,7 +128,7 @@ func (e *TraceWorker) ExecTxn(txNum uint64, txIndex int, txn types.Transaction) 
 	if err != nil {
 		return nil, fmt.Errorf("%w: blockNum=%d, txNum=%d, %s", err, e.blockNum, txNum, e.ibs.Error())
 	}
-	if e.vmConfig.Tracer != nil {
+	if e.tracer != nil {
 		if e.tracer.Found() {
 			e.tracer.SetTransaction(txn)
 		}

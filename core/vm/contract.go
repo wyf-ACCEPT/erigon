@@ -82,12 +82,12 @@ var (
 	jumpDestCacheTrace = dbg.EnvBool("JD_LRU_TRACE", false)
 )
 
-func NewJumpDestCache(trace bool) *JumpDestCache {
+func NewJumpDestCache() *JumpDestCache {
 	c, err := simplelru.NewLRU[libcommon.Hash, []uint64](jumpDestCacheLimit, nil)
 	if err != nil {
 		panic(err)
 	}
-	return &JumpDestCache{LRU: c, trace: trace || jumpDestCacheTrace}
+	return &JumpDestCache{LRU: c, trace: jumpDestCacheTrace}
 }
 
 func (c *JumpDestCache) LogStats() {

@@ -44,8 +44,9 @@ func (api *OtterscanAPIImpl) buildSearchResults(ctx context.Context, tx kv.Tempo
 		return nil, nil, false, err
 	}
 
-	exec := exec3.NewTraceWorker(tx, chainConfig, api.engine(), api._blockReader, nil)
+	exec := exec3.NewTraceWorker(chainConfig, api.engine(), api._blockReader)
 	defer exec.Close()
+	exec.SetTracer(nil)
 
 	var blockHash common.Hash
 	var header *types.Header
@@ -87,7 +88,7 @@ func (api *OtterscanAPIImpl) buildSearchResults(ctx context.Context, tx kv.Tempo
 				continue
 			}
 			blockHash = header.Hash()
-			exec.ChangeBlock(header)
+			exec.ChangeBlock(tx, header)
 			mustReadHeader = false
 		}
 

@@ -250,7 +250,8 @@ func (rw *Worker) RunTxTaskNoLock(txTask *state.TxTask) {
 		ibs.SetTxContext(txHash, txTask.BlockHash, txTask.TxIndex)
 		msg := txTask.TxAsMessage
 
-		rw.evm.ResetBetweenBlocks(txTask.EvmBlockContext, core.NewEVMTxContext(msg), ibs, rw.vmCfg, rules)
+		rw.evm.ResetBetweenBlocks(txTask.EvmBlockContext, rw.vmCfg, rules)
+		rw.evm.Reset(core.NewEVMTxContext(msg), ibs)
 
 		if msg.FeeCap().IsZero() && rw.engine != nil {
 			// Only zero-gas transactions may be service ones

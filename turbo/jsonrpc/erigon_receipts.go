@@ -190,8 +190,9 @@ func (api *ErigonImpl) GetLatestLogs(ctx context.Context, crit filters.FilterCri
 	if err != nil {
 		return nil, err
 	}
-	exec := exec3.NewTraceWorker(tx, chainConfig, api.engine(), api._blockReader, nil)
+	exec := exec3.NewTraceWorker(chainConfig, api.engine(), api._blockReader)
 	defer exec.Close()
+	exec.SetTracer(nil)
 
 	txNumbers, err := applyFiltersV3(tx, begin, end, crit)
 	if err != nil {
@@ -239,7 +240,7 @@ func (api *ErigonImpl) GetLatestLogs(ctx context.Context, crit filters.FilterCri
 				continue
 			}
 			blockHash = header.Hash()
-			exec.ChangeBlock(header)
+			exec.ChangeBlock(tx, header)
 			timestamp = header.Time
 		}
 		var logIndex uint

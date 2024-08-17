@@ -188,7 +188,8 @@ func (rw *HistoricalTraceWorker) RunTxTask(txTask *state.TxTask) {
 		ibs.SetTxContext(txHash, txTask.BlockHash, txTask.TxIndex)
 		msg := txTask.TxAsMessage
 
-		rw.evm.ResetBetweenBlocks(txTask.EvmBlockContext, core.NewEVMTxContext(msg), ibs, *rw.vmConfig, rules)
+		rw.evm.ResetBetweenBlocks(txTask.EvmBlockContext, *rw.vmConfig, rules)
+		rw.evm.Reset(core.NewEVMTxContext(msg), ibs)
 
 		if msg.FeeCap().IsZero() {
 			// Only zero-gas transactions may be service ones

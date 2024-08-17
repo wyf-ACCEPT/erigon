@@ -116,7 +116,7 @@ func NewEVM(blockCtx evmtypes.BlockContext, txCtx evmtypes.TxContext, state evmt
 		config:          vmConfig,
 		chainConfig:     chainConfig,
 		chainRules:      chainConfig.Rules(blockCtx.BlockNumber, blockCtx.Time),
-		JumpDestCache:   NewJumpDestCache(false),
+		JumpDestCache:   NewJumpDestCache(),
 	}
 
 	evm.interpreter = NewEVMInterpreter(evm, vmConfig)
@@ -134,10 +134,8 @@ func (evm *EVM) Reset(txCtx evmtypes.TxContext, ibs evmtypes.IntraBlockState) {
 	atomic.StoreInt32(&evm.abort, 0)
 }
 
-func (evm *EVM) ResetBetweenBlocks(blockCtx evmtypes.BlockContext, txCtx evmtypes.TxContext, ibs evmtypes.IntraBlockState, vmConfig Config, chainRules *chain.Rules) {
+func (evm *EVM) ResetBetweenBlocks(blockCtx evmtypes.BlockContext, vmConfig Config, chainRules *chain.Rules) {
 	evm.Context = blockCtx
-	evm.TxContext = txCtx
-	evm.intraBlockState = ibs
 	evm.config = vmConfig
 	evm.chainRules = chainRules
 
