@@ -511,13 +511,13 @@ func (r *BlockReader) HeaderByHash(ctx context.Context, tx kv.Getter, hash commo
 var emptyHash = common.Hash{}
 
 func (r *BlockReader) CanonicalHash(ctx context.Context, tx kv.Getter, blockHeight uint64) (h common.Hash, err error) {
-	h, err = rawdb.ReadCanonicalHash(tx, blockHeight)
-	if err != nil {
-		return emptyHash, err
-	}
-	if h != emptyHash {
-		return h, nil
-	}
+	//h, err = rawdb.ReadCanonicalHash(tx, blockHeight)
+	//if err != nil {
+	//	return emptyHash, err
+	//}
+	//if h != emptyHash {
+	//	return h, nil
+	//}
 
 	seg, ok, release := r.sn.ViewSingleFile(coresnaptype.Headers, blockHeight)
 	if !ok {
