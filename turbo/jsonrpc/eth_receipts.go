@@ -274,7 +274,7 @@ func (api *BaseAPI) getLogsV3(ctx context.Context, tx kv.TemporalTx, begin, end 
 	if err != nil {
 		return nil, err
 	}
-	exec := exec3.NewTraceWorker2(chainConfig, api.engine(), api._blockReader, nil)
+	exec := exec3.NewTraceWorker2(tx, chainConfig, api.engine(), api._blockReader, nil)
 	defer exec.Close()
 
 	var blockHash common.Hash
@@ -310,7 +310,7 @@ func (api *BaseAPI) getLogsV3(ctx context.Context, tx kv.TemporalTx, begin, end 
 				continue
 			}
 			blockHash = header.Hash()
-			exec.ChangeBlock(tx, header)
+			exec.ChangeBlock(header)
 			timestamp = header.Time
 		}
 

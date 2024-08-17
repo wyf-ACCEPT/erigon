@@ -45,12 +45,15 @@ type Resetable interface {
 }
 
 type TraceWorker struct {
-	stateReader  *state.HistoryReaderV3
 	engine       consensus.EngineReader
 	headerReader services.HeaderReader
 	tracer       GenericTracer
 	ibs          *state.IntraBlockState
 	evm          *vm.EVM
+
+	// nulify when return to pool
+	stateReader *state.HistoryReaderV3
+	tx          kv.Getter
 
 	// calculated by .changeBlock()
 	blockHash common.Hash
@@ -86,6 +89,7 @@ func NewTraceWorker2(tx kv.TemporalTx, cc *chain.Config, engine consensus.Engine
 	w.evm.ResetBetweenBlocksBatch(cc)
 	w.stateReader = state.NewHistoryReaderV3()
 	w.stateReader.SetTx(tx)
+	w.tx = tx
 	w.ibs = state.New(w.stateReader)
 	w.headerReader = br
 	w.engine = engine
@@ -103,10 +107,11 @@ func NewTraceWorker2(tx kv.TemporalTx, cc *chain.Config, engine consensus.Engine
 func (e *TraceWorker) Close() {
 	e.evm.JumpDestCache.LogStats()
 	e.stateReader = nil
+	e.tx = nil
 	p.Put(e)
 }
 
-func (e *TraceWorker) ChangeBlock(tx kv.TemporalTx, header *types.Header) {
+func (e *TraceWorker) ChangeBlock(header *types.Header) {
 	e.blockNum = header.Number.Uint64()
 	cc := e.evm.ChainConfig()
 	e.blockHash = header.Hash()
@@ -115,7 +120,7 @@ func (e *TraceWorker) ChangeBlock(tx kv.TemporalTx, header *types.Header) {
 	e.signer = types.MakeSigner(cc, e.blockNum, header.Time)
 	e.vmConfig.SkipAnalysis = core.SkipAnalysis(cc, e.blockNum)
 	e.evm.ResetBetweenBlocks(
-		transactions.NewEVMBlockContext(e.engine, header, true /* requireCanonical */, tx, e.headerReader, cc),
+		transactions.NewEVMBlockContext(e.engine, header, true /* requireCanonical */, e.tx, e.headerReader, cc),
 		*e.vmConfig, e.rules)
 }
 
