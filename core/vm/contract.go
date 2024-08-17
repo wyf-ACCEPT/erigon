@@ -22,9 +22,9 @@ package vm
 import (
 	"fmt"
 
+	"github.com/elastic/go-freelru"
 	"github.com/erigontech/erigon-lib/common/dbg"
 	"github.com/erigontech/erigon-lib/log/v3"
-	"github.com/hashicorp/golang-lru/v2/simplelru"
 	"github.com/holiman/uint256"
 
 	libcommon "github.com/erigontech/erigon-lib/common"
@@ -72,18 +72,18 @@ type Contract struct {
 }
 
 type JumpDestCache struct {
-	*simplelru.LRU[libcommon.Hash, []uint64]
+	*freelru.LRU[libcommon.Hash, []uint64]
 	hit, total int
 	trace      bool
 }
 
 var (
-	jumpDestCacheLimit = dbg.EnvInt("JD_LRU", 128)
+	jumpDestCacheLimit = dbg.EnvInt("JD_LRU", 256)
 	jumpDestCacheTrace = dbg.EnvBool("JD_LRU_TRACE", false)
 )
 
 func NewJumpDestCache() *JumpDestCache {
-	c, err := simplelru.NewLRU[libcommon.Hash, []uint64](jumpDestCacheLimit, nil)
+	c, err := freelru.New[libcommon.Hash, []uint64](uint32(jumpDestCacheLimit), nil)
 	if err != nil {
 		panic(err)
 	}
