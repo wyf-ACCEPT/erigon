@@ -18,6 +18,7 @@ package exec3
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/erigontech/erigon-lib/chain"
 	"github.com/erigontech/erigon-lib/common"
@@ -73,20 +74,39 @@ func NewTraceWorker(cc *chain.Config, engine consensus.EngineReader, br services
 	return ie
 }
 
-func (e *TraceWorker) SetTracer(tracer GenericTracer) {
-	e.vmConfig.Tracer = tracer
-	e.vmConfig.Debug = tracer != nil
-	if casted, ok := tracer.(GenericTracer); ok {
-		e.tracer = casted
+var p = &sync.Pool{New: func() any {
+	return &TraceWorker{
+		evm:      vm.NewEVM(evmtypes.BlockContext{}, evmtypes.TxContext{}, nil, nil, vm.Config{}),
+		vmConfig: &vm.Config{},
 	}
+}}
+
+func NewTraceWorker2(tx kv.TemporalTx, cc *chain.Config, engine consensus.EngineReader, br services.HeaderReader, tracer GenericTracer) *TraceWorker {
+	w := p.Get().(*TraceWorker)
+	w.evm.ResetBetweenBlocksBatch(cc)
+	w.stateReader = state.NewHistoryReaderV3()
+	w.stateReader.SetTx(tx)
+	w.ibs = state.New(w.stateReader)
+	w.headerReader = br
+	w.engine = engine
+	if w.vmConfig == nil {
+		w.vmConfig = &vm.Config{}
+	}
+	w.vmConfig.Tracer = tracer
+	w.vmConfig.Debug = tracer != nil
+	if casted, ok := tracer.(GenericTracer); ok {
+		w.tracer = casted
+	}
+	return w
 }
 
 func (e *TraceWorker) Close() {
 	e.evm.JumpDestCache.LogStats()
+	e.stateReader = nil
+	p.Put(e)
 }
 
 func (e *TraceWorker) ChangeBlock(tx kv.TemporalTx, header *types.Header) {
-	e.stateReader.SetTx(tx)
 	e.blockNum = header.Number.Uint64()
 	cc := e.evm.ChainConfig()
 	e.blockHash = header.Hash()

@@ -274,9 +274,8 @@ func (api *BaseAPI) getLogsV3(ctx context.Context, tx kv.TemporalTx, begin, end 
 	if err != nil {
 		return nil, err
 	}
-	exec := exec3.NewTraceWorker(chainConfig, api.engine(), api._blockReader)
+	exec := exec3.NewTraceWorker2(chainConfig, api.engine(), api._blockReader, nil)
 	defer exec.Close()
-	exec.SetTracer(nil)
 
 	var blockHash common.Hash
 	var header *types.Header

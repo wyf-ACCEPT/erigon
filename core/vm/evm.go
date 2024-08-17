@@ -144,6 +144,9 @@ func (evm *EVM) ResetBetweenBlocks(blockCtx evmtypes.BlockContext, vmConfig Conf
 	// ensure the evm is reset to be used again
 	atomic.StoreInt32(&evm.abort, 0)
 }
+func (evm *EVM) ResetBetweenBlocksBatch(cc *chain.Config) {
+	evm.chainConfig = cc
+}
 
 // Cancel cancels any running EVM operation. This may be called concurrently and
 // it's safe to be called multiple times.
