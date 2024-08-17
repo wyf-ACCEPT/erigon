@@ -103,10 +103,10 @@ func (bits bitvec2) set1(pos uint64) {
 }
 
 func (bits bitvec2) setN(flag uint64, pc uint64) {
-	idx, shift := pc/64, pc%64
-	bits[idx] |= flag << shift
+	shift := pc % 64
+	bits[pc/64] |= flag << shift
 	if shift > 32 {
-		bits[idx+1] |= flag >> (64 - shift)
+		bits[pc/64+1] |= flag >> (64 - shift)
 	}
 }
 
