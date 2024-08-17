@@ -20,6 +20,7 @@
 package vm
 
 import (
+	"encoding/binary"
 	"fmt"
 
 	"github.com/elastic/go-freelru"
@@ -81,8 +82,9 @@ var (
 	jumpDestCacheTrace = dbg.EnvBool("JD_LRU_TRACE", false)
 )
 
+func noHash(hash libcommon.Hash) uint32 { return binary.BigEndian.Uint32(hash[:]) }
 func NewJumpDestCache() *JumpDestCache {
-	c, err := freelru.New[libcommon.Hash, []uint64](uint32(jumpDestCacheLimit), nil)
+	c, err := freelru.New[libcommon.Hash, []uint64](uint32(jumpDestCacheLimit), noHash)
 	if err != nil {
 		panic(err)
 	}
