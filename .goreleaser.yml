@@ -432,6 +432,7 @@ dockers:
       - linux-arm64-downloader
       - linux-arm64-devnet
       - linux-arm64-evm
+      - linux-amd64-caplin
     build_flag_templates:
       - --platform=linux/arm64
       - --label=org.opencontainers.image.title={{ .ProjectName }}
