@@ -37,8 +37,8 @@ func TestJumpDestAnalysis(t *testing.T) {
 		exp   uint64
 		which int
 	}{
-		//{[]byte{byte(PUSH1), 0x01, 0x01, 0x01}, 0x02, 0},
-		//{[]byte{byte(PUSH1), byte(PUSH1), byte(PUSH1), byte(PUSH1)}, 0x0a, 0},
+		{[]byte{byte(PUSH1), 0x01, 0x01, 0x01}, 0b0000_0010, 0},
+		{[]byte{byte(PUSH1), byte(PUSH1), byte(PUSH1), byte(PUSH1)}, 0b0000_1010, 0},
 		{[]byte{byte(PUSH8), byte(PUSH8), byte(PUSH8), byte(PUSH8), byte(PUSH8), byte(PUSH8), byte(PUSH8), byte(PUSH8), 0x01, 0x01, 0x01}, 0x01fe, 0},
 		{[]byte{byte(PUSH8), 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01}, 0x01fe, 0},
 		{[]byte{0x01, 0x01, 0x01, 0x01, 0x01, byte(PUSH2), byte(PUSH2), byte(PUSH2), 0x01, 0x01, 0x01}, 0xc0, 0},
@@ -48,11 +48,6 @@ func TestJumpDestAnalysis(t *testing.T) {
 		{[]byte{byte(PUSH16), 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01}, 0x01fffe, 0},
 		{[]byte{byte(PUSH8), 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, byte(PUSH1), 0x01}, 0x05fe, 0},
 		{[]byte{byte(PUSH32)}, 0x01fffffffe, 0},
-		//{[]byte{byte(PUSH32)}, 0b1111_1110, 0},
-		//{[]byte{byte(PUSH32)}, 0b1111_1111, 1},
-		//{[]byte{byte(PUSH32)}, 0b1111_1111, 2},
-		//{[]byte{byte(PUSH32)}, 0b1111_1111, 3},
-		//{[]byte{byte(PUSH32)}, 0b0000_0001, 4},
 	}
 	for i, test := range tests {
 		ret := codeBitmap(test.code)
@@ -151,18 +146,6 @@ func BenchmarkJumpDest(b *testing.B) {
 
 const analysisCodeSize = 1200 * 1024
 
-func BenchmarkName(b *testing.B) {
-	b.Run("1", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			_ = i % 64
-		}
-	})
-	b.Run("2", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			_ = i & 63
-		}
-	})
-}
 func BenchmarkJumpdestOpAnalysis(bench *testing.B) {
 	bench.Run("1", func(b *testing.B) {
 		var op OpCode
