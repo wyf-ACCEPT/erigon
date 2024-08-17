@@ -2,6 +2,9 @@ ARG TARGET_BASE_VERSION="bullseye-20240701"
 
 FROM debian:${TARGET_BASE_VERSION}
 
+ARG USER=erigon \
+    GROUP=erigon
+
 COPY erigon /usr/local/bin/
 COPY downloader /usr/local/bin/
 COPY devnet /usr/local/bin/
