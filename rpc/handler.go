@@ -23,7 +23,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"reflect"
 	"strconv"
 	"strings"
@@ -240,18 +239,19 @@ func (h *handler) handleMsg(msg *jsonrpcMessage, stream *jsoniter.Stream) {
 	h.startCallProc(func(cp *callProc) {
 		needWriteStream := false
 		if stream == nil {
-			fmt.Printf("new stream\n")
-			stream = jsoniter.NewStream(jsoniter.ConfigDefault, nil, 4096)
+			//	stream = jsoniter.NewStream(jsoniter.ConfigDefault, nil, 4096)
 			needWriteStream = true
 		}
 		answer := h.handleCallMsg(cp, msg, stream)
 		h.addSubscriptions(cp.notifiers)
-		if answer != nil {
-			_ = json.NewEncoder(stream).Encode(answer)
-		}
 		if needWriteStream {
-			h.conn.WriteJSON(cp.ctx, json.RawMessage(stream.Buffer()))
+			if answer != nil {
+				h.conn.WriteJSON(cp.ctx, answer)
+			}
 		} else {
+			if answer != nil {
+				_ = json.NewEncoder(stream).Encode(answer)
+			}
 			stream.Write([]byte("\n"))
 		}
 		for _, n := range cp.notifiers {
