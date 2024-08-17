@@ -280,7 +280,12 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer codec.Close()
 	var stream *jsoniter.Stream
 	if !s.disableStreaming {
-		stream = jsoniter.NewStream(jsoniter.ConfigDefault, w, 4096)
+		stream = jsoniter.ConfigDefault.BorrowStream(w)
+		jsoniter.NewStream(jsoniter.ConfigDefault, w, 4096)
+		defer func() {
+			_ = stream.Flush()
+			jsoniter.ConfigDefault.ReturnStream(stream)
+		}()
 	}
 	s.serveSingleRequest(ctx, codec, stream)
 }
