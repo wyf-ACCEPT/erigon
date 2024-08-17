@@ -73,8 +73,7 @@ type Contract struct {
 
 type JumpDestCache struct {
 	*freelru.LRU[libcommon.Hash, []uint64]
-	hit, total int
-	trace      bool
+	trace bool
 }
 
 var (
@@ -94,7 +93,8 @@ func (c *JumpDestCache) LogStats() {
 	if c == nil || !c.trace {
 		return
 	}
-	log.Warn("[dbg] JumpDestCache", "hit", c.hit, "total", c.total, "limit", jumpDestCacheLimit, "ratio", fmt.Sprintf("%.2f", float64(c.hit)/float64(c.total)))
+	total := c.Metrics().Hits + c.Metrics().Misses
+	log.Warn("[dbg] JumpDestCache", "hit", c.Metrics().Hits, "total", total, "limit", jumpDestCacheLimit, "ratio", fmt.Sprintf("%.2f", float64(c.Metrics().Hits)/float64(total)))
 }
 
 // NewContract returns a new contract environment for the execution of EVM.
