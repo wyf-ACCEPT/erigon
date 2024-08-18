@@ -23,9 +23,19 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/sha3"
 
 	"github.com/erigontech/erigon-lib/common/length"
 )
+
+func BenchmarkName(b *testing.B) {
+	ks := sha3.NewLegacyKeccak256().(keccakState)
+	hashKey(ks)
+
+	for i := 0; i < b.N; i++ {
+
+	}
+}
 
 func Benchmark_HexPatriciaHashed_Process(b *testing.B) {
 	b.SetParallelism(1)
