@@ -10,11 +10,7 @@ release:
 env:
   - CGO_ENABLED=1
   - BUILD_VERSION={{ .Env.BUILD_VERSION }}
-  - GIT_COMMIT={{ .Env.GIT_COMMIT }}
-  - GIT_BRANCH={{ .Env.GIT_BRANCH }}
-  - GIT_TAG={{ .Env.GIT_TAG }}
   - DARWIN_LDFLAGS="-O3 -g -mmacosx-version-min=13.3"
-  - PACKAGE={{ .Env.PACKAGE }}
   - GO_FLAGS=-trimpath -buildvcs=false -ldflags "-X {{ .Env.PACKAGE }}/params.GitCommit={{ .Env.GIT_COMMIT }} -X {{ .Env.PACKAGE }}/params.GitBranch={{ .Env.GIT_BRANCH }} -X {{ .Env.PACKAGE }}/params.GitTag={{ .Env.GIT_TAG }}"
 
 builds:
