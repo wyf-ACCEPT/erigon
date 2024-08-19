@@ -144,7 +144,7 @@ builds:
 
 
 checksum:
-  name_template: "{{ .ProjectName }}_{{ .Env.BUILD_VERSION }}_checksums.txt"
+  name_template: "{{ .Env.APPLICATION }}_{{ .Env.BUILD_VERSION }}_checksums.txt"
   algorithm: sha256
   ids:
     - linux-arm64
@@ -159,7 +159,7 @@ archives:
       - linux-arm64-devnet
       - linux-arm64-evm
       - linux-arm64-caplin
-    name_template: "{{ .ProjectName }}_{{ .Env.BUILD_VERSION }}_{{ .Os }}_{{ .Arch }}"
+    name_template: "{{ .Env.APPLICATION }}_{{ .Env.BUILD_VERSION }}_{{ .Os }}_{{ .Arch }}"
     wrap_in_directory: true
     format: tar.gz
 
@@ -170,64 +170,7 @@ archives:
       - linux-amd64-devnet
       - linux-amd64-evm
       - linux-amd64-caplin
-    name_template: "{{ .ProjectName }}_{{ .Env.BUILD_VERSION }}_{{ .Os }}_{{ .Arch }}"
+    name_template: "{{ .Env.APPLICATION }}_{{ .Env.BUILD_VERSION }}_{{ .Os }}_{{ .Arch }}"
     wrap_in_directory: true
     format: tar.gz
 
-
-
-dockers:
-  - dockerfile: Dockerfile.NEW-gr
-    use: buildx
-    goarch: amd64
-    goos: linux
-    ids:
-      - linux-amd64-erigon
-      - linux-amd64-downloader
-      - linux-amd64-devnet
-      - linux-amd64-evm
-      - linux-amd64-caplin
-    build_flag_templates:
-      - --platform=linux/amd64
-      - --label=org.opencontainers.image.title={{ .ProjectName }}
-      - --label=org.opencontainers.image.description={{ .Env.LABEL_DESCRIPTION }}
-      - --label=org.opencontainers.image.url={{ .Env.PACKAGE }}
-      - --label=org.opencontainers.image.source={{.GitURL}}
-      - --label=org.opencontainers.image.vcs-ref={{ .Env.GIT_COMMIT }}
-      - --label=org.opencontainers.image.created={{ time "2006-01-02T15:04:05Z07:00" }}
-      - --label=org.opencontainers.image.revision={{ .Env.GIT_COMMIT }}
-      - "--build-arg=TARGET_BASE_VERSION={{.Env.TARGET_BASE_VERSION}}"
-      - "--output type=image,name={{ .Env.DOCKER_URL }},push-by-digest=true,name-canonical=true,push=true"
-      - "--metadata-file docker-buildx-amd64.metadata"
-    image_templates:
-      - '{{ .Env.DOCKER_URL }}:{{ .Env.BUILD_VERSION }}-amd64'
-  - dockerfile: Dockerfile.NEW-gr
-    use: buildx
-    goarch: arm64
-    goos: linux
-    ids:
-      - linux-arm64-erigon
-      - linux-arm64-downloader
-      - linux-arm64-devnet
-      - linux-arm64-evm
-      - linux-arm64-caplin
-    build_flag_templates:
-      - --platform=linux/arm64
-      - --label=org.opencontainers.image.title={{ .ProjectName }}
-      - --label=org.opencontainers.image.description={{ .Env.LABEL_DESCRIPTION }}
-      - --label=org.opencontainers.image.url={{ .Env.PACKAGE }}
-      - --label=org.opencontainers.image.source={{.GitURL}}
-      - --label=org.opencontainers.image.vcs-ref={{ .Env.GIT_COMMIT }}
-      - --label=org.opencontainers.image.created={{ time "2006-01-02T15:04:05Z07:00" }}
-      - --label=org.opencontainers.image.revision={{ .Env.GIT_COMMIT }}
-      - "--build-arg=TARGET_BASE_VERSION={{.Env.TARGET_BASE_VERSION}}"
-      - "--output type=image,name={{ .Env.DOCKER_URL }},push-by-digest=true,name-canonical=true,push=true"
-      - "--metadata-file docker-buildx-arm64.metadata"
-    image_templates:
-      - '{{ .Env.DOCKER_URL }}:{{ .Env.BUILD_VERSION }}-arm64'
-
-docker_manifests:
-  - name_template: "{{ .Env.DOCKER_IMAGE }}:{{ .Env.BUILD_VERSION }}"
-    image_templates:
-      - "{{ .Env.DOCKER_URL }}:{{ .Env.BUILD_VERSION }}"
-      - "{{ .Env.DOCKER_URL }}:{{ .Env.BUILD_VERSION }}"

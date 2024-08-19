@@ -1,0 +1,35 @@
+ARG TARGET_BASE_VERSION="bullseye-20240701"
+
+FROM debian:${TARGET_BASE_VERSION}
+
+ARG USER=erigon \
+    GROUP=erigon \
+    ARCH=${BUILDARCH} \
+    VERSION=${VERSION} \
+    APPLICATION
+
+COPY ./dist/${APPLICATION}_${VERSION}_linux_${ARCH}.tar.gz /tmp/${APPLICATION}.tar.gz
+
+RUN tar xzvf /tmp/${APPLICATION}.tar.gz -C /tmp && \
+    groupadd ${GROUP} && \
+    useradd -d /home/${USER} -g ${GROUP} -m ${USER} && \
+    install -o ${USER} -g $ {GROUP} /tmp/${APPLICATION}_${VERSION}_linux_${ARCH}/* /usr/local/bin/ && \
+    rm -drfv /tmp/${APPLICATION}*
+
+VOLUME [ "/home/${USER}" ]
+WORKDIR /home/${USER}
+
+USER ${USER}
+
+EXPOSE 8545 \
+       8551 \
+       8546 \
+       30303 \
+       30303/udp \
+       42069 \
+       42069/udp \
+       8080 \
+       9090 \
+       6060
+
+ENTRYPOINT [ "/usr/local/bin/erigon" ]
