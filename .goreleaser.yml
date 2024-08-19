@@ -146,68 +146,6 @@ builds:
 
 ## End of Linux ARM64.
 
-## Windows AMD64
-  - id: windows-amd64-erigon
-    main: ./cmd/erigon
-    binary: erigon
-    goos: [ windows ]
-    goarch: [ amd64 ]
-    env:
-      - CC=x86_64-w64-mingw32-gcc
-      - CXX=x86_64-w64-mingw32-g++
-      - GO_FLAGS={{ .Env.GO_FLAGS }}
-    tags: [ nosqlite, noboltdb, nosilkworm ]
-    ldflags: -s -w
-
-  - id: windows-amd64-downloader
-    main: ./cmd/downloader
-    binary: downloader
-    goos: [ windows ]
-    goarch: [ amd64 ]
-    env:
-      - CC=x86_64-w64-mingw32-gcc
-      - CXX=x86_64-w64-mingw32-g++
-      - GO_FLAGS={{ .Env.GO_FLAGS }}
-    tags: [ nosqlite, noboltdb, nosilkworm ]
-    ldflags: -s -w
-
-  - id: windows-amd64-devnet
-    main: ./cmd/devnet
-    binary: devnet
-    goos: [ windows ]
-    goarch: [ amd64 ]
-    env:
-      - CC=x86_64-w64-mingw32-gcc
-      - CXX=x86_64-w64-mingw32-g++
-      - GO_FLAGS={{ .Env.GO_FLAGS }}
-    tags: [ nosqlite, noboltdb, nosilkworm ]
-    ldflags: -s -w
-
-  - id: windows-amd64-evm
-    main: ./cmd/evm
-    binary: evm
-    goos: [ windows ]
-    goarch: [ amd64 ]
-    env:
-      - CC=x86_64-w64-mingw32-gcc
-      - CXX=x86_64-w64-mingw32-g++
-      - GO_FLAGS={{ .Env.GO_FLAGS }}
-    tags: [ nosqlite, noboltdb, nosilkworm ]
-    ldflags: -s -w
-
-  - id: windows-amd64-caplin
-    main: ./cmd/caplin
-    binary: caplin
-    goos: [ windows ]
-    goarch: [ amd64 ]
-    env:
-      - CC=x86_64-w64-mingw32-gcc
-      - CXX=x86_64-w64-mingw32-g++
-      - GO_FLAGS={{ .Env.GO_FLAGS }}
-    tags: [ nosqlite, noboltdb, nosilkworm ]
-    ldflags: -s -w
-
-## End of Windows AMD64
 
 archives:
 
