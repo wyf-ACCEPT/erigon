@@ -8,7 +8,7 @@ ARG BUILDARCH \
     VERSION=${VERSION} \
     APPLICATION
 
-COPY ./dist/${APPLICATION}_${VERSION}_linux_${BUILDARCH}.tar.gz /tmp/${APPLICATION}/${APPLICATION}.tar.gz
+COPY ./dist/${APPLICATION}_${VERSION}_linux_${BUILDARCH}.tar.gz /tmp/${APPLICATION}.tar.gz
 RUN tar xzvf /tmp/${APPLICATION}.tar.gz -C /tmp && \
     mv /tmp/${APPLICATION}_${VERSION}_linux_${BUILDARCH} /tmp/${APPLICATION}
 
