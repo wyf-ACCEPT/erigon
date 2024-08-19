@@ -25,7 +25,6 @@ builds:
     binary: erigon
     goos: [ darwin ]
     goarch: [ amd64 ]
-    skip: {{ .Env.SKIP_DARWIN_AMD64 }}
     env:
       - CC=o64-clang
       - CXX=o64-clang++
@@ -39,7 +38,6 @@ builds:
     binary: downloader
     goos: [ darwin ]
     goarch: [ amd64 ]
-    skip: {{ .Env.SKIP_DARWIN_AMD64 }}
     env:
       - CC=o64-clang
       - CXX=o64-clang++
@@ -53,7 +51,6 @@ builds:
     binary: devenet
     goos: [ darwin ]
     goarch: [ amd64 ]
-    skip: {{ .Env.SKIP_DARWIN_AMD64 }}
     env:
       - CC=o64-clang
       - CXX=o64-clang++
@@ -67,7 +64,6 @@ builds:
     binary: evm
     goos: [ darwin ]
     goarch: [ amd64 ]
-    skip: {{ .Env.SKIP_DARWIN_AMD64 }}
     env:
       - CC=o64-clang
       - CXX=o64-clang++
@@ -81,7 +77,6 @@ builds:
     binary: caplin
     goos: [ darwin ]
     goarch: [ amd64 ]
-    skip: {{ .Env.SKIP_DARWIN_AMD64 }}
     env:
       - CC=o64-clang
       - CXX=o64-clang++
@@ -98,7 +93,6 @@ builds:
     binary: erigon
     goos: [ darwin ]
     goarch: [ arm64 ]
-    skip: {{ .Env.SKIP_DARWIN_ARM64 }}
     env:
       - CC=oa64-clang
       - CXX=oa64-clang++
@@ -112,7 +106,6 @@ builds:
     binary: downloader
     goos: [ darwin ]
     goarch: [ arm64 ]
-    skip: {{ .Env.SKIP_DARWIN_ARM64 }}
     env:
       - CC=oa64-clang
       - CXX=oa64-clang++
@@ -126,7 +119,6 @@ builds:
     binary: devnet
     goos: [ darwin ]
     goarch: [ arm64 ]
-    skip: {{ .Env.SKIP_DARWIN_ARM64 }}
     env:
       - CC=oa64-clang
       - CXX=oa64-clang++
@@ -140,7 +132,6 @@ builds:
     binary: evm
     goos: [ darwin ]
     goarch: [ arm64 ]
-    skip: {{ .Env.SKIP_DARWIN_ARM64 }}
     env:
       - CC=oa64-clang
       - CXX=oa64-clang++
@@ -154,7 +145,6 @@ builds:
     binary: caplin
     goos: [ darwin ]
     goarch: [ arm64 ]
-    skip: {{ .Env.SKIP_DARWIN_ARM64 }}
     env:
       - CC=oa64-clang
       - CXX=oa64-clang++
