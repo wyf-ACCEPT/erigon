@@ -18,7 +18,7 @@ ARG USER=erigon \
     GROUP=erigon \
     APPLICATION
 
-RUN --mount=type=bind,from=temporary,source=/tmp/${APPLICATION},target=/tmp/${APPLICATION} && \
+RUN --mount=type=bind,from=temporary,source=/tmp/${APPLICATION},target=/tmp/${APPLICATION} \
     groupadd ${GROUP} && \
     useradd -d /home/${USER} -g ${GROUP} -m ${USER} && \
     install -o ${USER} -g ${GROUP} /tmp/${APPLICATION}/* /usr/local/bin/
