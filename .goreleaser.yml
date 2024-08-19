@@ -363,9 +363,8 @@ archives:
       - darwin-amd64-caplin
     name_template: "{{ .ProjectName }}_{{ .Env.BUILD_VERSION }}_{{ .Os }}_{{ .Arch }}"
     wrap_in_directory: true
-    format: {{ if eq .Env.SKIP_DARWIN_AMD64 "true" }}binary{{ else }}tar.gz{{ end }}
+    format: tar.gz
 
-  
   - id: darwin-arm64
     builds:
       - darwin-arm64-erigon
@@ -375,7 +374,7 @@ archives:
       - darwin-arm64-caplin
     name_template: "{{ .ProjectName }}_{{ .Env.BUILD_VERSION }}_{{ .Os }}_{{ .Arch }}"
     wrap_in_directory: true
-    format: {{ if eq .Env.SKIP_DARWIN_ARM64 "true" }}binary{{ else }}tar.gz{{ end }}
+    format: tar.gz
 
   - id: linux-arm64
     builds:
