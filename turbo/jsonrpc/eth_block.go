@@ -22,12 +22,13 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/erigontech/erigon-lib/log/v3"
-
 	"github.com/erigontech/erigon-lib/common"
+	"github.com/erigontech/erigon-lib/common/dbg"
 	"github.com/erigontech/erigon-lib/common/hexutil"
 	"github.com/erigontech/erigon-lib/common/hexutility"
 	"github.com/erigontech/erigon-lib/kv"
+	"github.com/erigontech/erigon-lib/log/v3"
+
 	"github.com/erigontech/erigon/cl/clparams"
 	"github.com/erigontech/erigon/common/math"
 	"github.com/erigontech/erigon/core"
@@ -213,7 +214,7 @@ func (api *APIImpl) CallBundle(ctx context.Context, txHashes []common.Hash, stat
 
 // GetBlockByNumber implements eth_getBlockByNumber. Returns information about a block given the block's number.
 func (api *APIImpl) GetBlockByNumber(ctx context.Context, number rpc.BlockNumber, fullTx bool) (map[string]interface{}, error) {
-	log.Info("GetBlockByNumber 000")
+	log.Info("GetBlockByNumber", "number", number, "stack", dbg.Stack())
 	tx, err := api.db.BeginRo(ctx)
 	if err != nil {
 		return nil, err
@@ -223,11 +224,11 @@ func (api *APIImpl) GetBlockByNumber(ctx context.Context, number rpc.BlockNumber
 	if err != nil {
 		return nil, err
 	}
-	log.Info("GetBlockByNumber 100")
+	log.Info("GetBlockByNumber 100", "number", number)
 	if b == nil {
 		return nil, nil
 	}
-	log.Info("GetBlockByNumber 200")
+	log.Info("GetBlockByNumber 200", "number", number)
 	additionalFields := make(map[string]interface{})
 	td, err := rawdb.ReadTd(tx, b.Hash(), b.NumberU64())
 	if err != nil {
