@@ -1,23 +1,27 @@
 ARG TARGET_BASE_VERSION="bullseye-20240701"
 
-FROM debian:${TARGET_BASE_VERSION}
-
 ## Note BUILDARCH is a crucial variable:
 ##   see https://docs.docker.com/reference/dockerfile/#automatic-platform-args-in-the-global-scope
 
-ARG USER=erigon \
-    GROUP=erigon \
-    BUILDARCH \
+FROM debian:${TARGET_BASE_VERSION} AS temporary
+ARG BUILDARCH \
     VERSION=${VERSION} \
     APPLICATION
 
-COPY ./dist/${APPLICATION}_${VERSION}_linux_${BUILDARCH}.tar.gz /tmp/${APPLICATION}.tar.gz
-
+COPY ./dist/${APPLICATION}_${VERSION}_linux_${BUILDARCH}.tar.gz /tmp/${APPLICATION}/${APPLICATION}.tar.gz
 RUN tar xzvf /tmp/${APPLICATION}.tar.gz -C /tmp && \
+    mv /tmp/${APPLICATION}_${VERSION}_linux_${BUILDARCH} /tmp/${APPLICATION}
+
+FROM debian:${TARGET_BASE_VERSION}
+
+ARG USER=erigon \
+    GROUP=erigon \
+    APPLICATION
+
+RUN --mount=type=bind,from=temporary,source=/tmp/${APPLICATION},target=/tmp/${APPLICATION} && \
     groupadd ${GROUP} && \
     useradd -d /home/${USER} -g ${GROUP} -m ${USER} && \
-    install -o ${USER} -g ${GROUP} /tmp/${APPLICATION}_${VERSION}_linux_${BUILDARCH}/* /usr/local/bin/ && \
-    rm -drfv /tmp/${APPLICATION}*
+    install -o ${USER} -g ${GROUP} /tmp/${APPLICATION}/* /usr/local/bin/
 
 VOLUME [ "/home/${USER}" ]
 WORKDIR /home/${USER}
