@@ -147,9 +147,15 @@ builds:
 ## End of Linux ARM64.
 
 
+checksum:
+  name_template: "{{ .ProjectName }}_{{ .Env.BUILD_VERSION }}_checksums.txt"
+  algorithm: sha256
+  ids:
+    - linux-arm64
+    - linux-amd64
+
+
 archives:
-
-
   - id: linux-arm64
     builds:
       - linux-arm64-erigon
@@ -171,6 +177,7 @@ archives:
     name_template: "{{ .ProjectName }}_{{ .Env.BUILD_VERSION }}_{{ .Os }}_{{ .Arch }}"
     wrap_in_directory: true
     format: tar.gz
+
 
 
 dockers:
