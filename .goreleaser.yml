@@ -197,6 +197,8 @@ dockers:
       - --label=org.opencontainers.image.created={{ time "2006-01-02T15:04:05Z07:00" }}
       - --label=org.opencontainers.image.revision={{ .Env.GIT_COMMIT }}
       - "--build-arg=TARGET_BASE_VERSION={{.Env.TARGET_BASE_VERSION}}"
+      - "--output type=image,name={{ .Env.DOCKER_URL }},push-by-digest=true,name-canonical=true,push=true"
+      - "--metadata-file docker-buildx-amd64.metadata"
     image_templates:
       - '{{ .Env.DOCKER_URL }}:{{ .Env.BUILD_VERSION }}-amd64'
   - dockerfile: Dockerfile.NEW-gr
@@ -219,6 +221,8 @@ dockers:
       - --label=org.opencontainers.image.created={{ time "2006-01-02T15:04:05Z07:00" }}
       - --label=org.opencontainers.image.revision={{ .Env.GIT_COMMIT }}
       - "--build-arg=TARGET_BASE_VERSION={{.Env.TARGET_BASE_VERSION}}"
+      - "--output type=image,name={{ .Env.DOCKER_URL }},push-by-digest=true,name-canonical=true,push=true"
+      - "--metadata-file docker-buildx-arm64.metadata"
     image_templates:
       - '{{ .Env.DOCKER_URL }}:{{ .Env.BUILD_VERSION }}-arm64'
 
