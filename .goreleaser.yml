@@ -19,140 +19,6 @@ env:
 
 builds:
 
-## Darwin AMD64:
-  - id: darwin-amd64-erigon
-    main: ./cmd/erigon
-    binary: erigon
-    goos: [ darwin ]
-    goarch: [ amd64 ]
-    env:
-      - CC=o64-clang
-      - CXX=o64-clang++
-      - CGO_LDFLAGS={{ .Env.DARWIN_LDFLAGS }}
-      - GO_FLAGS={{ .Env.GO_FLAGS }}
-    tags: [ nosqlite, noboltdb, nosilkworm ]
-    ldflags: -s -w
-
-  - id: darwin-amd64-downloader
-    main: ./cmd/downloader
-    binary: downloader
-    goos: [ darwin ]
-    goarch: [ amd64 ]
-    env:
-      - CC=o64-clang
-      - CXX=o64-clang++
-      - CGO_LDFLAGS={{ .Env.DARWIN_LDFLAGS }}
-      - GO_FLAGS={{ .Env.GO_FLAGS }}
-    tags: [ nosqlite, noboltdb, nosilkworm ]
-    ldflags: -s -w
-
-  - id: darwin-amd64-devnet
-    main: ./cmd/devnet
-    binary: devenet
-    goos: [ darwin ]
-    goarch: [ amd64 ]
-    env:
-      - CC=o64-clang
-      - CXX=o64-clang++
-      - CGO_LDFLAGS={{ .Env.DARWIN_LDFLAGS }}
-      - GO_FLAGS={{ .Env.GO_FLAGS }}
-    tags: [ nosqlite, noboltdb, nosilkworm ]
-    ldflags: -s -w
-
-  - id: darwin-amd64-evm
-    main: ./cmd/evm
-    binary: evm
-    goos: [ darwin ]
-    goarch: [ amd64 ]
-    env:
-      - CC=o64-clang
-      - CXX=o64-clang++
-      - CGO_LDFLAGS={{ .Env.DARWIN_LDFLAGS }}
-      - GO_FLAGS={{ .Env.GO_FLAGS }}
-    tags: [ nosqlite, noboltdb, nosilkworm ]
-    ldflags: -s -w
-
-  - id: darwin-amd64-caplin
-    main: ./cmd/caplin
-    binary: caplin
-    goos: [ darwin ]
-    goarch: [ amd64 ]
-    env:
-      - CC=o64-clang
-      - CXX=o64-clang++
-      - CGO_LDFLAGS={{ .Env.DARWIN_LDFLAGS }}
-      - GO_FLAGS={{ .Env.GO_FLAGS }}
-    tags: [ nosqlite, noboltdb, nosilkworm ]
-    ldflags: -s -w
-
-## END of Darwin AMD64.
-
-## Darwin ARM64:
-  - id: darwin-arm64-erigon
-    main: ./cmd/erigon
-    binary: erigon
-    goos: [ darwin ]
-    goarch: [ arm64 ]
-    env:
-      - CC=oa64-clang
-      - CXX=oa64-clang++
-      - CGO_LDFLAGS={{ .Env.DARWIN_LDFLAGS }}
-      - GO_FLAGS={{ .Env.GO_FLAGS }}
-    tags: [ nosqlite, noboltdb, nosilkworm ]
-    ldflags: -s -w
-
-  - id: darwin-arm64-downloader
-    main: ./cmd/downloader
-    binary: downloader
-    goos: [ darwin ]
-    goarch: [ arm64 ]
-    env:
-      - CC=oa64-clang
-      - CXX=oa64-clang++
-      - CGO_LDFLAGS={{ .Env.DARWIN_LDFLAGS }}
-      - GO_FLAGS={{ .Env.GO_FLAGS }}
-    tags: [ nosqlite, noboltdb, nosilkworm ]
-    ldflags: -s -w
-
-  - id: darwin-arm64-devnet
-    main: ./cmd/devnet
-    binary: devnet
-    goos: [ darwin ]
-    goarch: [ arm64 ]
-    env:
-      - CC=oa64-clang
-      - CXX=oa64-clang++
-      - CGO_LDFLAGS={{ .Env.DARWIN_LDFLAGS }}
-      - GO_FLAGS={{ .Env.GO_FLAGS }}
-    tags: [ nosqlite, noboltdb, nosilkworm ]
-    ldflags: -s -w
-
-  - id: darwin-arm64-evm
-    main: ./cmd/evm
-    binary: evm
-    goos: [ darwin ]
-    goarch: [ arm64 ]
-    env:
-      - CC=oa64-clang
-      - CXX=oa64-clang++
-      - CGO_LDFLAGS={{ .Env.DARWIN_LDFLAGS }}
-      - GO_FLAGS={{ .Env.GO_FLAGS }}
-    tags: [ nosqlite, noboltdb, nosilkworm ]
-    ldflags: -s -w
-
-  - id: darwin-arm64-caplin
-    main: ./cmd/caplin
-    binary: caplin
-    goos: [ darwin ]
-    goarch: [ arm64 ]
-    env:
-      - CC=oa64-clang
-      - CXX=oa64-clang++
-      - CGO_LDFLAGS={{ .Env.DARWIN_LDFLAGS }}
-      - GO_FLAGS={{ .Env.GO_FLAGS }}
-    tags: [ nosqlite, noboltdb, nosilkworm ]
-    ldflags: -s -w
-## END of Darwin ARM64.
 
 ## Linux AMD64:
   - id: linux-amd64-erigon
@@ -344,27 +210,7 @@ builds:
 ## End of Windows AMD64
 
 archives:
-  - id: darwin-amd64
-    builds:
-      - darwin-amd64-erigon
-      - darwin-amd64-downloader
-      - darwin-amd64-devnet
-      - darwin-amd64-evm
-      - darwin-amd64-caplin
-    name_template: "{{ .ProjectName }}_{{ .Env.BUILD_VERSION }}_{{ .Os }}_{{ .Arch }}"
-    wrap_in_directory: true
-    format: tar.gz
 
-  - id: darwin-arm64
-    builds:
-      - darwin-arm64-erigon
-      - darwin-arm64-downloader
-      - darwin-arm64-devnet
-      - darwin-arm64-evm
-      - darwin-arm64-caplin
-    name_template: "{{ .ProjectName }}_{{ .Env.BUILD_VERSION }}_{{ .Os }}_{{ .Arch }}"
-    wrap_in_directory: true
-    format: tar.gz
 
   - id: linux-arm64
     builds:
@@ -387,17 +233,6 @@ archives:
     name_template: "{{ .ProjectName }}_{{ .Env.BUILD_VERSION }}_{{ .Os }}_{{ .Arch }}"
     wrap_in_directory: true
     format: tar.gz
-
-  - id: windows-amd64
-    builds:
-      - windows-amd64-erigon
-      - windows-amd64-downloader
-      - windows-amd64-devnet
-      - windows-amd64-evm
-      - windows-amd64-caplin
-    name_template: "{{ .ProjectName }}_{{ .Env.BUILD_VERSION }}_{{ .Os }}_{{ .Arch }}"
-    wrap_in_directory: true
-    format: zip
 
 
 dockers:
