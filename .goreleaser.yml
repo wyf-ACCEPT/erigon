@@ -422,7 +422,7 @@ dockers:
       - --label=org.opencontainers.image.revision={{ .Env.GIT_COMMIT }}
       - "--build-arg=TARGET_BASE_VERSION={{.Env.TARGET_BASE_VERSION}}"
     image_templates:
-      - '{{ .Env.DOCKER_URL }}:{{ .Env.BUILD_VERSION }}-{{ .Os }}'
+      - '{{ .Env.DOCKER_URL }}:{{ .Env.BUILD_VERSION }}-amd64'
   - dockerfile: Dockerfile.NEW-gr
     use: buildx
     goarch: arm64
@@ -444,7 +444,7 @@ dockers:
       - --label=org.opencontainers.image.revision={{ .Env.GIT_COMMIT }}
       - "--build-arg=TARGET_BASE_VERSION={{.Env.TARGET_BASE_VERSION}}"
     image_templates:
-      - '{{ .Env.DOCKER_URL }}:{{ .Env.BUILD_VERSION }}-{{ .Os }}'
+      - '{{ .Env.DOCKER_URL }}:{{ .Env.BUILD_VERSION }}-arm64'
 
 docker_manifests:
   - name_template: "{{ .Env.DOCKER_IMAGE }}:{{ .Env.BUILD_VERSION }}"
