@@ -48,16 +48,16 @@ import (
 
 // ReadCanonicalHash retrieves the hash assigned to a canonical block number.
 func ReadCanonicalHash(db kv.Getter, number uint64) (common.Hash, error) {
-	log.Info("ReadCanonicalHash 000")
+	log.Info("ReadCanonicalHash", "number", number, "stack", dbg.Stack())
 	data, err := db.GetOne(kv.HeaderCanonical, hexutility.EncodeTs(number))
 	if err != nil {
 		return common.Hash{}, fmt.Errorf("failed ReadCanonicalHash: %w, number=%d", err, number)
 	}
-	log.Info("ReadCanonicalHash 100")
+	log.Info("ReadCanonicalHash 100", "number", number)
 	if len(data) == 0 {
 		return common.Hash{}, nil
 	}
-	log.Info("ReadCanonicalHash 200")
+	log.Info("ReadCanonicalHash 200", "number", number)
 	return common.BytesToHash(data), nil
 }
 
