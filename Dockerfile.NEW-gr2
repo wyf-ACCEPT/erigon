@@ -1,0 +1,42 @@
+ARG TARGET_BASE_VERSION="bullseye-20240701"
+
+## Note BUILDARCH is a crucial variable:
+##   see https://docs.docker.com/reference/dockerfile/#automatic-platform-args-in-the-global-scope
+
+FROM debian:${TARGET_BASE_VERSION} AS temporary
+ARG BUILDARCH \
+    VERSION=${VERSION} \
+    APPLICATION
+
+COPY ./dist/${APPLICATION}_${VERSION}_linux_${BUILDARCH}.tar.gz /tmp/${APPLICATION}.tar.gz
+RUN tar xzvf /tmp/${APPLICATION}.tar.gz -C /tmp && \
+    mv /tmp/${APPLICATION}_${VERSION}_linux_${BUILDARCH} /tmp/${APPLICATION}
+
+FROM debian:${TARGET_BASE_VERSION}
+
+ARG USER=erigon \
+    GROUP=erigon \
+    APPLICATION
+
+RUN --mount=type=bind,from=temporary,source=/tmp/${APPLICATION},target=/tmp/${APPLICATION} \
+    groupadd ${GROUP} && \
+    useradd -d /home/${USER} -g ${GROUP} -m ${USER} && \
+    install -o ${USER} -g ${GROUP} /tmp/${APPLICATION}/* /usr/local/bin/
+
+VOLUME [ "/home/${USER}" ]
+WORKDIR /home/${USER}
+
+USER ${USER}
+
+EXPOSE 8545 \
+       8551 \
+       8546 \
+       30303 \
+       30303/udp \
+       42069 \
+       42069/udp \
+       8080 \
+       9090 \
+       6060
+
+ENTRYPOINT [ "/usr/local/bin/erigon" ]

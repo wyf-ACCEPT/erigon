@@ -1,12 +1,24 @@
+#version: 2
+
 project_name: erigon
 
 release:
-  disable: false
+  disable: true
   draft: true
   prerelease: auto
 
+env:
+  - CGO_ENABLED=1
+  - BUILD_VERSION={{ .Env.BUILD_VERSION }}
+  - CGO_CFLAGS_DEFAULT=-DMDBX_ENV_CHECKPID=0 -DMDBX_DISABLE_VALIDATION=0 -DMDBX_FORCE_ASSERTIONS=0 -Wno-unknown-warning-option -Wno-enum-int-mismatch -Wno-strict-prototypes -Wno-unused-but-set-variable -O3
+  - CGO_LDFLAGS_DEFAULT=-O3 -g
+  - CGO_LDFLAGS_DEFAULT_DARWIN="-O3 -g -mmacosx-version-min=13.3"
+  - GOPRIVATE_DEFAULT=github.com/erigontech/silkworm-go
+
 builds:
-  - id: darwin-amd64
+
+## Darwin AMD64:
+  - id: darwin-amd64-erigon
     main: ./cmd/erigon
     binary: erigon
     goos: [ darwin ]
@@ -14,32 +26,194 @@ builds:
     env:
       - CC=o64-clang
       - CXX=o64-clang++
+      - CGO_LDFLAGS={{ .Env.CGO_LDFLAGS_DEFAULT_DARWIN }}
+      - CGO_CFLAGS={{ .Env.CGO_CFLAGS_DEFAULT }}
     tags: [ nosqlite, noboltdb, nosilkworm ]
-    ldflags: -s -w
+    flags:
+      - -trimpath
+      - -buildvcs=false
+    ldflags:
+      - -s -w -extldflags "-static"
+      - -X {{ .Env.PACKAGE }}/params.GitCommit={{ .Env.GIT_COMMIT }} -X {{ .Env.PACKAGE }}/params.GitBranch={{ .Env.GIT_BRANCH }} -X {{ .Env.PACKAGE }}/params.GitTag={{ .Env.GIT_TAG }}
 
-  - id: darwin-arm64
-    main: ./cmd/erigon
-    binary: erigon
+  - id: darwin-amd64-downloader
+    main: ./cmd/downloader
+    binary: downloader
     goos: [ darwin ]
-    goarch: [ arm64 ]
+    goarch: [ amd64 ]
     env:
-      - CC=oa64-clang
-      - CXX=oa64-clang++
+      - CC=o64-clang
+      - CXX=o64-clang++
+      - CGO_LDFLAGS={{ .Env.CGO_LDFLAGS_DEFAULT_DARWIN }}
+      - CGO_CFLAGS={{ .Env.CGO_CFLAGS_DEFAULT }}
     tags: [ nosqlite, noboltdb, nosilkworm ]
-    ldflags: -s -w
+    flags:
+      - -trimpath
+      - -buildvcs=false
+    ldflags:
+      - -s -w -extldflags "-static"
+      - -X {{ .Env.PACKAGE }}/params.GitCommit={{ .Env.GIT_COMMIT }} -X {{ .Env.PACKAGE }}/params.GitBranch={{ .Env.GIT_BRANCH }} -X {{ .Env.PACKAGE }}/params.GitTag={{ .Env.GIT_TAG }}
 
-  - id: linux-amd64
+  - id: darwin-amd64-devnet
+    main: ./cmd/devnet
+    binary: devnet
+    goos: [ darwin ]
+    goarch: [ amd64 ]
+    env:
+      - CC=o64-clang
+      - CXX=o64-clang++
+      - CGO_LDFLAGS={{ .Env.CGO_LDFLAGS_DEFAULT_DARWIN }}
+      - CGO_CFLAGS={{ .Env.CGO_CFLAGS_DEFAULT }}
+    tags: [ nosqlite, noboltdb, nosilkworm ]
+    flags:
+      - -trimpath
+      - -buildvcs=false
+    ldflags:
+      - -s -w -extldflags "-static"
+      - -X {{ .Env.PACKAGE }}/params.GitCommit={{ .Env.GIT_COMMIT }} -X {{ .Env.PACKAGE }}/params.GitBranch={{ .Env.GIT_BRANCH }} -X {{ .Env.PACKAGE }}/params.GitTag={{ .Env.GIT_TAG }}
+
+  - id: darwin-amd64-evm
+    main: ./cmd/evm
+    binary: evm
+    goos: [ darwin ]
+    goarch: [ amd64 ]
+    env:
+      - CC=o64-clang
+      - CXX=o64-clang++
+      - CGO_LDFLAGS={{ .Env.CGO_LDFLAGS_DEFAULT_DARWIN }}
+      - CGO_CFLAGS={{ .Env.CGO_CFLAGS_DEFAULT }}
+    tags: [ nosqlite, noboltdb, nosilkworm ]
+    flags:
+      - -trimpath
+      - -buildvcs=false
+    ldflags:
+      - -s -w -extldflags "-static"
+      - -X {{ .Env.PACKAGE }}/params.GitCommit={{ .Env.GIT_COMMIT }} -X {{ .Env.PACKAGE }}/params.GitBranch={{ .Env.GIT_BRANCH }} -X {{ .Env.PACKAGE }}/params.GitTag={{ .Env.GIT_TAG }}
+
+  - id: darwin-amd64-caplin
+    main: ./cmd/caplin
+    binary: caplin
+    goos: [ darwin ]
+    goarch: [ amd64 ]
+    env:
+      - CC=o64-clang
+      - CXX=o64-clang++
+      - CGO_LDFLAGS={{ .Env.CGO_LDFLAGS_DEFAULT_DARWIN }}
+      - CGO_CFLAGS={{ .Env.CGO_CFLAGS_DEFAULT }}
+    tags: [ nosqlite, noboltdb, nosilkworm ]
+    flags:
+      - -trimpath
+      - -buildvcs=false
+    ldflags:
+      - -s -w -extldflags "-static"
+      - -X {{ .Env.PACKAGE }}/params.GitCommit={{ .Env.GIT_COMMIT }} -X {{ .Env.PACKAGE }}/params.GitBranch={{ .Env.GIT_BRANCH }} -X {{ .Env.PACKAGE }}/params.GitTag={{ .Env.GIT_TAG }}
+
+
+## Linux AMD64:
+  - id: linux-amd64-erigon
     main: ./cmd/erigon
     binary: erigon
     goos: [ linux ]
     goarch: [ amd64 ]
+    goamd64:
+      - v2
     env:
       - CC=x86_64-linux-gnu-gcc
       - CXX=x86_64-linux-gnu-g++
+      - CGO_CFLAGS={{ .Env.CGO_CFLAGS_DEFAULT }}
+      - CGO_LDFLAGS={{ .Env.CGO_LDFLAGS_DEFAULT }}
     tags: [ nosqlite, noboltdb, nosilkworm ]
-    ldflags: -s -w -extldflags "-static" # We need to build a static binary because we are building in a glibc based system and running in a musl container
+    flags:
+      - -trimpath
+      - -buildvcs=false
+    ldflags:
+      - -s -w -extldflags "-static"
+      - -X {{ .Env.PACKAGE }}/params.GitCommit={{ .Env.GIT_COMMIT }} -X {{ .Env.PACKAGE }}/params.GitBranch={{ .Env.GIT_BRANCH }} -X {{ .Env.PACKAGE }}/params.GitTag={{ .Env.GIT_TAG }}
 
-  - id: linux-arm64
+  - id: linux-amd64-downloader
+    main: ./cmd/downloader
+    binary: downloader
+    goos: [ linux ]
+    goarch: [ amd64 ]
+    goamd64:
+      - v2
+    env:
+      - CC=x86_64-linux-gnu-gcc
+      - CXX=x86_64-linux-gnu-g++
+      - CGO_CFLAGS={{ .Env.CGO_CFLAGS_DEFAULT }}
+      - CGO_LDFLAGS={{ .Env.CGO_LDFLAGS_DEFAULT }}
+    tags: [ nosqlite, noboltdb, nosilkworm ]
+    flags:
+      - -trimpath
+      - -buildvcs=false
+    ldflags:
+      - -s -w -extldflags "-static"
+      - -X {{ .Env.PACKAGE }}/params.GitCommit={{ .Env.GIT_COMMIT }} -X {{ .Env.PACKAGE }}/params.GitBranch={{ .Env.GIT_BRANCH }} -X {{ .Env.PACKAGE }}/params.GitTag={{ .Env.GIT_TAG }}
+
+  - id: linux-amd64-devnet
+    main: ./cmd/devnet
+    binary: devnet
+    goos: [ linux ]
+    goarch: [ amd64 ]
+    goamd64:
+      - v2
+    env:
+      - CC=x86_64-linux-gnu-gcc
+      - CXX=x86_64-linux-gnu-g++
+      - CGO_CFLAGS={{ .Env.CGO_CFLAGS_DEFAULT }}
+      - CGO_LDFLAGS={{ .Env.CGO_LDFLAGS_DEFAULT }}
+    tags: [ nosqlite, noboltdb, nosilkworm ]
+    flags:
+      - -trimpath
+      - -buildvcs=false
+    ldflags:
+      - -s -w -extldflags "-static"
+      - -X {{ .Env.PACKAGE }}/params.GitCommit={{ .Env.GIT_COMMIT }} -X {{ .Env.PACKAGE }}/params.GitBranch={{ .Env.GIT_BRANCH }} -X {{ .Env.PACKAGE }}/params.GitTag={{ .Env.GIT_TAG }}
+
+  - id: linux-amd64-evm
+    main: ./cmd/evm
+    binary: evm
+    goos: [ linux ]
+    goarch: [ amd64 ]
+    goamd64:
+      - v2
+    env:
+      - CC=x86_64-linux-gnu-gcc
+      - CXX=x86_64-linux-gnu-g++
+      - CGO_CFLAGS={{ .Env.CGO_CFLAGS_DEFAULT }}
+      - CGO_LDFLAGS={{ .Env.CGO_LDFLAGS_DEFAULT }}
+    tags: [ nosqlite, noboltdb, nosilkworm ]
+    flags:
+      - -trimpath
+      - -buildvcs=false
+    ldflags:
+      - -s -w -extldflags "-static"
+      - -X {{ .Env.PACKAGE }}/params.GitCommit={{ .Env.GIT_COMMIT }} -X {{ .Env.PACKAGE }}/params.GitBranch={{ .Env.GIT_BRANCH }} -X {{ .Env.PACKAGE }}/params.GitTag={{ .Env.GIT_TAG }}
+
+  - id: linux-amd64-caplin
+    main: ./cmd/caplin
+    binary: caplin
+    goos: [ linux ]
+    goarch: [ amd64 ]
+    goamd64:
+      - v2
+    env:
+      - CC=x86_64-linux-gnu-gcc
+      - CXX=x86_64-linux-gnu-g++
+      - CGO_CFLAGS={{ .Env.CGO_CFLAGS_DEFAULT }}
+      - CGO_LDFLAGS={{ .Env.CGO_LDFLAGS_DEFAULT }}
+    tags: [ nosqlite, noboltdb, nosilkworm ]
+    flags:
+      - -trimpath
+      - -buildvcs=false
+    ldflags:
+      - -s -w -extldflags "-static"
+      - -X {{ .Env.PACKAGE }}/params.GitCommit={{ .Env.GIT_COMMIT }} -X {{ .Env.PACKAGE }}/params.GitBranch={{ .Env.GIT_BRANCH }} -X {{ .Env.PACKAGE }}/params.GitTag={{ .Env.GIT_TAG }}
+
+## End of Linux AMD64.
+
+## Linux ARM64
+  - id: linux-arm64-erigon
     main: ./cmd/erigon
     binary: erigon
     goos: [ linux ]
@@ -47,76 +221,130 @@ builds:
     env:
       - CC=aarch64-linux-gnu-gcc
       - CXX=aarch64-linux-gnu-g++
+      - CGO_CFLAGS={{ .Env.CGO_CFLAGS_DEFAULT }} -D__BLST_PORTABLE__
+      - CGO_LDFLAGS={{ .Env.CGO_LDFLAGS_DEFAULT }}
     tags: [ nosqlite, noboltdb, nosilkworm ]
-    ldflags: -s -w -extldflags "-static" # We need to build a static binary because we are building in a glibc based system and running in a musl container
+    flags:
+      - -trimpath
+      - -buildvcs=false
+    ldflags:
+      - -s -w -extldflags "-static"
+      - -X {{ .Env.PACKAGE }}/params.GitCommit={{ .Env.GIT_COMMIT }} -X {{ .Env.PACKAGE }}/params.GitBranch={{ .Env.GIT_BRANCH }} -X {{ .Env.PACKAGE }}/params.GitTag={{ .Env.GIT_TAG }}
 
-  - id: windows-amd64
-    main: ./cmd/erigon
-    binary: erigon
-    goos: [ windows ]
-    goarch: [ amd64 ]
+  - id: linux-arm64-downloader
+    main: ./cmd/downloader
+    binary: downloader
+    goos: [ linux ]
+    goarch: [ arm64 ]
     env:
-      - CC=x86_64-w64-mingw32-gcc
-      - CXX=x86_64-w64-mingw32-g++
+      - CC=aarch64-linux-gnu-gcc
+      - CXX=aarch64-linux-gnu-g++
+      - CGO_CFLAGS={{ .Env.CGO_CFLAGS_DEFAULT }} -D__BLST_PORTABLE__
+      - CGO_LDFLAGS={{ .Env.CGO_LDFLAGS_DEFAULT }}
     tags: [ nosqlite, noboltdb, nosilkworm ]
-    ldflags: -s -w
+    flags:
+      - -trimpath
+      - -buildvcs=false
+    ldflags:
+      - -s -w -extldflags "-static"
+      - -X {{ .Env.PACKAGE }}/params.GitCommit={{ .Env.GIT_COMMIT }} -X {{ .Env.PACKAGE }}/params.GitBranch={{ .Env.GIT_BRANCH }} -X {{ .Env.PACKAGE }}/params.GitTag={{ .Env.GIT_TAG }}
+
+  - id: linux-arm64-devnet
+    main: ./cmd/devnet
+    binary: devnet
+    goos: [ linux ]
+    goarch: [ arm64 ]
+    env:
+      - CC=aarch64-linux-gnu-gcc
+      - CXX=aarch64-linux-gnu-g++
+      - CGO_CFLAGS={{ .Env.CGO_CFLAGS_DEFAULT }} -D__BLST_PORTABLE__
+      - CGO_LDFLAGS={{ .Env.CGO_LDFLAGS_DEFAULT }}
+    tags: [ nosqlite, noboltdb, nosilkworm ]
+    flags:
+      - -trimpath
+      - -buildvcs=false
+    ldflags:
+      - -s -w -extldflags "-static"
+      - -X {{ .Env.PACKAGE }}/params.GitCommit={{ .Env.GIT_COMMIT }} -X {{ .Env.PACKAGE }}/params.GitBranch={{ .Env.GIT_BRANCH }} -X {{ .Env.PACKAGE }}/params.GitTag={{ .Env.GIT_TAG }}
+
+  - id: linux-arm64-evm
+    main: ./cmd/evm
+    binary: evm
+    goos: [ linux ]
+    goarch: [ arm64 ]
+    env:
+      - CC=aarch64-linux-gnu-gcc
+      - CXX=aarch64-linux-gnu-g++
+      - CGO_CFLAGS={{ .Env.CGO_CFLAGS_DEFAULT }} -D__BLST_PORTABLE__
+      - CGO_LDFLAGS={{ .Env.CGO_LDFLAGS_DEFAULT }}
+    tags: [ nosqlite, noboltdb, nosilkworm ]
+    flags:
+      - -trimpath
+      - -buildvcs=false
+    ldflags:
+      - -s -w -extldflags "-static"
+      - -X {{ .Env.PACKAGE }}/params.GitCommit={{ .Env.GIT_COMMIT }} -X {{ .Env.PACKAGE }}/params.GitBranch={{ .Env.GIT_BRANCH }} -X {{ .Env.PACKAGE }}/params.GitTag={{ .Env.GIT_TAG }}
+
+  - id: linux-arm64-caplin
+    main: ./cmd/caplin
+    binary: caplin
+    goos: [ linux ]
+    goarch: [ arm64 ]
+    env:
+      - CC=aarch64-linux-gnu-gcc
+      - CXX=aarch64-linux-gnu-g++
+      - CGO_CFLAGS={{ .Env.CGO_CFLAGS_DEFAULT }} -D__BLST_PORTABLE__
+      - CGO_LDFLAGS={{ .Env.CGO_LDFLAGS_DEFAULT }}
+    tags: [ nosqlite, noboltdb, nosilkworm ]
+    flags:
+      - -trimpath
+      - -buildvcs=false
+    ldflags:
+      - -s -w -extldflags "-static"
+      - -X {{ .Env.PACKAGE }}/params.GitCommit={{ .Env.GIT_COMMIT }} -X {{ .Env.PACKAGE }}/params.GitBranch={{ .Env.GIT_BRANCH }} -X {{ .Env.PACKAGE }}/params.GitTag={{ .Env.GIT_TAG }}
+
+## End of Linux ARM64.
 
 
-snapshot:
-  name_template: "{{ .Tag }}.next"
+checksum:
+  name_template: "{{ .Env.APPLICATION }}_{{ .Env.BUILD_VERSION }}_checksums.txt"
+  algorithm: sha256
+  ids:
+    - linux-arm64
+    - linux-amd64
 
-dockers:
-  - image_templates:
-      - thorax/{{ .ProjectName }}:{{ .Version }}-amd64
-      - ghcr.io/erigontech/{{ .ProjectName }}:{{ .Version }}-amd64
-    dockerfile: Dockerfile.release
-    use: buildx
-    skip_push: true
-    goarch: amd64
-    ids:
-      - linux-amd64
-    build_flag_templates:
-      - --platform=linux/amd64
 
-  - image_templates:
-      - thorax/{{ .ProjectName }}:{{ .Version }}-arm64
-      - ghcr.io/erigontech/{{ .ProjectName }}:{{ .Version }}-arm64
-    dockerfile: Dockerfile.release
-    skip_push: true
-    use: buildx
-    goarch: arm64
-    ids:
-      - linux-arm64
-    build_flag_templates:
-      - --platform=linux/arm64/v8
+archives:
+  - id: linux-arm64
+    builds:
+      - linux-arm64-erigon
+      - linux-arm64-downloader
+      - linux-arm64-devnet
+      - linux-arm64-evm
+      - linux-arm64-caplin
+    name_template: "{{ .Env.APPLICATION }}_{{ .Env.BUILD_VERSION }}_{{ .Os }}_{{ .Arch }}"
+    wrap_in_directory: true
+    format: tar.gz
 
-docker_manifests:
-  - name_template: thorax/{{ .ProjectName }}:{{ .Version }}
-    skip_push: true
-    image_templates:
-      - thorax/{{ .ProjectName }}:{{ .Version }}-amd64
-      - thorax/{{ .ProjectName }}:{{ .Version }}-arm64
+  - id: linux-amd64
+    builds:
+      - linux-amd64-erigon
+      - linux-amd64-downloader
+      - linux-amd64-devnet
+      - linux-amd64-evm
+      - linux-amd64-caplin
+    name_template: "{{ .Env.APPLICATION }}_{{ .Env.BUILD_VERSION }}_{{ .Os }}_{{ .Arch }}"
+    wrap_in_directory: true
+    format: tar.gz
 
-  - name_template: ghcr.io/erigontech/{{ .ProjectName }}:{{ .Version }}
-    skip_push: true
-    image_templates:
-      - ghcr.io/erigontech/{{ .ProjectName }}:{{ .Version }}-amd64
-      - ghcr.io/erigontech/{{ .ProjectName }}:{{ .Version }}-arm64
+  - id: darwin-amd64
+    builds:
+      - darwin-amd64-erigon
+      - darwin-amd64-downloader
+      - darwin-amd64-devnet
+      - darwin-amd64-evm
+      - darwin-amd64-caplin
+    name_template: "{{ .Env.APPLICATION }}_{{ .Env.BUILD_VERSION }}_{{ .Os }}_{{ .Arch }}"
+    wrap_in_directory: true
+    format: tar.gz
 
-  - name_template: thorax/{{ .ProjectName }}:latest
-    skip_push: true
-    image_templates:
-      - thorax/{{ .ProjectName }}:{{ .Version }}-amd64
-      - thorax/{{ .ProjectName }}:{{ .Version }}-arm64
-
-  - name_template: ghcr.io/erigontech/{{ .ProjectName }}:latest
-    skip_push: true
-    image_templates:
-      - ghcr.io/erigontech/{{ .ProjectName }}:{{ .Version }}-amd64
-      - ghcr.io/erigontech/{{ .ProjectName }}:{{ .Version }}-arm64
-
-announce:
-  slack:
-    enabled: false
-    # The name of the channel that the user selected as a destination for webhook messages.
-    channel: '#code-releases'
