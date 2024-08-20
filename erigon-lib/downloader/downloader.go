@@ -2331,9 +2331,9 @@ func (d *Downloader) ReCalcStats(interval time.Duration) {
 
 	fmt.Println(stats.BytesTotal, "- Total")
 	fmt.Println(stats.BytesCompleted, "- Downloaded - timeleft :", calculateTime(downloadBytesLeft, stats.DownloadRate))
-	fmt.Println(stats.BytesFlushed, "- Flushed - timeleft :", calculateTime(flushBytesLeft, stats.FlushRate))
-	fmt.Println(stats.BytesHashed, "- Hashed - timeleft :", calculateTime(hashBytesLeft, stats.HashRate))
-	fmt.Println(connStats.BytesCompleted.Int64(), "- Completed - timeleft :", calculateTime(completionBytesLeft, stats.CompletionRate))
+	//fmt.Println(stats.BytesFlushed, "- Flushed - timeleft :", calculateTime(flushBytesLeft, stats.FlushRate))
+	//fmt.Println(stats.BytesHashed, "- Hashed - timeleft :", calculateTime(hashBytesLeft, stats.HashRate))
+	//fmt.Println(connStats.BytesCompleted.Int64(), "- Completed - timeleft :", calculateTime(completionBytesLeft, stats.CompletionRate))
 	fmt.Println("Total time left :", totalTimeLeft)
 	fmt.Println("Total percent completed :", totalPercentCompleted)
 	fmt.Println("BytesMissing :", bytesMissing)
