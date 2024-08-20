@@ -2339,7 +2339,7 @@ func (d *Downloader) ReCalcStats(interval time.Duration) {
 	fmt.Println("BytesMissing :", bytesMissing)
 
 	//calculate looking on bytes missing
-	fmt.Println("BytesMissing percent completed :", float64(bytesMissing)/float64(stats.BytesTotal)*100)
+	fmt.Println("BytesMissing percent completed :", float64(stats.BytesTotal-uint64(bytesMissing))/float64(stats.BytesTotal)*100)
 
 	fmt.Println()
 
