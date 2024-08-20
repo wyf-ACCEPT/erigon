@@ -2102,13 +2102,6 @@ func (d *Downloader) ReCalcStats(interval time.Duration) {
 
 	stats.BytesCompleted = uint64(downloadedBytes)
 
-	if !stats.Completed {
-		fmt.Println("Downloaded", stats.BytesCompleted, "/", stats.BytesTotal)
-		fmt.Println("Flushed", stats.BytesFlushed, "/", stats.BytesTotal)
-		fmt.Println("Hashed", stats.BytesHashed, "/", stats.BytesTotal)
-		fmt.Println("BytesCompleted", connStats.BytesCompleted, "/", stats.BytesTotal)
-	}
-
 	var webTransfers int32
 
 	if webDownloadClient != nil {
@@ -2320,6 +2313,28 @@ func (d *Downloader) ReCalcStats(interval time.Duration) {
 		}
 	}
 
+	downloadBytesLeft := stats.BytesTotal - stats.BytesCompleted
+	flushBytesLeft := stats.BytesTotal - stats.BytesFlushed
+	hashBytesLeft := stats.BytesTotal - stats.BytesHashed
+	completionBytesLeft := stats.BytesTotal - uint64(connStats.BytesCompleted.Int64())
+
+	sumLeft := stats.BytesCompleted + stats.BytesFlushed + stats.BytesHashed + uint64(connStats.BytesCompleted.Int64())
+	sumTotal := stats.BytesTotal * 4
+	rateTotal := stats.DownloadRate + stats.FlushRate + stats.HashRate + stats.CompletionRate
+	totalTimeLeft := calculateTime(sumTotal-sumLeft, rateTotal)
+
+	totalPercentCompleted := float64(sumLeft) / float64(sumTotal) * 100
+
+	fmt.Println(stats.BytesTotal, "- Total")
+	fmt.Println(stats.BytesCompleted, "- Downloaded - timeleft :", calculateTime(downloadBytesLeft, stats.DownloadRate))
+	fmt.Println(stats.BytesFlushed, "- Flushed - timeleft :", calculateTime(flushBytesLeft, stats.FlushRate))
+	fmt.Println(stats.BytesHashed, "- Hashed - timeleft :", calculateTime(hashBytesLeft, stats.HashRate))
+	fmt.Println(connStats.BytesCompleted.Int64(), "- Completed - timeleft :", calculateTime(completionBytesLeft, stats.CompletionRate))
+	fmt.Println("Total time left :", totalTimeLeft)
+	fmt.Println("Total percent completed :", totalPercentCompleted)
+
+	fmt.Println()
+
 	stats.PeersUnique = int32(len(peers))
 	stats.FilesTotal = int32(len(torrents)) + webTransfers
 
@@ -2334,6 +2349,18 @@ func (d *Downloader) ReCalcStats(interval time.Duration) {
 	}
 
 	d.lock.Unlock()
+}
+
+func calculateTime(amountLeft, rate uint64) string {
+	if rate == 0 {
+		return "999hrs:99m"
+	}
+	timeLeftInSeconds := amountLeft / rate
+
+	hours := timeLeftInSeconds / 3600
+	minutes := (timeLeftInSeconds / 60) % 60
+
+	return fmt.Sprintf("%dhrs:%dm", hours, minutes)
 }
 
 type filterWriter struct {
