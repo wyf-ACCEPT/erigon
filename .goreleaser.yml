@@ -441,3 +441,13 @@ archives:
     wrap_in_directory: true
     format: tar.gz
 
+  - id: darwin-arm64
+    builds:
+      - darwin-arm64-erigon
+      - darwin-arm64-downloader
+      - darwin-arm64-devnet
+      - darwin-arm64-evm
+      - darwin-arm64-caplin
+    name_template: "{{ .Env.APPLICATION }}_{{ .Env.BUILD_VERSION }}_{{ .Os }}_{{ .Arch }}"
+    wrap_in_directory: true
+    format: tar.gz
