@@ -15,7 +15,6 @@ env:
   - CGO_LDFLAGS_DEFAULT=-O3 -g
   - GOPRIVATE_DEFAULT=github.com/erigontech/silkworm-go
   - GO_FLAGS=-trimpath -buildvcs=false
-  - LDFLAGS_DEFAULT="-X {{ .Env.PACKAGE }}/params.GitCommit={{ .Env.GIT_COMMIT }} -X {{ .Env.PACKAGE }}/params.GitBranch={{ .Env.GIT_BRANCH }} -X {{ .Env.PACKAGE }}/params.GitTag={{ .Env.GIT_TAG }}"
 
 builds:
 
@@ -35,7 +34,7 @@ builds:
     tags: [ nosqlite, noboltdb, nosilkworm ]
     ldflags:
       - -s -w -extldflags "-static" 
-      - {{ .Env.LDFLAGS_DEFAULT }}
+      - -X {{ .Env.PACKAGE }}/params.GitCommit={{ .Env.GIT_COMMIT }} -X {{ .Env.PACKAGE }}/params.GitBranch={{ .Env.GIT_BRANCH }} -X {{ .Env.PACKAGE }}/params.GitTag={{ .Env.GIT_TAG }}
 
   - id: linux-amd64-downloader
     main: ./cmd/downloader
@@ -51,7 +50,7 @@ builds:
     tags: [ nosqlite, noboltdb, nosilkworm ]
     ldflags:
       - -s -w -extldflags "-static" 
-      - {{ .Env.LDFLAGS_DEFAULT }}
+      - -X {{ .Env.PACKAGE }}/params.GitCommit={{ .Env.GIT_COMMIT }} -X {{ .Env.PACKAGE }}/params.GitBranch={{ .Env.GIT_BRANCH }} -X {{ .Env.PACKAGE }}/params.GitTag={{ .Env.GIT_TAG }}
 
   - id: linux-amd64-devnet
     main: ./cmd/devnet
@@ -67,7 +66,7 @@ builds:
     tags: [ nosqlite, noboltdb, nosilkworm ]
     ldflags:
       - -s -w -extldflags "-static" 
-      - {{ .Env.LDFLAGS_DEFAULT }}
+      - -X {{ .Env.PACKAGE }}/params.GitCommit={{ .Env.GIT_COMMIT }} -X {{ .Env.PACKAGE }}/params.GitBranch={{ .Env.GIT_BRANCH }} -X {{ .Env.PACKAGE }}/params.GitTag={{ .Env.GIT_TAG }}
 
   - id: linux-amd64-evm
     main: ./cmd/evm
@@ -83,7 +82,7 @@ builds:
     tags: [ nosqlite, noboltdb, nosilkworm ]
     ldflags:
       - -s -w -extldflags "-static" 
-      - {{ .Env.LDFLAGS_DEFAULT }}
+      - -X {{ .Env.PACKAGE }}/params.GitCommit={{ .Env.GIT_COMMIT }} -X {{ .Env.PACKAGE }}/params.GitBranch={{ .Env.GIT_BRANCH }} -X {{ .Env.PACKAGE }}/params.GitTag={{ .Env.GIT_TAG }}
 
   - id: linux-amd64-caplin
     main: ./cmd/caplin
@@ -99,7 +98,7 @@ builds:
     tags: [ nosqlite, noboltdb, nosilkworm ]
     ldflags:
       - -s -w -extldflags "-static" 
-      - {{ .Env.LDFLAGS_DEFAULT }}
+      - -X {{ .Env.PACKAGE }}/params.GitCommit={{ .Env.GIT_COMMIT }} -X {{ .Env.PACKAGE }}/params.GitBranch={{ .Env.GIT_BRANCH }} -X {{ .Env.PACKAGE }}/params.GitTag={{ .Env.GIT_TAG }}
 
 ## End of Linux AMD64.
 
@@ -118,7 +117,7 @@ builds:
     tags: [ nosqlite, noboltdb, nosilkworm ]
     ldflags:
       - -s -w -extldflags "-static" 
-      - {{ .Env.LDFLAGS_DEFAULT }}
+      - -X {{ .Env.PACKAGE }}/params.GitCommit={{ .Env.GIT_COMMIT }} -X {{ .Env.PACKAGE }}/params.GitBranch={{ .Env.GIT_BRANCH }} -X {{ .Env.PACKAGE }}/params.GitTag={{ .Env.GIT_TAG }}
 
   - id: linux-arm64-downloader
     main: ./cmd/downloader
@@ -134,7 +133,7 @@ builds:
     tags: [ nosqlite, noboltdb, nosilkworm ]
     ldflags:
       - -s -w -extldflags "-static" 
-      - {{ .Env.LDFLAGS_DEFAULT }}
+      - -X {{ .Env.PACKAGE }}/params.GitCommit={{ .Env.GIT_COMMIT }} -X {{ .Env.PACKAGE }}/params.GitBranch={{ .Env.GIT_BRANCH }} -X {{ .Env.PACKAGE }}/params.GitTag={{ .Env.GIT_TAG }}
 
   - id: linux-arm64-devnet
     main: ./cmd/devnet
@@ -150,7 +149,7 @@ builds:
     tags: [ nosqlite, noboltdb, nosilkworm ]
     ldflags:
       - -s -w -extldflags "-static" 
-      - {{ .Env.LDFLAGS_DEFAULT }}
+      - -X {{ .Env.PACKAGE }}/params.GitCommit={{ .Env.GIT_COMMIT }} -X {{ .Env.PACKAGE }}/params.GitBranch={{ .Env.GIT_BRANCH }} -X {{ .Env.PACKAGE }}/params.GitTag={{ .Env.GIT_TAG }}
 
   - id: linux-arm64-evm
     main: ./cmd/evm
@@ -166,7 +165,7 @@ builds:
     tags: [ nosqlite, noboltdb, nosilkworm ]
     ldflags:
       - -s -w -extldflags "-static" 
-      - {{ .Env.LDFLAGS_DEFAULT }}
+      - -X {{ .Env.PACKAGE }}/params.GitCommit={{ .Env.GIT_COMMIT }} -X {{ .Env.PACKAGE }}/params.GitBranch={{ .Env.GIT_BRANCH }} -X {{ .Env.PACKAGE }}/params.GitTag={{ .Env.GIT_TAG }}
 
   - id: linux-arm64-caplin
     main: ./cmd/caplin
@@ -182,7 +181,7 @@ builds:
     tags: [ nosqlite, noboltdb, nosilkworm ]
     ldflags:
       - -s -w -extldflags "-static" 
-      - {{ .Env.LDFLAGS_DEFAULT }}
+      - -X {{ .Env.PACKAGE }}/params.GitCommit={{ .Env.GIT_COMMIT }} -X {{ .Env.PACKAGE }}/params.GitBranch={{ .Env.GIT_BRANCH }} -X {{ .Env.PACKAGE }}/params.GitTag={{ .Env.GIT_TAG }}
 
 ## End of Linux ARM64.
 
