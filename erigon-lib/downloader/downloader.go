@@ -2008,6 +2008,8 @@ func (d *Downloader) ReCalcStats(interval time.Duration) {
 
 	downloadedBytes := int64(0)
 
+	bytesMissing := int64(0)
+
 	for _, t := range torrents {
 		select {
 		case <-t.GotInfo():
@@ -2021,6 +2023,8 @@ func (d *Downloader) ReCalcStats(interval time.Duration) {
 		torrentComplete := t.Complete.Bool()
 		torrentInfo++
 		stats.MetadataReady++
+
+		bytesMissing += t.BytesMissing()
 
 		// call methods once - to reduce internal mutex contention
 		peersOfThisFile := t.PeerConns()
@@ -2332,6 +2336,10 @@ func (d *Downloader) ReCalcStats(interval time.Duration) {
 	fmt.Println(connStats.BytesCompleted.Int64(), "- Completed - timeleft :", calculateTime(completionBytesLeft, stats.CompletionRate))
 	fmt.Println("Total time left :", totalTimeLeft)
 	fmt.Println("Total percent completed :", totalPercentCompleted)
+	fmt.Println("BytesMissing :", bytesMissing)
+
+	//calculate looking on bytes missing
+	fmt.Println("BytesMissing percent completed :", float64(bytesMissing)/float64(stats.BytesTotal)*100)
 
 	fmt.Println()
 
