@@ -33,7 +33,9 @@ builds:
       - CGO_CFLAGS={{ .Env.CGO_CFLAGS_DEFAULT }}
       - CGO_LDFLAGS={{ .Env.CGO_LDFLAGS_DEFAULT }}
     tags: [ nosqlite, noboltdb, nosilkworm ]
-    ldflags: -s -w -extldflags "-static" {{ .Env.LDFLAGS_DEFAULT }} # We need to build a static binary because we are building in a glibc based system and running in a musl container
+    ldflags:
+      - -s -w -extldflags "-static" 
+      - {{ .Env.LDFLAGS_DEFAULT }}
 
   - id: linux-amd64-downloader
     main: ./cmd/downloader
@@ -47,7 +49,9 @@ builds:
       - CGO_CFLAGS={{ .Env.CGO_CFLAGS_DEFAULT }}
       - CGO_LDFLAGS={{ .Env.CGO_LDFLAGS_DEFAULT }}
     tags: [ nosqlite, noboltdb, nosilkworm ]
-    ldflags: -s -w -extldflags "-static" {{ .Env.LDFLAGS_DEFAULT }} # We need to build a static binary because we are building in a glibc based system and running in a musl container
+    ldflags:
+      - -s -w -extldflags "-static" 
+      - {{ .Env.LDFLAGS_DEFAULT }}
 
   - id: linux-amd64-devnet
     main: ./cmd/devnet
@@ -61,7 +65,9 @@ builds:
       - CGO_CFLAGS={{ .Env.CGO_CFLAGS_DEFAULT }}
       - CGO_LDFLAGS={{ .Env.CGO_LDFLAGS_DEFAULT }}
     tags: [ nosqlite, noboltdb, nosilkworm ]
-    ldflags: -s -w -extldflags "-static" {{ .Env.LDFLAGS_DEFAULT }} # We need to build a static binary because we are building in a glibc based system and running in a musl container
+    ldflags:
+      - -s -w -extldflags "-static" 
+      - {{ .Env.LDFLAGS_DEFAULT }}
 
   - id: linux-amd64-evm
     main: ./cmd/evm
@@ -75,7 +81,9 @@ builds:
       - CGO_CFLAGS={{ .Env.CGO_CFLAGS_DEFAULT }}
       - CGO_LDFLAGS={{ .Env.CGO_LDFLAGS_DEFAULT }}
     tags: [ nosqlite, noboltdb, nosilkworm ]
-    ldflags: -s -w -extldflags "-static" {{ .Env.LDFLAGS_DEFAULT }} # We need to build a static binary because we are building in a glibc based system and running in a musl container
+    ldflags:
+      - -s -w -extldflags "-static" 
+      - {{ .Env.LDFLAGS_DEFAULT }}
 
   - id: linux-amd64-caplin
     main: ./cmd/caplin
@@ -89,7 +97,9 @@ builds:
       - CGO_CFLAGS={{ .Env.CGO_CFLAGS_DEFAULT }}
       - CGO_LDFLAGS={{ .Env.CGO_LDFLAGS_DEFAULT }}
     tags: [ nosqlite, noboltdb, nosilkworm ]
-    ldflags: -s -w -extldflags "-static" {{ .Env.LDFLAGS_DEFAULT }} # We need to build a static binary because we are building in a glibc based system and running in a musl container
+    ldflags:
+      - -s -w -extldflags "-static" 
+      - {{ .Env.LDFLAGS_DEFAULT }}
 
 ## End of Linux AMD64.
 
@@ -106,7 +116,9 @@ builds:
       - CGO_CFLAGS={{ .Env.CGO_CFLAGS_DEFAULT }} -D__BLST_PORTABLE__
       - CGO_LDFLAGS={{ .Env.CGO_LDFLAGS_DEFAULT }}
     tags: [ nosqlite, noboltdb, nosilkworm ]
-    ldflags: -s -w -extldflags "-static" {{ .Env.LDFLAGS_DEFAULT }} # We need to build a static binary because we are building in a glibc based system and running in a musl container
+    ldflags:
+      - -s -w -extldflags "-static" 
+      - {{ .Env.LDFLAGS_DEFAULT }}
 
   - id: linux-arm64-downloader
     main: ./cmd/downloader
@@ -120,7 +132,9 @@ builds:
       - CGO_CFLAGS={{ .Env.CGO_CFLAGS_DEFAULT }} -D__BLST_PORTABLE__
       - CGO_LDFLAGS={{ .Env.CGO_LDFLAGS_DEFAULT }}
     tags: [ nosqlite, noboltdb, nosilkworm ]
-    ldflags: -s -w -extldflags "-static" {{ .Env.LDFLAGS_DEFAULT }} # We need to build a static binary because we are building in a glibc based system and running in a musl container
+    ldflags:
+      - -s -w -extldflags "-static" 
+      - {{ .Env.LDFLAGS_DEFAULT }}
 
   - id: linux-arm64-devnet
     main: ./cmd/devnet
@@ -134,7 +148,9 @@ builds:
       - CGO_CFLAGS={{ .Env.CGO_CFLAGS_DEFAULT }} -D__BLST_PORTABLE__
       - CGO_LDFLAGS={{ .Env.CGO_LDFLAGS_DEFAULT }}
     tags: [ nosqlite, noboltdb, nosilkworm ]
-    ldflags: -s -w -extldflags "-static" {{ .Env.LDFLAGS_DEFAULT }} # We need to build a static binary because we are building in a glibc based system and running in a musl container
+    ldflags:
+      - -s -w -extldflags "-static" 
+      - {{ .Env.LDFLAGS_DEFAULT }}
 
   - id: linux-arm64-evm
     main: ./cmd/evm
@@ -148,7 +164,9 @@ builds:
       - CGO_CFLAGS={{ .Env.CGO_CFLAGS_DEFAULT }} -D__BLST_PORTABLE__
       - CGO_LDFLAGS={{ .Env.CGO_LDFLAGS_DEFAULT }}
     tags: [ nosqlite, noboltdb, nosilkworm ]
-    ldflags: -s -w -extldflags "-static" {{ .Env.LDFLAGS_DEFAULT }} # We need to build a static binary because we are building in a glibc based system and running in a musl container
+    ldflags:
+      - -s -w -extldflags "-static" 
+      - {{ .Env.LDFLAGS_DEFAULT }}
 
   - id: linux-arm64-caplin
     main: ./cmd/caplin
@@ -162,7 +180,9 @@ builds:
       - CGO_CFLAGS={{ .Env.CGO_CFLAGS_DEFAULT }} -D__BLST_PORTABLE__
       - CGO_LDFLAGS={{ .Env.CGO_LDFLAGS_DEFAULT }}
     tags: [ nosqlite, noboltdb, nosilkworm ]
-    ldflags: -s -w -extldflags "-static" {{ .Env.LDFLAGS_DEFAULT }} # We need to build a static binary because we are building in a glibc based system and running in a musl container
+    ldflags:
+      - -s -w -extldflags "-static" 
+      - {{ .Env.LDFLAGS_DEFAULT }}
 
 ## End of Linux ARM64.
 
