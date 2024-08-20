@@ -2102,6 +2102,12 @@ func (d *Downloader) ReCalcStats(interval time.Duration) {
 
 	stats.BytesCompleted = uint64(downloadedBytes)
 
+	if !stats.Completed {
+		fmt.Println("Downloaded", stats.BytesCompleted, "/", stats.BytesTotal)
+		fmt.Println("Flushed", stats.BytesFlushed, "/", stats.BytesTotal)
+		fmt.Println("Hashed", stats.BytesHashed, "/", stats.BytesTotal)
+	}
+
 	var webTransfers int32
 
 	if webDownloadClient != nil {
