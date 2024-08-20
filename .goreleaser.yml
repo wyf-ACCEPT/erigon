@@ -25,6 +25,8 @@ builds:
     binary: erigon
     goos: [ linux ]
     goarch: [ amd64 ]
+    goamd64:
+      - v2
     env:
       - CC=x86_64-linux-gnu-gcc
       - CXX=x86_64-linux-gnu-g++
@@ -32,15 +34,18 @@ builds:
       - CGO_CFLAGS={{ .Env.CGO_CFLAGS_DEFAULT }}
       - CGO_LDFLAGS={{ .Env.CGO_LDFLAGS_DEFAULT }}
     tags: [ nosqlite, noboltdb, nosilkworm ]
+    flags:
+      - ldflags "-X {{ .Env.PACKAGE }}/params.GitCommit={{ .Env.GIT_COMMIT }} -X {{ .Env.PACKAGE }}/params.GitBranch={{ .Env.GIT_BRANCH }} -X {{ .Env.PACKAGE }}/params.GitTag={{ .Env.GIT_TAG }}"
     ldflags:
-      - -s -w
-      - -X {{ .Env.PACKAGE }}/params.GitCommit={{ .Env.GIT_COMMIT }} -X {{ .Env.PACKAGE }}/params.GitBranch={{ .Env.GIT_BRANCH }} -X {{ .Env.PACKAGE }}/params.GitTag={{ .Env.GIT_TAG }}
+      - -s -w -extldflags "-static"
 
   - id: linux-amd64-downloader
     main: ./cmd/downloader
     binary: downloader
     goos: [ linux ]
     goarch: [ amd64 ]
+    goamd64:
+      - v2
     env:
       - CC=x86_64-linux-gnu-gcc
       - CXX=x86_64-linux-gnu-g++
@@ -48,15 +53,18 @@ builds:
       - CGO_CFLAGS={{ .Env.CGO_CFLAGS_DEFAULT }}
       - CGO_LDFLAGS={{ .Env.CGO_LDFLAGS_DEFAULT }}
     tags: [ nosqlite, noboltdb, nosilkworm ]
+    flags:
+      - ldflags "-X {{ .Env.PACKAGE }}/params.GitCommit={{ .Env.GIT_COMMIT }} -X {{ .Env.PACKAGE }}/params.GitBranch={{ .Env.GIT_BRANCH }} -X {{ .Env.PACKAGE }}/params.GitTag={{ .Env.GIT_TAG }}"
     ldflags:
-      - -s -w
-      - -X {{ .Env.PACKAGE }}/params.GitCommit={{ .Env.GIT_COMMIT }} -X {{ .Env.PACKAGE }}/params.GitBranch={{ .Env.GIT_BRANCH }} -X {{ .Env.PACKAGE }}/params.GitTag={{ .Env.GIT_TAG }}
+      - -s -w -extldflags "-static"
 
   - id: linux-amd64-devnet
     main: ./cmd/devnet
     binary: devnet
     goos: [ linux ]
     goarch: [ amd64 ]
+    goamd64:
+      - v2
     env:
       - CC=x86_64-linux-gnu-gcc
       - CXX=x86_64-linux-gnu-g++
@@ -64,15 +72,18 @@ builds:
       - CGO_CFLAGS={{ .Env.CGO_CFLAGS_DEFAULT }}
       - CGO_LDFLAGS={{ .Env.CGO_LDFLAGS_DEFAULT }}
     tags: [ nosqlite, noboltdb, nosilkworm ]
+    flags:
+      - ldflags "-X {{ .Env.PACKAGE }}/params.GitCommit={{ .Env.GIT_COMMIT }} -X {{ .Env.PACKAGE }}/params.GitBranch={{ .Env.GIT_BRANCH }} -X {{ .Env.PACKAGE }}/params.GitTag={{ .Env.GIT_TAG }}"
     ldflags:
-      - -s -w
-      - -X {{ .Env.PACKAGE }}/params.GitCommit={{ .Env.GIT_COMMIT }} -X {{ .Env.PACKAGE }}/params.GitBranch={{ .Env.GIT_BRANCH }} -X {{ .Env.PACKAGE }}/params.GitTag={{ .Env.GIT_TAG }}
+      - -s -w -extldflags "-static"
 
   - id: linux-amd64-evm
     main: ./cmd/evm
     binary: evm
     goos: [ linux ]
     goarch: [ amd64 ]
+    goamd64:
+      - v2
     env:
       - CC=x86_64-linux-gnu-gcc
       - CXX=x86_64-linux-gnu-g++
@@ -80,15 +91,18 @@ builds:
       - CGO_CFLAGS={{ .Env.CGO_CFLAGS_DEFAULT }}
       - CGO_LDFLAGS={{ .Env.CGO_LDFLAGS_DEFAULT }}
     tags: [ nosqlite, noboltdb, nosilkworm ]
+    flags:
+      - ldflags "-X {{ .Env.PACKAGE }}/params.GitCommit={{ .Env.GIT_COMMIT }} -X {{ .Env.PACKAGE }}/params.GitBranch={{ .Env.GIT_BRANCH }} -X {{ .Env.PACKAGE }}/params.GitTag={{ .Env.GIT_TAG }}"
     ldflags:
-      - -s -w
-      - -X {{ .Env.PACKAGE }}/params.GitCommit={{ .Env.GIT_COMMIT }} -X {{ .Env.PACKAGE }}/params.GitBranch={{ .Env.GIT_BRANCH }} -X {{ .Env.PACKAGE }}/params.GitTag={{ .Env.GIT_TAG }}
+      - -s -w -extldflags "-static"
 
   - id: linux-amd64-caplin
     main: ./cmd/caplin
     binary: caplin
     goos: [ linux ]
     goarch: [ amd64 ]
+    goamd64:
+      - v2
     env:
       - CC=x86_64-linux-gnu-gcc
       - CXX=x86_64-linux-gnu-g++
@@ -96,9 +110,10 @@ builds:
       - CGO_CFLAGS={{ .Env.CGO_CFLAGS_DEFAULT }}
       - CGO_LDFLAGS={{ .Env.CGO_LDFLAGS_DEFAULT }}
     tags: [ nosqlite, noboltdb, nosilkworm ]
+    flags:
+      - ldflags "-X {{ .Env.PACKAGE }}/params.GitCommit={{ .Env.GIT_COMMIT }} -X {{ .Env.PACKAGE }}/params.GitBranch={{ .Env.GIT_BRANCH }} -X {{ .Env.PACKAGE }}/params.GitTag={{ .Env.GIT_TAG }}"
     ldflags:
-      - -s -w
-      - -X {{ .Env.PACKAGE }}/params.GitCommit={{ .Env.GIT_COMMIT }} -X {{ .Env.PACKAGE }}/params.GitBranch={{ .Env.GIT_BRANCH }} -X {{ .Env.PACKAGE }}/params.GitTag={{ .Env.GIT_TAG }}
+      - -s -w -extldflags "-static"
 
 ## End of Linux AMD64.
 
@@ -115,9 +130,10 @@ builds:
       - CGO_CFLAGS={{ .Env.CGO_CFLAGS_DEFAULT }} -D__BLST_PORTABLE__
       - CGO_LDFLAGS={{ .Env.CGO_LDFLAGS_DEFAULT }}
     tags: [ nosqlite, noboltdb, nosilkworm ]
+    flags:
+      - ldflags "-X {{ .Env.PACKAGE }}/params.GitCommit={{ .Env.GIT_COMMIT }} -X {{ .Env.PACKAGE }}/params.GitBranch={{ .Env.GIT_BRANCH }} -X {{ .Env.PACKAGE }}/params.GitTag={{ .Env.GIT_TAG }}"
     ldflags:
-      - -s -w
-      - -X {{ .Env.PACKAGE }}/params.GitCommit={{ .Env.GIT_COMMIT }} -X {{ .Env.PACKAGE }}/params.GitBranch={{ .Env.GIT_BRANCH }} -X {{ .Env.PACKAGE }}/params.GitTag={{ .Env.GIT_TAG }}
+      - -s -w -extldflags "-static"
 
   - id: linux-arm64-downloader
     main: ./cmd/downloader
@@ -131,9 +147,10 @@ builds:
       - CGO_CFLAGS={{ .Env.CGO_CFLAGS_DEFAULT }} -D__BLST_PORTABLE__
       - CGO_LDFLAGS={{ .Env.CGO_LDFLAGS_DEFAULT }}
     tags: [ nosqlite, noboltdb, nosilkworm ]
+    flags:
+      - ldflags "-X {{ .Env.PACKAGE }}/params.GitCommit={{ .Env.GIT_COMMIT }} -X {{ .Env.PACKAGE }}/params.GitBranch={{ .Env.GIT_BRANCH }} -X {{ .Env.PACKAGE }}/params.GitTag={{ .Env.GIT_TAG }}"
     ldflags:
-      - -s -w
-      - -X {{ .Env.PACKAGE }}/params.GitCommit={{ .Env.GIT_COMMIT }} -X {{ .Env.PACKAGE }}/params.GitBranch={{ .Env.GIT_BRANCH }} -X {{ .Env.PACKAGE }}/params.GitTag={{ .Env.GIT_TAG }}
+      - -s -w -extldflags "-static"
 
   - id: linux-arm64-devnet
     main: ./cmd/devnet
@@ -147,9 +164,10 @@ builds:
       - CGO_CFLAGS={{ .Env.CGO_CFLAGS_DEFAULT }} -D__BLST_PORTABLE__
       - CGO_LDFLAGS={{ .Env.CGO_LDFLAGS_DEFAULT }}
     tags: [ nosqlite, noboltdb, nosilkworm ]
+    flags:
+      - ldflags "-X {{ .Env.PACKAGE }}/params.GitCommit={{ .Env.GIT_COMMIT }} -X {{ .Env.PACKAGE }}/params.GitBranch={{ .Env.GIT_BRANCH }} -X {{ .Env.PACKAGE }}/params.GitTag={{ .Env.GIT_TAG }}"
     ldflags:
-      - -s -w
-      - -X {{ .Env.PACKAGE }}/params.GitCommit={{ .Env.GIT_COMMIT }} -X {{ .Env.PACKAGE }}/params.GitBranch={{ .Env.GIT_BRANCH }} -X {{ .Env.PACKAGE }}/params.GitTag={{ .Env.GIT_TAG }}
+      - -s -w -extldflags "-static"
 
   - id: linux-arm64-evm
     main: ./cmd/evm
@@ -163,9 +181,10 @@ builds:
       - CGO_CFLAGS={{ .Env.CGO_CFLAGS_DEFAULT }} -D__BLST_PORTABLE__
       - CGO_LDFLAGS={{ .Env.CGO_LDFLAGS_DEFAULT }}
     tags: [ nosqlite, noboltdb, nosilkworm ]
+    flags:
+      - ldflags "-X {{ .Env.PACKAGE }}/params.GitCommit={{ .Env.GIT_COMMIT }} -X {{ .Env.PACKAGE }}/params.GitBranch={{ .Env.GIT_BRANCH }} -X {{ .Env.PACKAGE }}/params.GitTag={{ .Env.GIT_TAG }}"
     ldflags:
-      - -s -w
-      - -X {{ .Env.PACKAGE }}/params.GitCommit={{ .Env.GIT_COMMIT }} -X {{ .Env.PACKAGE }}/params.GitBranch={{ .Env.GIT_BRANCH }} -X {{ .Env.PACKAGE }}/params.GitTag={{ .Env.GIT_TAG }}
+      - -s -w -extldflags "-static"
 
   - id: linux-arm64-caplin
     main: ./cmd/caplin
@@ -179,9 +198,10 @@ builds:
       - CGO_CFLAGS={{ .Env.CGO_CFLAGS_DEFAULT }} -D__BLST_PORTABLE__
       - CGO_LDFLAGS={{ .Env.CGO_LDFLAGS_DEFAULT }}
     tags: [ nosqlite, noboltdb, nosilkworm ]
+    flags:
+      - ldflags "-X {{ .Env.PACKAGE }}/params.GitCommit={{ .Env.GIT_COMMIT }} -X {{ .Env.PACKAGE }}/params.GitBranch={{ .Env.GIT_BRANCH }} -X {{ .Env.PACKAGE }}/params.GitTag={{ .Env.GIT_TAG }}"
     ldflags:
-      - -s -w
-      - -X {{ .Env.PACKAGE }}/params.GitCommit={{ .Env.GIT_COMMIT }} -X {{ .Env.PACKAGE }}/params.GitBranch={{ .Env.GIT_BRANCH }} -X {{ .Env.PACKAGE }}/params.GitTag={{ .Env.GIT_TAG }}
+      - -s -w -extldflags "-static"
 
 ## End of Linux ARM64.
 
