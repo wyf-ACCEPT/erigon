@@ -398,6 +398,97 @@ builds:
 
 ## End of Linux ARM64.
 
+## Windows AMD64:
+  - id: windows-amd64-erigon
+    main: ./cmd/caplin
+    binary: erigon
+    goos: [ windows ]
+    goarch: [ amd64 ]
+    env:
+      - CC=x86_64-w64-mingw32-gcc
+      - CXX=x86_64-w64-mingw32-g++
+      - CGO_CFLAGS={{ .Env.CGO_CFLAGS_DEFAULT }} -D__BLST_PORTABLE__
+      - CGO_LDFLAGS={{ .Env.CGO_LDFLAGS_DEFAULT }}
+    tags: [ nosqlite, noboltdb, nosilkworm ]
+    flags:
+      - -trimpath
+      - -buildvcs=false
+    ldflags:
+      - -s -w -extldflags "-static"
+      - -X {{ .Env.PACKAGE }}/params.GitCommit={{ .Env.GIT_COMMIT }} -X {{ .Env.PACKAGE }}/params.GitBranch={{ .Env.GIT_BRANCH }} -X {{ .Env.PACKAGE }}/params.GitTag={{ .Env.GIT_TAG }}
+
+  - id: windows-amd64-downloader
+    main: ./cmd/downloader
+    binary: downloader
+    goos: [ windows ]
+    goarch: [ amd64 ]
+    env:
+      - CC=x86_64-w64-mingw32-gcc
+      - CXX=x86_64-w64-mingw32-g++
+      - CGO_CFLAGS={{ .Env.CGO_CFLAGS_DEFAULT }} -D__BLST_PORTABLE__
+      - CGO_LDFLAGS={{ .Env.CGO_LDFLAGS_DEFAULT }}
+    tags: [ nosqlite, noboltdb, nosilkworm ]
+    flags:
+      - -trimpath
+      - -buildvcs=false
+    ldflags:
+      - -s -w -extldflags "-static"
+      - -X {{ .Env.PACKAGE }}/params.GitCommit={{ .Env.GIT_COMMIT }} -X {{ .Env.PACKAGE }}/params.GitBranch={{ .Env.GIT_BRANCH }} -X {{ .Env.PACKAGE }}/params.GitTag={{ .Env.GIT_TAG }}
+
+  - id: windows-amd64-devnet
+    main: ./cmd/devnet
+    binary: devnet
+    goos: [ windows ]
+    goarch: [ amd64 ]
+    env:
+      - CC=x86_64-w64-mingw32-gcc
+      - CXX=x86_64-w64-mingw32-g++
+      - CGO_CFLAGS={{ .Env.CGO_CFLAGS_DEFAULT }} -D__BLST_PORTABLE__
+      - CGO_LDFLAGS={{ .Env.CGO_LDFLAGS_DEFAULT }}
+    tags: [ nosqlite, noboltdb, nosilkworm ]
+    flags:
+      - -trimpath
+      - -buildvcs=false
+    ldflags:
+      - -s -w -extldflags "-static"
+      - -X {{ .Env.PACKAGE }}/params.GitCommit={{ .Env.GIT_COMMIT }} -X {{ .Env.PACKAGE }}/params.GitBranch={{ .Env.GIT_BRANCH }} -X {{ .Env.PACKAGE }}/params.GitTag={{ .Env.GIT_TAG }}
+
+  - id: windows-amd64-evm
+    main: ./cmd/evm
+    binary: evm
+    goos: [ windows ]
+    goarch: [ amd64 ]
+    env:
+      - CC=x86_64-w64-mingw32-gcc
+      - CXX=x86_64-w64-mingw32-g++
+      - CGO_CFLAGS={{ .Env.CGO_CFLAGS_DEFAULT }} -D__BLST_PORTABLE__
+      - CGO_LDFLAGS={{ .Env.CGO_LDFLAGS_DEFAULT }}
+    tags: [ nosqlite, noboltdb, nosilkworm ]
+    flags:
+      - -trimpath
+      - -buildvcs=false
+    ldflags:
+      - -s -w -extldflags "-static"
+      - -X {{ .Env.PACKAGE }}/params.GitCommit={{ .Env.GIT_COMMIT }} -X {{ .Env.PACKAGE }}/params.GitBranch={{ .Env.GIT_BRANCH }} -X {{ .Env.PACKAGE }}/params.GitTag={{ .Env.GIT_TAG }}
+
+  - id: windows-amd64-caplin
+    main: ./cmd/caplin
+    binary: caplin
+    goos: [ windows ]
+    goarch: [ amd64 ]
+    env:
+      - CC=x86_64-w64-mingw32-gcc
+      - CXX=x86_64-w64-mingw32-g++
+      - CGO_CFLAGS={{ .Env.CGO_CFLAGS_DEFAULT }} -D__BLST_PORTABLE__
+      - CGO_LDFLAGS={{ .Env.CGO_LDFLAGS_DEFAULT }}
+    tags: [ nosqlite, noboltdb, nosilkworm ]
+    flags:
+      - -trimpath
+      - -buildvcs=false
+    ldflags:
+      - -s -w -extldflags "-static"
+      - -X {{ .Env.PACKAGE }}/params.GitCommit={{ .Env.GIT_COMMIT }} -X {{ .Env.PACKAGE }}/params.GitBranch={{ .Env.GIT_BRANCH }} -X {{ .Env.PACKAGE }}/params.GitTag={{ .Env.GIT_TAG }}
+
 
 checksum:
   name_template: "{{ .Env.APPLICATION }}_{{ .Env.BUILD_VERSION }}_checksums.txt"
@@ -405,6 +496,9 @@ checksum:
   ids:
     - linux-arm64
     - linux-amd64
+    - darwin-amd64
+    - darwin-arm64
+    - windows-amd64
 
 
 archives:
@@ -451,3 +545,14 @@ archives:
     name_template: "{{ .Env.APPLICATION }}_{{ .Env.BUILD_VERSION }}_{{ .Os }}_{{ .Arch }}"
     wrap_in_directory: true
     format: tar.gz
+
+  - id: windows-amd64
+    builds:
+      - windows-amd64-erigon
+      - windows-amd64-downloader
+      - windows-amd64-devnet
+      - windows-amd64-evm
+      - windows-amd64-caplin
+    name_template: "{{ .Env.APPLICATION }}_{{ .Env.BUILD_VERSION }}_{{ .Os }}_{{ .Arch }}"
+    wrap_in_directory: true
+    format: zip
