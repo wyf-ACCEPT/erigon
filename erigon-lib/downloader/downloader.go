@@ -2010,6 +2010,9 @@ func (d *Downloader) ReCalcStats(interval time.Duration) {
 
 	bytesMissing := int64(0)
 
+	pieces := 0
+	completedPieces := 0
+
 	for _, t := range torrents {
 		select {
 		case <-t.GotInfo():
@@ -2018,6 +2021,9 @@ func (d *Downloader) ReCalcStats(interval time.Duration) {
 			noMetadata = append(noMetadata, t.Name())
 			continue
 		}
+
+		pieces += t.NumPieces()
+		completedPieces += t.Stats().PiecesComplete
 
 		torrentName := t.Name()
 		torrentComplete := t.Complete.Bool()
@@ -2340,6 +2346,10 @@ func (d *Downloader) ReCalcStats(interval time.Duration) {
 
 	//calculate looking on bytes missing
 	fmt.Println("BytesMissing percent completed :", float64(stats.BytesTotal-uint64(bytesMissing))/float64(stats.BytesTotal)*100)
+
+	//calculate by pieces completed
+	fmt.Println("Pieces completed :", completedPieces, "from", pieces, "total")
+	fmt.Println("Pieces completed percent :", float64(completedPieces)/float64(pieces)*100)
 
 	fmt.Println()
 
