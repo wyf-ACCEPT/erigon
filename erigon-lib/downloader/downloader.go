@@ -2323,10 +2323,10 @@ func (d *Downloader) ReCalcStats(interval time.Duration) {
 		}
 	}
 
-	downloadBytesLeft := stats.BytesTotal - stats.BytesCompleted
-	flushBytesLeft := stats.BytesTotal - stats.BytesFlushed
-	hashBytesLeft := stats.BytesTotal - stats.BytesHashed
-	completionBytesLeft := stats.BytesTotal - uint64(connStats.BytesCompleted.Int64())
+	//downloadBytesLeft := stats.BytesTotal - stats.BytesCompleted
+	//flushBytesLeft := stats.BytesTotal - stats.BytesFlushed
+	//hashBytesLeft := stats.BytesTotal - stats.BytesHashed
+	//completionBytesLeft := stats.BytesTotal - uint64(connStats.BytesCompleted.Int64())
 
 	sumLeft := stats.BytesCompleted + stats.BytesFlushed + stats.BytesHashed + uint64(connStats.BytesCompleted.Int64())
 	sumTotal := stats.BytesTotal * 4
