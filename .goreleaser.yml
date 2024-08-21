@@ -400,7 +400,7 @@ builds:
 
 ## Windows AMD64:
   - id: windows-amd64-erigon
-    main: ./cmd/caplin
+    main: ./cmd/erigon
     binary: erigon
     goos: [ windows ]
     goarch: [ amd64 ]
