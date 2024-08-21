@@ -2356,6 +2356,10 @@ func (d *Downloader) ReCalcStats(interval time.Duration) {
 	stats.PeersUnique = int32(len(peers))
 	stats.FilesTotal = int32(len(torrents)) + webTransfers
 
+	if stats.Completed {
+		fmt.Println("DLDR Download completed")
+	}
+
 	d.lock.Lock()
 	d.stats = stats
 
