@@ -2336,10 +2336,14 @@ func (d *Downloader) ReCalcStats(interval time.Duration) {
 	totalPercentCompleted := float64(sumLeft) / float64(sumTotal) * 100
 
 	fmt.Println(stats.BytesTotal, "- Total")
-	fmt.Println(stats.BytesCompleted, "- Downloaded - timeleft :", calculateTime(downloadBytesLeft, stats.DownloadRate))
-	fmt.Println(stats.BytesFlushed, "- Flushed - timeleft :", calculateTime(flushBytesLeft, stats.FlushRate))
-	fmt.Println(stats.BytesHashed, "- Hashed - timeleft :", calculateTime(hashBytesLeft, stats.HashRate))
-	fmt.Println(connStats.BytesCompleted.Int64(), "- Completed - timeleft :", calculateTime(completionBytesLeft, stats.CompletionRate))
+	//fmt.Println(stats.BytesCompleted, "- Downloaded - timeleft :", calculateTime(downloadBytesLeft, stats.DownloadRate))
+	fmt.Println("Total percent bytes downloaded", float64(stats.BytesCompleted)/float64(stats.BytesTotal)*100)
+	//fmt.Println(stats.BytesFlushed, "- Flushed - timeleft :", calculateTime(flushBytesLeft, stats.FlushRate))
+	fmt.Println("Total percent bytes flushed", float64(stats.BytesFlushed)/float64(stats.BytesTotal)*100)
+	//fmt.Println(stats.BytesHashed, "- Hashed - timeleft :", calculateTime(hashBytesLeft, stats.HashRate))
+	fmt.Println("Total percent bytes hash", float64(stats.BytesHashed)/float64(stats.BytesTotal)*100)
+	//fmt.Println(connStats.BytesCompleted.Int64(), "- Completed - timeleft :", calculateTime(completionBytesLeft, stats.CompletionRate))
+	fmt.Println("Total percent connStats.BytesCompleted", float64(connStats.BytesCompleted.Int64())/float64(stats.BytesTotal)*100)
 	fmt.Println("Total time left :", totalTimeLeft)
 	fmt.Println("Total percent completed :", totalPercentCompleted)
 	fmt.Println("BytesMissing :", bytesMissing)
