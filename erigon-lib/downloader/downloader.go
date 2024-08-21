@@ -2022,8 +2022,8 @@ func (d *Downloader) ReCalcStats(interval time.Duration) {
 			continue
 		}
 
-		pieces += t.NumPieces()
-		completedPieces += t.Stats().PiecesComplete
+		pieces += t.NumPieces() * int(t.Info().PieceLength)
+		completedPieces += t.Stats().PiecesComplete * int(t.Info().PieceLength)
 
 		torrentName := t.Name()
 		torrentComplete := t.Complete.Bool()
