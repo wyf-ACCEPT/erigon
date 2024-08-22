@@ -64,8 +64,16 @@ import (
 	"github.com/erigontech/erigon-lib/log/v3"
 )
 
+type charttest struct {
+	Name string 
+	Bytes uint64
+	Increment uint64 
+}
+
 // Downloader - component which downloading historical files. Can use BitTorrent, or other protocols
 type Downloader struct {
+	startTime uint64
+	testjson []charttest
 	db                  kv.RwDB
 	pieceCompletionDB   storage.PieceCompletion
 	torrentClient       *torrent.Client
@@ -325,6 +333,8 @@ func New(ctx context.Context, cfg *downloadercfg.Cfg, logger log.Logger, verbosi
 	}
 
 	d := &Downloader{
+		testjson: make([]charttest, 0),
+		startTime : 0,
 		cfg:                 cfg,
 		db:                  db,
 		pieceCompletionDB:   c,
@@ -1375,7 +1385,7 @@ func (d *Downloader) mainLoop(silent bool) error {
 	logEvery := time.NewTicker(20 * time.Second)
 	defer logEvery.Stop()
 
-	statInterval := 20 * time.Second
+	statInterval := 10 * time.Second
 	statEvery := time.NewTicker(statInterval)
 	defer statEvery.Stop()
 
@@ -2318,51 +2328,87 @@ func (d *Downloader) ReCalcStats(interval time.Duration) {
 		stats.Progress = 0
 	} else {
 		stats.Progress = float32(float64(100) * (float64(stats.BytesCompleted) / float64(stats.BytesTotal)))
-		if int(stats.Progress) == 100 && !stats.Completed {
-			stats.Progress = 99.9
-		}
+		//if int(stats.Progress) == 100 && !stats.Completed {
+		//	stats.Progress = 99.9
+		//}
 	}
 
-	//downloadBytesLeft := stats.BytesTotal - stats.BytesCompleted
-	//flushBytesLeft := stats.BytesTotal - stats.BytesFlushed
-	//hashBytesLeft := stats.BytesTotal - stats.BytesHashed
-	//completionBytesLeft := stats.BytesTotal - uint64(connStats.BytesCompleted.Int64())
+	downloadBytesLeft := stats.BytesTotal - stats.BytesCompleted
+	completionBytesLeft := stats.BytesTotal - uint64(connStats.BytesCompleted.Int64())
 
-	sumLeft := stats.BytesCompleted + stats.BytesFlushed + stats.BytesHashed + uint64(connStats.BytesCompleted.Int64())
-	sumTotal := stats.BytesTotal * 4
-	rateTotal := stats.DownloadRate + stats.FlushRate + stats.HashRate + stats.CompletionRate
-	totalTimeLeft := calculateTime(sumTotal-sumLeft, rateTotal)
+	downloadTimeLeft := calculateTime(downloadBytesLeft, stats.DownloadRate)
 
-	totalPercentCompleted := float64(sumLeft) / float64(sumTotal) * 100
+	
 
-	fmt.Println(stats.BytesTotal, "- Total")
-	//fmt.Println(stats.BytesCompleted, "- Downloaded - timeleft :", calculateTime(downloadBytesLeft, stats.DownloadRate))
+	if stats.Completed {
+		fmt.Println("DLDR Download completed")
+		jsonBytes1, _ := json.Marshal(d.testjson)
+	jsonStr1 := string(jsonBytes1)
+		SaveDataToFile("/app/", "andjsondata", jsonStr1)
+	} else {
+		d.startTime += 1
+		data := charttest{
+			Name: "Downloaded",
+			Bytes: stats.BytesCompleted,
+			Increment: d.startTime, 
+		}
+		d.testjson = append(d.testjson, data)
+
+		downloadTimeLeftnew := calculateTime(completionBytesLeft, stats.CompletionRate)
+		completeProgress := float32(float64(100) * (float64(connStats.BytesCompleted.Int64()) / float64(stats.BytesTotal)))
+		compdata := charttest{
+			Name: "Completed",
+			Bytes: uint64(connStats.BytesCompleted.Int64()),
+			Increment: d.startTime, 
+		}
+		d.testjson = append(d.testjson, compdata)
+
+		fldata := charttest{
+			Name: "Flushed",
+			Bytes: stats.BytesFlushed,
+			Increment: d.startTime, 
+		}
+		d.testjson = append(d.testjson, fldata)
+
+		hsdata := charttest{
+			Name: "Hashed",
+			Bytes: stats.BytesHashed,
+			Increment: d.startTime, 
+		}
+		d.testjson = append(d.testjson, hsdata)
+
+	log.Info("[Downloader Download]",
+			"progress", fmt.Sprintf("%.2f%% %s/%s", stats.Progress, common.ByteCount(stats.BytesCompleted), common.ByteCount(stats.BytesTotal)),
+			"time-left", downloadTimeLeft,
+			"download", common.ByteCount(stats.DownloadRate)+"/s",
+			"flush", common.ByteCount(stats.FlushRate)+"/s",
+			"hash", common.ByteCount(stats.HashRate)+"/s",
+			"complete", common.ByteCount(stats.CompletionRate)+"/s",
+			"metadata", fmt.Sprintf("%d/%d", stats.MetadataReady, stats.FilesTotal),
+		)
+
+		log.Info("[Downloader Completed]",
+			"progress", fmt.Sprintf("%.2f%% %s/%s", completeProgress, common.ByteCount(uint64(connStats.BytesCompleted.Int64())), common.ByteCount(stats.BytesTotal)),
+			"time-left", downloadTimeLeftnew,
+			"download", common.ByteCount(stats.DownloadRate)+"/s",
+			"flush", common.ByteCount(stats.FlushRate)+"/s",
+			"hash", common.ByteCount(stats.HashRate)+"/s",
+			"complete", common.ByteCount(stats.CompletionRate)+"/s",
+			"metadata", fmt.Sprintf("%d/%d", stats.MetadataReady, stats.FilesTotal),
+		)
+	}
+
+	fmt.Println("metadata", fmt.Sprintf("%d/%d", stats.MetadataReady, stats.FilesTotal))
+	/*fmt.Println(stats.BytesTotal, "- Total")
+	fmt.Println(stats.BytesCompleted, "- Downloaded - timeleft :", calculateTime(downloadBytesLeft, stats.DownloadRate))
 	fmt.Println("Total percent bytes downloaded", float64(stats.BytesCompleted)/float64(stats.BytesTotal)*100)
-	//fmt.Println(stats.BytesFlushed, "- Flushed - timeleft :", calculateTime(flushBytesLeft, stats.FlushRate))
-	fmt.Println("Total percent bytes flushed", float64(stats.BytesFlushed)/float64(stats.BytesTotal)*100)
-	//fmt.Println(stats.BytesHashed, "- Hashed - timeleft :", calculateTime(hashBytesLeft, stats.HashRate))
-	fmt.Println("Total percent bytes hash", float64(stats.BytesHashed)/float64(stats.BytesTotal)*100)
-	//fmt.Println(connStats.BytesCompleted.Int64(), "- Completed - timeleft :", calculateTime(completionBytesLeft, stats.CompletionRate))
-	fmt.Println("Total percent connStats.BytesCompleted", float64(connStats.BytesCompleted.Int64())/float64(stats.BytesTotal)*100)
-	fmt.Println("Total time left :", totalTimeLeft)
-	fmt.Println("Total percent completed :", totalPercentCompleted)
-	fmt.Println("BytesMissing :", bytesMissing)
-
-	//calculate looking on bytes missing
-	fmt.Println("BytesMissing percent completed :", float64(stats.BytesTotal-uint64(bytesMissing))/float64(stats.BytesTotal)*100)
-
-	//calculate by pieces completed
-	fmt.Println("Pieces completed :", completedPieces, "from", pieces, "total")
-	fmt.Println("Pieces completed percent :", float64(completedPieces)/float64(pieces)*100)
-
-	fmt.Println()
+	fmt.Println(connStats.BytesCompleted.Int64(), "- Completed - timeleft :", calculateTime(completionBytesLeft, stats.CompletionRate))
+	fmt.Println("Total percent connStats.BytesCompleted", float64(connStats.BytesCompleted.Int64())/float64(stats.BytesTotal)*100)*/
 
 	stats.PeersUnique = int32(len(peers))
 	stats.FilesTotal = int32(len(torrents)) + webTransfers
 
-	if stats.Completed {
-		fmt.Println("DLDR Download completed")
-	}
+	
 
 	d.lock.Lock()
 	d.stats = stats
@@ -2375,6 +2421,39 @@ func (d *Downloader) ReCalcStats(interval time.Duration) {
 	}
 
 	d.lock.Unlock()
+}
+
+func SaveDataToFile(filePath string, fileName string, data string) error {
+	//check is folder exists
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		err := os.MkdirAll(filePath, 0755)
+		if err != nil {
+			return err
+		}
+	}
+
+	fullPath := MakePath(filePath, fileName)
+
+	file, err := os.Create(fullPath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	_, err = file.WriteString(fmt.Sprintf("%v\n", data))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func MakePath(filePath string, fileName string) string {
+	if filePath[len(filePath)-1] == '/' {
+		filePath = filePath[:len(filePath)-1]
+	}
+
+	return fmt.Sprintf("%s/%s", filePath, fileName)
 }
 
 func calculateTime(amountLeft, rate uint64) string {
