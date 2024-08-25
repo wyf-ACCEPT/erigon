@@ -120,6 +120,7 @@ type domainVisible struct {
 	files  []visibleFile
 	name   kv.Domain
 	caches *sync.Pool
+	_c     *DomainGetFromFileCache
 }
 
 var DomainCompressCfg = seg.Cfg{
@@ -1423,7 +1424,8 @@ func (dt *DomainRoTx) getFromFiles(filekey []byte) (v []byte, found bool, fileSt
 	hi, lo := dt.ht.iit.hashKey(filekey)
 
 	if dt.getFromFileCache == nil {
-		dt.getFromFileCache = dt.visible.newGetFromFileCache()
+		//dt.getFromFileCache = dt.visible.newGetFromFileCache()
+		dt.getFromFileCache = dt.visible._c
 	}
 	if dt.getFromFileCache != nil {
 		cv, ok := dt.getFromFileCache.Get(u128{hi: hi, lo: lo})

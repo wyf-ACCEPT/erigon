@@ -58,6 +58,7 @@ func newDomainVisible(name kv.Domain, files []visibleFile) *domainVisible {
 		files:  files,
 		caches: &sync.Pool{New: NewDomainGetFromFileCacheAny},
 	}
+	d._c = d.newGetFromFileCache()
 	// Not on hot-path: better pre-alloc here
 	//d.preAlloc()
 	return d
