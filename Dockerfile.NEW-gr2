@@ -1,16 +1,16 @@
 ARG TARGET_BASE_VERSION="alpine:3.20.1"
 
-## Note BUILDARCH is a crucial variable:
+## Note TARGETARCH is a crucial variable:
 ##   see https://docs.docker.com/reference/dockerfile/#automatic-platform-args-in-the-global-scope
 
 FROM ${TARGET_BASE_VERSION} AS temporary
-ARG BUILDARCH \
+ARG TARGETARCH \
     VERSION=${VERSION} \
     APPLICATION
 
-COPY ./dist/${APPLICATION}_${VERSION}_linux_${BUILDARCH}.tar.gz /tmp/${APPLICATION}.tar.gz
+COPY ./dist/${APPLICATION}_${VERSION}_linux_${TARGETARCH}.tar.gz /tmp/${APPLICATION}.tar.gz
 RUN tar xzvf /tmp/${APPLICATION}.tar.gz -C /tmp && \
-    mv /tmp/${APPLICATION}_${VERSION}_linux_${BUILDARCH} /tmp/${APPLICATION}
+    mv /tmp/${APPLICATION}_${VERSION}_linux_${TARGETARCH} /tmp/${APPLICATION}
 
 FROM ${TARGET_BASE_VERSION}
 
@@ -19,13 +19,14 @@ ARG USER=erigon \
     APPLICATION
 
 RUN --mount=type=bind,from=temporary,source=/tmp/${APPLICATION},target=/tmp/${APPLICATION} \
+    apk add --no-cache ca-certificates tzdata \
     addgroup ${GROUP} && \
     adduser -D -h /home/${USER} -G ${GROUP} ${USER} && \
+    install -d -o ${USER} -g ${GROUP} /home/${USER}/.local /home/${USER}/.local/share /home/${USER}/.local/share/erigon && \
     install -o ${USER} -g ${GROUP} /tmp/${APPLICATION}/erigon /usr/local/bin/ && \
     install -o ${USER} -g ${GROUP} /tmp/${APPLICATION}/integration /usr/local/bin/ && \
     install -o ${USER} -g ${GROUP} /tmp/${APPLICATION}/diag /usr/local/bin/ && \
     install -o ${USER} -g ${GROUP} /tmp/${APPLICATION}/rpcdaemon /usr/local/bin/
-
 
 VOLUME [ "/home/${USER}" ]
 WORKDIR /home/${USER}
