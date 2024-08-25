@@ -91,7 +91,7 @@ func (v *domainVisible) returnGetFromFileCache(c *DomainGetFromFileCache) {
 }
 
 var (
-	iiGetFromFileCacheLimit = uint32(dbg.EnvInt("II_LRU", 4096))
+	iiGetFromFileCacheLimit = uint32(dbg.EnvInt("II_LRU", 10_000))
 	iiGetFromFileCacheTrace = dbg.EnvBool("II_LRU_TRACE", false)
 )
 
