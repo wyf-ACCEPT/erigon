@@ -19,7 +19,7 @@ ARG USER=erigon \
     APPLICATION
 
 RUN --mount=type=bind,from=temporary,source=/tmp/${APPLICATION},target=/tmp/${APPLICATION} \
-    apk add --no-cache ca-certificates tzdata \
+    apk add --no-cache ca-certificates tzdata && \
     addgroup ${GROUP} && \
     adduser -D -h /home/${USER} -G ${GROUP} ${USER} && \
     install -d -o ${USER} -g ${GROUP} /home/${USER}/.local /home/${USER}/.local/share /home/${USER}/.local/share/erigon && \
