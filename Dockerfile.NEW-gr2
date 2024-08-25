@@ -1,9 +1,9 @@
-ARG TARGET_BASE_VERSION="bullseye-20240701"
+ARG TARGET_BASE_VERSION="alpine:3.20.1"
 
 ## Note BUILDARCH is a crucial variable:
 ##   see https://docs.docker.com/reference/dockerfile/#automatic-platform-args-in-the-global-scope
 
-FROM debian:${TARGET_BASE_VERSION} AS temporary
+FROM ${TARGET_BASE_VERSION} AS temporary
 ARG BUILDARCH \
     VERSION=${VERSION} \
     APPLICATION
@@ -12,16 +12,20 @@ COPY ./dist/${APPLICATION}_${VERSION}_linux_${BUILDARCH}.tar.gz /tmp/${APPLICATI
 RUN tar xzvf /tmp/${APPLICATION}.tar.gz -C /tmp && \
     mv /tmp/${APPLICATION}_${VERSION}_linux_${BUILDARCH} /tmp/${APPLICATION}
 
-FROM debian:${TARGET_BASE_VERSION}
+FROM ${TARGET_BASE_VERSION}
 
 ARG USER=erigon \
     GROUP=erigon \
     APPLICATION
 
 RUN --mount=type=bind,from=temporary,source=/tmp/${APPLICATION},target=/tmp/${APPLICATION} \
-    groupadd ${GROUP} && \
-    useradd -d /home/${USER} -g ${GROUP} -m ${USER} && \
-    install -o ${USER} -g ${GROUP} /tmp/${APPLICATION}/* /usr/local/bin/
+    addgroup ${GROUP} && \
+    adduser -h /home/${USER} -G ${GROUP} ${USER} && \
+    install -o ${USER} -g ${GROUP} /tmp/${APPLICATION}/erigon /usr/local/bin/ && \
+    install -o ${USER} -g ${GROUP} /tmp/${APPLICATION}/integration /usr/local/bin/ && \
+    install -o ${USER} -g ${GROUP} /tmp/${APPLICATION}/diag /usr/local/bin/ && \
+    install -o ${USER} -g ${GROUP} /tmp/${APPLICATION}/rpcdaemon /usr/local/bin/
+
 
 VOLUME [ "/home/${USER}" ]
 WORKDIR /home/${USER}
