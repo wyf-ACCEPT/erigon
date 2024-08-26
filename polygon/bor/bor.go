@@ -62,6 +62,7 @@ import (
 	"github.com/erigontech/erigon/polygon/bor/finality/flags"
 	"github.com/erigontech/erigon/polygon/bor/finality/whitelist"
 	"github.com/erigontech/erigon/polygon/bor/statefull"
+	bortypes "github.com/erigontech/erigon/polygon/bor/types"
 	"github.com/erigontech/erigon/polygon/bor/valset"
 	"github.com/erigontech/erigon/polygon/heimdall"
 	"github.com/erigontech/erigon/rlp"
@@ -1559,7 +1560,8 @@ func (c *Bor) CommitStates(
 		startEventID := chain.Chain.BorStartEventID(header.Hash(), blockNum)
 
 		if startEventID > 0 {
-			fmt.Println("remote bor events", "blockNum", blockNum, "startEventID", startEventID, "events_from_db_or_snaps", len(events))
+
+			fmt.Println("remote bor events", "blockNum", blockNum, "hash", bortypes.ComputeBorTxHash(blockNum, header.Hash()), "startEventID", startEventID, "events_from_db_or_snaps", len(events))
 			remote, err := c.HeimdallClient.FetchStateSyncEvents(context.Background(), startEventID, to, 0)
 
 			if err != nil {
