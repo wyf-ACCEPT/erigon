@@ -227,7 +227,7 @@ func (rw *Worker) RunTxTaskNoLock(txTask *state.TxTask, isMining bool) {
 			break
 		}
 
-		fmt.Printf("txNum=%d, blockNum=%d, finalisation of the block (%s)\n", txTask.TxNum, txTask.BlockNum, err)
+		fmt.Printf("txNum=%d, blockNum=%d, finalisation of the block (%v)\n", txTask.TxNum, txTask.BlockNum, err)
 		// End of block transaction in a block
 		syscall := func(contract libcommon.Address, data []byte) ([]byte, error) {
 			return core.SysCallContract(contract, data, rw.chainConfig, ibs, header, rw.engine, false /* constCall */)
@@ -238,7 +238,7 @@ func (rw *Worker) RunTxTaskNoLock(txTask *state.TxTask, isMining bool) {
 		} else {
 			_, _, _, err = rw.engine.Finalize(rw.chainConfig, types.CopyHeader(header), ibs, txTask.Txs, txTask.Uncles, txTask.BlockReceipts, txTask.Withdrawals, txTask.Requests, rw.chain, syscall, rw.logger)
 		}
-		fmt.Printf("txNum=%d, blockNum=%d, done finalisation (%s)\n", txTask.TxNum, txTask.BlockNum, err)
+		fmt.Printf("txNum=%d, blockNum=%d, done finalisation (%v)\n", txTask.TxNum, txTask.BlockNum, err)
 		if err != nil {
 			txTask.Error = err
 		} else {
