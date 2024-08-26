@@ -1448,7 +1448,7 @@ func (r *BlockReader) EventsByBlock(ctx context.Context, tx kv.Tx, hash common.H
 		if err != nil {
 			return nil, err
 		}
-		fmt.Println("FR", len(result))
+		fmt.Println("DB", len(result))
 		return result, nil
 	}
 	borTxHash := bortypes.ComputeBorTxHash(blockHeight, hash)
@@ -1488,7 +1488,7 @@ func (r *BlockReader) EventsByBlock(ctx context.Context, tx kv.Tx, hash common.H
 			result = append(result, rlp.RawValue(common.Copy(buf[length.Hash+length.BlockNum+8:])))
 		}
 	}
-	fmt.Println("DB", len(result))
+	fmt.Println("FR", len(result))
 	return result, nil
 }
 
