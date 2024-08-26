@@ -1582,7 +1582,7 @@ func (c *Bor) CommitStates(
 		}
 	}
 
-	fmt.Println("REM", len(events), len(remoteEvents))
+	fmt.Println("REM", len(events), len(remote), len(remoteEvents))
 
 	if len(events) == len(remoteEvents) {
 		for i, event := range events {
