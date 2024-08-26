@@ -803,7 +803,10 @@ func BuildBtreeIndexWithDecompressor(indexPath string, kv *seg.Decompressor, com
 	key := make([]byte, 0, 64)
 	var pos uint64
 
+	var i int
 	for getter.HasNext() {
+		i++
+		fmt.Printf("[dbg] i %d\n", i)
 		key, _ = getter.Next(key[:0])
 		err = iw.AddKey(key, pos)
 		if err != nil {
