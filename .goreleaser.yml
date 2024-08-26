@@ -11,7 +11,7 @@ env:
   - CGO_ENABLED=1
   - BUILD_VERSION={{ .Env.BUILD_VERSION }}
   - CGO_CFLAGS_DEFAULT=-DMDBX_ENV_CHECKPID=0 -DMDBX_DISABLE_VALIDATION=0 -DMDBX_FORCE_ASSERTIONS=0 -Wno-unknown-warning-option -Wno-enum-int-mismatch -Wno-strict-prototypes -Wno-unused-but-set-variable -O3
-  - CGO_CFLAGS_WINDOWS=-DMDBX_WITHOUT_MSVC_CRT=ON -DMDBX_ENV_CHECKPID=0 -DMDBX_DISABLE_VALIDATION=0 -DMDBX_FORCE_ASSERTIONS=0 -Wno-unknown-warning-option -Wno-enum-int-mismatch -Wno-strict-prototypes -Wno-unused-but-set-variable -O3
+  - CGO_CFLAGS_WINDOWS=-Wno-unknown-warning-option -Wno-enum-int-mismatch -Wno-strict-prototypes -Wno-unused-but-set-variable -O3
   - CGO_LDFLAGS_DEFAULT=-O3 -g
   - CGO_LDFLAGS_DEFAULT_DARWIN=-O3 -g
   - CGO_LDFLAGS_DEFAULT_DARWIN_BKP=-O3 -g -mmacosx-version-min=13.3
