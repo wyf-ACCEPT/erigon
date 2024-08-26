@@ -1540,57 +1540,65 @@ func (c *Bor) CommitStates(
 		return nil
 	}
 
+	// set this true to check the current stored events vs the current heimdall contents
+	const checkEvents = true
+
 	events := chain.Chain.BorEventsByBlock(header.Hash(), blockNum)
 
-	// temp
-	var to time.Time
-	if c.config.IsIndore(blockNum) {
-		stateSyncDelay := c.config.CalculateStateSyncDelay(blockNum)
-		to = time.Unix(int64(header.Time-stateSyncDelay), 0)
-	} else {
-		pHeader := chain.Chain.GetHeaderByNumber(blockNum - c.config.CalculateSprintLength(blockNum))
-		to = time.Unix(int64(pHeader.Time), 0)
-	}
+	if checkEvents {
+		// temp
+		var to time.Time
+		if c.config.IsIndore(blockNum) {
+			stateSyncDelay := c.config.CalculateStateSyncDelay(blockNum)
+			to = time.Unix(int64(header.Time-stateSyncDelay), 0)
+		} else {
+			pHeader := chain.Chain.GetHeaderByNumber(blockNum - c.config.CalculateSprintLength(blockNum))
+			to = time.Unix(int64(pHeader.Time), 0)
+		}
 
-	startEventID := chain.Chain.BorStartEventID(header.Hash(), blockNum)
-	fmt.Println("remote bor events", "blockNum", blockNum, "startEventID", startEventID, "events_from_db_or_snaps", len(events))
-	remote, err := c.HeimdallClient.FetchStateSyncEvents(context.Background(), startEventID, to, 0)
-	if err != nil {
-		return err
-	}
+		startEventID := chain.Chain.BorStartEventID(header.Hash(), blockNum)
 
-	var remoteEvents []rlp.RawValue
+		if startEventID > 0 {
+			fmt.Println("remote bor events", "blockNum", blockNum, "startEventID", startEventID, "events_from_db_or_snaps", len(events))
+			remote, err := c.HeimdallClient.FetchStateSyncEvents(context.Background(), startEventID, to, 0)
 
-	if len(remote) > 0 {
-		chainID := c.chainConfig.ChainID.String()
-
-		for _, ev := range remote {
-			if ev.ChainID != chainID {
-				continue
-			}
-			if ev.Time.After(to) {
-				continue
-			}
-
-			data, err := ev.MarshallBytes()
 			if err != nil {
-				panic(err)
+				return err
 			}
 
-			remoteEvents = append(remoteEvents, data)
-		}
-	}
+			var remoteEvents []rlp.RawValue
 
-	fmt.Println("REM", len(events), len(remote), len(remoteEvents))
+			if len(remote) > 0 {
+				chainID := c.chainConfig.ChainID.String()
 
-	if len(events) == len(remoteEvents) {
-		for i, event := range events {
-			if !bytes.Equal(event, remoteEvents[i]) {
-				fmt.Println("MIS", i)
+				for i, ev := range remote {
+					if ev.ChainID != chainID {
+						continue
+					}
+					if ev.Time.After(to) {
+						continue
+					}
+
+					data, err := ev.MarshallBytes()
+					if err != nil {
+						return fmt.Errorf("remote bor event data invalid at: %d: %w", i, err)
+					}
+
+					remoteEvents = append(remoteEvents, data)
+				}
+			}
+
+			if len(events) != len(remoteEvents) {
+				return fmt.Errorf("bor event count mismatch: expected: %d, got: %d", len(remoteEvents), len(events))
+			}
+
+			for i, event := range events {
+				if !bytes.Equal(event, remoteEvents[i]) {
+					return fmt.Errorf("bor event data mismatch at: %d", i)
+				}
 			}
 		}
 	}
-	// to here
 
 	for _, event := range events {
 		if err := c.stateReceiver.CommitState(event, syscall); err != nil {

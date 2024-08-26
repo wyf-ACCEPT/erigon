@@ -839,7 +839,7 @@ Loop:
 					return err
 				}
 				if txTask.Error != nil {
-					return fmt.Errorf("%w, txnIdx=%d, %v", consensus.ErrInvalidBlock, txTask.TxIndex, txTask.Error) //same as in stage_exec.go
+					return fmt.Errorf("%w, txnIdx=%d/%d, %v", consensus.ErrInvalidBlock, txTask.TxIndex, len(txs), txTask.Error) //same as in stage_exec.go
 				}
 
 				txCount++
