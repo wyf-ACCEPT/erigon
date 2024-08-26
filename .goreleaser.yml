@@ -9,9 +9,10 @@ release:
 
 env:
   - CGO_ENABLED=1
+  - GOPRIVATE=github.com/erigontech/silkworm-go
   - BUILD_VERSION={{ .Env.BUILD_VERSION }}
   - CGO_CFLAGS_DEFAULT=-DMDBX_ENV_CHECKPID=0 -DMDBX_DISABLE_VALIDATION=0 -DMDBX_FORCE_ASSERTIONS=0 -Wno-unknown-warning-option -Wno-enum-int-mismatch -Wno-strict-prototypes -Wno-unused-but-set-variable -O3
-  - CGO_CFLAGS_WINDOWS=-Wno-unknown-warning-option -Wno-enum-int-mismatch -Wno-strict-prototypes -Wno-unused-but-set-variable -O3
+  - CGO_CFLAGS_WINDOWS=-Wno-unknown-warning-option -Wno-enum-int-mismatch -Wno-strict-prototypes -Wno-unused-but-set-variable -g -O2 -D__BLST_PORTABLE__
   - CGO_LDFLAGS_DEFAULT=-O3 -g
   - CGO_LDFLAGS_DEFAULT_DARWIN=-O3 -g
   - CGO_LDFLAGS_DEFAULT_DARWIN_BKP=-O3 -g -mmacosx-version-min=13.3
