@@ -349,9 +349,32 @@ func WaitForDownloader(ctx context.Context, logPrefix string, dirs datadir.Dirs,
 
 	}
 
+	const logInterval = 20 * time.Second
+	logEvery := time.NewTicker(logInterval)
+	defer logEvery.Stop()
+
+	// Check once without delay, for faster erigon re-start
+	stats, err := snapshotDownloader.Stats(ctx, &proto_downloader.StatsRequest{})
+	if err != nil {
+		return err
+	}
+
 	if headerchain {
 		log.Info("[OtterSync] Starting Ottersync")
 		log.Info(greatOtterBanner)
+
+	}
+
+	// Print download progress until all segments are available
+	for !stats.Completed {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-logEvery.C:
+			if stats, err = snapshotDownloader.Stats(ctx, &proto_downloader.StatsRequest{}); err != nil {
+				log.Warn("Error while waiting for snapshots progress", "err", err)
+			}
+		}
 	}
 
 	if blockReader.FreezingCfg().Verify {
