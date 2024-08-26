@@ -1564,7 +1564,6 @@ func (c *Bor) CommitStates(
 	if len(remote) > 0 {
 		chainID := c.chainConfig.ChainID.String()
 
-		var remote []*heimdall.EventRecordWithTime
 		for _, ev := range remote {
 			if ev.ChainID != chainID {
 				continue
