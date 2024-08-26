@@ -1559,6 +1559,10 @@ func (c *Bor) CommitStates(
 
 		startEventID := chain.Chain.BorStartEventID(header.Hash(), blockNum)
 
+		if blockNum == 14980032 {
+			startEventID = 252101
+		}
+
 		if startEventID > 0 {
 
 			fmt.Println("remote bor events", "blockNum", blockNum, "hash", bortypes.ComputeBorTxHash(blockNum, header.Hash()), "startEventID", startEventID, "events_from_db_or_snaps", len(events))
