@@ -1541,6 +1541,8 @@ func (c *Bor) CommitStates(
 	}
 
 	events := chain.Chain.BorEventsByBlock(header.Hash(), blockNum)
+
+	// temp
 	var to time.Time
 	if c.config.IsIndore(blockNum) {
 		stateSyncDelay := c.config.CalculateStateSyncDelay(blockNum)
@@ -1551,11 +1553,45 @@ func (c *Bor) CommitStates(
 	}
 
 	startEventID := chain.Chain.BorStartEventID(header.Hash(), blockNum)
+	fmt.Println("remote bor events", "blockNum", blockNum, "startEventID", startEventID, "events_from_db_or_snaps", len(events))
 	remote, err := c.HeimdallClient.FetchStateSyncEvents(context.Background(), startEventID, to, 0)
 	if err != nil {
 		return err
 	}
-	fmt.Println("REMOTE", len(remote))
+
+	var remoteEvents []rlp.RawValue
+
+	if len(remote) > 0 {
+		chainID := c.chainConfig.ChainID.String()
+
+		var remote []*heimdall.EventRecordWithTime
+		for _, ev := range remote {
+			if ev.ChainID != chainID {
+				continue
+			}
+			if ev.Time.After(to) {
+				continue
+			}
+
+			data, err := ev.MarshallBytes()
+			if err != nil {
+				panic(err)
+			}
+
+			remoteEvents = append(remoteEvents, data)
+		}
+	}
+
+	fmt.Println("REM", len(events), len(remoteEvents))
+
+	if len(events) == len(remoteEvents) {
+		for i, event := range events {
+			if !bytes.Equal(event, remoteEvents[i]) {
+				fmt.Println("MIS", i)
+			}
+		}
+	}
+	// to here
 
 	for _, event := range events {
 		if err := c.stateReceiver.CommitState(event, syscall); err != nil {
