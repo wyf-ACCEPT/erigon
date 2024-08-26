@@ -1398,7 +1398,20 @@ func (r *BlockReader) BorStartEventID(ctx context.Context, tx kv.Tx, hash common
 		if !found {
 			return 0, fmt.Errorf("borTxHash %x not found in snapshot %s", borTxHash, sn.FilePath())
 		}
-		return idxBorTxnHash.BaseDataID() + blockEventId, nil
+
+		offset := idxBorTxnHash.OrdinalLookup(blockEventId)
+		gg := sn.MakeGetter()
+		gg.Reset(offset)
+		if gg.HasNext() && gg.MatchPrefix(borTxHash[:]) {
+			buf, _ := gg.Next(nil)
+			var startEvent heimdall.EventRecordWithTime
+			if err := startEvent.UnmarshallBytes(buf[length.Hash+length.BlockNum+8:]); err != nil {
+				return 0, fmt.Errorf("borTxHash %x has invalid format in snapshot %s", borTxHash, sn.FilePath())
+			}
+			return startEvent.ID, nil
+		} else {
+			return 0, fmt.Errorf("borTxHash %x not found in snapshot %s", borTxHash, sn.FilePath())
+		}
 	}
 	return 0, nil
 }
@@ -1488,14 +1501,16 @@ func (r *BlockReader) EventsByBlock(ctx context.Context, tx kv.Tx, hash common.H
 			result = append(result, rlp.RawValue(common.Copy(buf[length.Hash+length.BlockNum+8:])))
 		}
 	}
-	var startEvent, endEvent heimdall.EventRecordWithTime
-	if err := startEvent.UnmarshallBytes(result[0]); err != nil {
-		panic(err)
-	}
-	if err := endEvent.UnmarshallBytes(result[len(result)-1]); err != nil {
-		panic(err)
-	}
 
+	var startEvent, endEvent heimdall.EventRecordWithTime
+	if len(result) > 0 {
+		if err := startEvent.UnmarshallBytes(result[0]); err != nil {
+			panic(err)
+		}
+		if err := endEvent.UnmarshallBytes(result[len(result)-1]); err != nil {
+			panic(err)
+		}
+	}
 	fmt.Println("FR", len(result), startEvent.ID, endEvent.ID)
 	return result, nil
 }
