@@ -804,12 +804,13 @@ builds:
       - CXX=x86_64-w64-mingw32-g++
       - CGO_CFLAGS={{ .Env.CGO_CFLAGS_WINDOWS }}
       - CGO_LDFLAGS={{ .Env.CGO_LDFLAGS_DEFAULT }}
-      - MDBX_BUILD_SHARED_LIBRARY:BOOL=OFF
-      - MDBX_WITHOUT_MSVC_CRT:BOOOL=OFF
-      - MDBX_BUILD_TIMESTAMP=unknown
-      - MDBX_FORCE_ASSERTIONS:INT=0
+      - CMAKE_MDBX_BUILD_SHARED_LIBRARY:BOOL=OFF
+      - CMAKE_MDBX_WITHOUT_MSVC_CRT:BOOOL=OFF
+      - CMAKE_MDBX_BUILD_TIMESTAMP=unknown
+      - CMAKE_MDBX_FORCE_ASSERTIONS:INT=0
     tags: [ nosqlite, noboltdb, nosilkworm ]
     flags:
+      - -v
       - -trimpath
       - -buildvcs=false
     ldflags:
@@ -826,10 +827,10 @@ builds:
       - CXX=x86_64-w64-mingw32-g++
       - CGO_CFLAGS={{ .Env.CGO_CFLAGS_WINDOWS }}
       - CGO_LDFLAGS={{ .Env.CGO_LDFLAGS_DEFAULT }}
-      - MDBX_BUILD_SHARED_LIBRARY:BOOL=OFF
-      - MDBX_WITHOUT_MSVC_CRT:BOOOL=OFF
-      - MDBX_BUILD_TIMESTAMP=unknown
-      - MDBX_FORCE_ASSERTIONS:INT=0
+      - CMAKE_MDBX_BUILD_SHARED_LIBRARY:BOOL=OFF
+      - CMAKE_MDBX_WITHOUT_MSVC_CRT:BOOOL=OFF
+      - CMAKE_MDBX_BUILD_TIMESTAMP=unknown
+      - CMAKE_MDBX_FORCE_ASSERTIONS:INT=0
     tags: [ nosqlite, noboltdb, nosilkworm ]
     flags:
       - -trimpath
@@ -848,10 +849,10 @@ builds:
       - CXX=x86_64-w64-mingw32-g++
       - CGO_CFLAGS={{ .Env.CGO_CFLAGS_WINDOWS }}
       - CGO_LDFLAGS={{ .Env.CGO_LDFLAGS_DEFAULT }}
-      - MDBX_BUILD_SHARED_LIBRARY:BOOL=OFF
-      - MDBX_WITHOUT_MSVC_CRT:BOOOL=OFF
-      - MDBX_BUILD_TIMESTAMP=unknown
-      - MDBX_FORCE_ASSERTIONS:INT=0
+      - CMAKE_MDBX_BUILD_SHARED_LIBRARY:BOOL=OFF
+      - CMAKE_MDBX_WITHOUT_MSVC_CRT:BOOOL=OFF
+      - CMAKE_MDBX_BUILD_TIMESTAMP=unknown
+      - CMAKE_MDBX_FORCE_ASSERTIONS:INT=0
     tags: [ nosqlite, noboltdb, nosilkworm ]
     flags:
       - -trimpath
@@ -870,10 +871,10 @@ builds:
       - CXX=x86_64-w64-mingw32-g++
       - CGO_CFLAGS={{ .Env.CGO_CFLAGS_WINDOWS }}
       - CGO_LDFLAGS={{ .Env.CGO_LDFLAGS_DEFAULT }}
-      - MDBX_BUILD_SHARED_LIBRARY:BOOL=OFF
-      - MDBX_WITHOUT_MSVC_CRT:BOOOL=OFF
-      - MDBX_BUILD_TIMESTAMP=unknown
-      - MDBX_FORCE_ASSERTIONS:INT=0
+      - CMAKE_MDBX_BUILD_SHARED_LIBRARY:BOOL=OFF
+      - CMAKE_MDBX_WITHOUT_MSVC_CRT:BOOOL=OFF
+      - CMAKE_MDBX_BUILD_TIMESTAMP=unknown
+      - CMAKE_MDBX_FORCE_ASSERTIONS:INT=0
     tags: [ nosqlite, noboltdb, nosilkworm ]
     flags:
       - -trimpath
@@ -892,10 +893,10 @@ builds:
       - CXX=x86_64-w64-mingw32-g++
       - CGO_CFLAGS={{ .Env.CGO_CFLAGS_WINDOWS }}
       - CGO_LDFLAGS={{ .Env.CGO_LDFLAGS_DEFAULT }}
-      - MDBX_BUILD_SHARED_LIBRARY:BOOL=OFF
-      - MDBX_WITHOUT_MSVC_CRT:BOOOL=OFF
-      - MDBX_BUILD_TIMESTAMP=unknown
-      - MDBX_FORCE_ASSERTIONS:INT=0
+      - CMAKE_MDBX_BUILD_SHARED_LIBRARY:BOOL=OFF
+      - CMAKE_MDBX_WITHOUT_MSVC_CRT:BOOOL=OFF
+      - CMAKE_MDBX_BUILD_TIMESTAMP=unknown
+      - CMAKE_MDBX_FORCE_ASSERTIONS:INT=0
     tags: [ nosqlite, noboltdb, nosilkworm ]
     flags:
       - -trimpath
@@ -914,10 +915,10 @@ builds:
       - CXX=x86_64-w64-mingw32-g++
       - CGO_CFLAGS={{ .Env.CGO_CFLAGS_WINDOWS }}
       - CGO_LDFLAGS={{ .Env.CGO_LDFLAGS_DEFAULT }}
-      - MDBX_BUILD_SHARED_LIBRARY:BOOL=OFF
-      - MDBX_WITHOUT_MSVC_CRT:BOOOL=OFF
-      - MDBX_BUILD_TIMESTAMP=unknown
-      - MDBX_FORCE_ASSERTIONS:INT=0
+      - CMAKE_MDBX_BUILD_SHARED_LIBRARY:BOOL=OFF
+      - CMAKE_MDBX_WITHOUT_MSVC_CRT:BOOOL=OFF
+      - CMAKE_MDBX_BUILD_TIMESTAMP=unknown
+      - CMAKE_MDBX_FORCE_ASSERTIONS:INT=0
     tags: [ nosqlite, noboltdb, nosilkworm ]
     flags:
       - -trimpath
@@ -936,10 +937,10 @@ builds:
       - CXX=x86_64-w64-mingw32-g++
       - CGO_CFLAGS={{ .Env.CGO_CFLAGS_WINDOWS }}
       - CGO_LDFLAGS={{ .Env.CGO_LDFLAGS_DEFAULT }}
-      - MDBX_BUILD_SHARED_LIBRARY:BOOL=OFF
-      - MDBX_WITHOUT_MSVC_CRT:BOOOL=OFF
-      - MDBX_BUILD_TIMESTAMP=unknown
-      - MDBX_FORCE_ASSERTIONS:INT=0
+      - CMAKE_MDBX_BUILD_SHARED_LIBRARY:BOOL=OFF
+      - CMAKE_MDBX_WITHOUT_MSVC_CRT:BOOOL=OFF
+      - CMAKE_MDBX_BUILD_TIMESTAMP=unknown
+      - CMAKE_MDBX_FORCE_ASSERTIONS:INT=0
     tags: [ nosqlite, noboltdb, nosilkworm ]
     flags:
       - -trimpath
@@ -958,10 +959,10 @@ builds:
       - CXX=x86_64-w64-mingw32-g++
       - CGO_CFLAGS={{ .Env.CGO_CFLAGS_WINDOWS }}
       - CGO_LDFLAGS={{ .Env.CGO_LDFLAGS_DEFAULT }}
-      - MDBX_BUILD_SHARED_LIBRARY:BOOL=OFF
-      - MDBX_WITHOUT_MSVC_CRT:BOOOL=OFF
-      - MDBX_BUILD_TIMESTAMP=unknown
-      - MDBX_FORCE_ASSERTIONS:INT=0
+      - CMAKE_MDBX_BUILD_SHARED_LIBRARY:BOOL=OFF
+      - CMAKE_MDBX_WITHOUT_MSVC_CRT:BOOOL=OFF
+      - CMAKE_MDBX_BUILD_TIMESTAMP=unknown
+      - CMAKE_MDBX_FORCE_ASSERTIONS:INT=0
     tags: [ nosqlite, noboltdb, nosilkworm ]
     flags:
       - -trimpath
@@ -980,10 +981,10 @@ builds:
       - CXX=x86_64-w64-mingw32-g++
       - CGO_CFLAGS={{ .Env.CGO_CFLAGS_WINDOWS }}
       - CGO_LDFLAGS={{ .Env.CGO_LDFLAGS_DEFAULT }}
-      - MDBX_BUILD_SHARED_LIBRARY:BOOL=OFF
-      - MDBX_WITHOUT_MSVC_CRT:BOOOL=OFF
-      - MDBX_BUILD_TIMESTAMP=unknown
-      - MDBX_FORCE_ASSERTIONS:INT=0
+      - CMAKE_MDBX_BUILD_SHARED_LIBRARY:BOOL=OFF
+      - CMAKE_MDBX_WITHOUT_MSVC_CRT:BOOOL=OFF
+      - CMAKE_MDBX_BUILD_TIMESTAMP=unknown
+      - CMAKE_MDBX_FORCE_ASSERTIONS:INT=0
     tags: [ nosqlite, noboltdb, nosilkworm ]
     flags:
       - -trimpath
@@ -1002,10 +1003,10 @@ builds:
       - CXX=x86_64-w64-mingw32-g++
       - CGO_CFLAGS={{ .Env.CGO_CFLAGS_WINDOWS }}
       - CGO_LDFLAGS={{ .Env.CGO_LDFLAGS_DEFAULT }}
-      - MDBX_BUILD_SHARED_LIBRARY:BOOL=OFF
-      - MDBX_WITHOUT_MSVC_CRT:BOOOL=OFF
-      - MDBX_BUILD_TIMESTAMP=unknown
-      - MDBX_FORCE_ASSERTIONS:INT=0
+      - CMAKE_MDBX_BUILD_SHARED_LIBRARY:BOOL=OFF
+      - CMAKE_MDBX_WITHOUT_MSVC_CRT:BOOOL=OFF
+      - CMAKE_MDBX_BUILD_TIMESTAMP=unknown
+      - CMAKE_MDBX_FORCE_ASSERTIONS:INT=0
     tags: [ nosqlite, noboltdb, nosilkworm ]
     flags:
       - -trimpath
