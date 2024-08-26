@@ -892,6 +892,7 @@ func (ac *AggregatorRoTx) CanUnwindToBlockNum(tx kv.Tx) (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
+	log.Warn("[dbg] ReadLowestUnwindableBlock", "minUnwindale", minUnwindale)
 	if minUnwindale == math.MaxUint64 { // no unwindable block found
 		stateVal, _, _, err := ac.d[kv.CommitmentDomain].GetLatest(keyCommitmentState, nil, tx)
 		if err != nil {
@@ -901,6 +902,7 @@ func (ac *AggregatorRoTx) CanUnwindToBlockNum(tx kv.Tx) (uint64, error) {
 			return 0, nil
 		}
 		_, minUnwindale = _decodeTxBlockNums(stateVal)
+		log.Warn("[dbg] _decodeTxBlockNums", "minUnwindale", minUnwindale)
 	}
 	return minUnwindale, nil
 }
@@ -911,6 +913,7 @@ func (ac *AggregatorRoTx) CanUnwindBeforeBlockNum(blockNum uint64, tx kv.Tx) (un
 	if err != nil {
 		return 0, false, err
 	}
+	log.Warn("[dbg] CanUnwindBeforeBlockNum", "blockNum", blockNum, "_minUnwindableBlockNum", _minUnwindableBlockNum)
 	if blockNum < _minUnwindableBlockNum {
 		return _minUnwindableBlockNum, false, nil
 	}
