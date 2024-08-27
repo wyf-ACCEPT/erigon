@@ -1542,7 +1542,7 @@ func (c *Bor) CommitStates(
 	}
 
 	// set this true to check the current stored events vs the current heimdall contents
-	const checkEvents = true
+	const checkEvents = false
 
 	events := chain.Chain.BorEventsByBlock(header.Hash(), blockNum)
 
