@@ -1155,6 +1155,7 @@ func flushAndCheckCommitmentV3(ctx context.Context, header *types.Header, applyT
 
 	if bytes.Equal(rh, header.Root.Bytes()) {
 		if !inMemExec {
+			log.Warn("[dbg] flush trie", "bn", doms.BlockNum())
 			if err := doms.Flush(ctx, applyTx); err != nil {
 				return false, err
 			}
