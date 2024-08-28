@@ -271,7 +271,7 @@ func (sd *SharedDomains) SeekCommitment(ctx context.Context, tx kv.Tx) (txsFromB
 				return 0, errors.WithMessage(ErrBehindCommitment, fmt.Sprintf("TxNums index is at block %d and behind commitment %d", lastBn, bn))
 			}
 		}
-		log.Warn("[dbg] alex1", "bn", 0, "txn", 0)
+		log.Warn("[dbg] alex1", "bn", bn, "txn", txn)
 		sd.SetBlockNum(bn)
 		sd.SetTxNum(txn)
 		return 0, nil
