@@ -1151,7 +1151,7 @@ func flushAndCheckCommitmentV3(ctx context.Context, header *types.Header, applyT
 		return true, nil
 	}
 
-	if bytes.Equal(rh, header.Root.Bytes()) && maxBlockNum%10 != 0 {
+	if bytes.Equal(rh, header.Root.Bytes()) {
 		if !inMemExec {
 			if err := doms.Flush(ctx, applyTx); err != nil {
 				return false, err
