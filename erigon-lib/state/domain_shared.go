@@ -271,6 +271,7 @@ func (sd *SharedDomains) SeekCommitment(ctx context.Context, tx kv.Tx) (txsFromB
 				return 0, errors.WithMessage(ErrBehindCommitment, fmt.Sprintf("TxNums index is at block %d and behind commitment %d", lastBn, bn))
 			}
 		}
+		log.Warn("[dbg] alex1", "bn", bn, "txn", txn)
 		sd.SetBlockNum(bn)
 		sd.SetTxNum(txn)
 		return 0, nil
@@ -288,10 +289,12 @@ func (sd *SharedDomains) SeekCommitment(ctx context.Context, tx kv.Tx) (txsFromB
 		}
 	}
 	if bn == 0 && txn == 0 {
+		log.Warn("[dbg] alex2", "bn", 0, "txn", 0)
 		sd.SetBlockNum(0)
 		sd.SetTxNum(0)
 		return 0, nil
 	}
+	log.Warn("[dbg] alex3", "bn", bn, "txn", txn)
 	sd.SetBlockNum(bn)
 	sd.SetTxNum(txn)
 	newRh, err := sd.rebuildCommitment(ctx, tx, bn)
@@ -299,6 +302,7 @@ func (sd *SharedDomains) SeekCommitment(ctx context.Context, tx kv.Tx) (txsFromB
 		return 0, err
 	}
 	if bytes.Equal(newRh, commitment.EmptyRootHash) {
+		log.Warn("[dbg] alex4", "bn", 0, "txn", 0)
 		sd.SetBlockNum(0)
 		sd.SetTxNum(0)
 		return 0, nil
@@ -306,6 +310,7 @@ func (sd *SharedDomains) SeekCommitment(ctx context.Context, tx kv.Tx) (txsFromB
 	if sd.trace {
 		fmt.Printf("rebuilt commitment %x %d %d\n", newRh, sd.TxNum(), sd.BlockNum())
 	}
+	log.Warn("[dbg] alex4", "bn", bn, "txn", txn)
 	sd.SetBlockNum(bn)
 	sd.SetTxNum(txn)
 	return 0, nil
