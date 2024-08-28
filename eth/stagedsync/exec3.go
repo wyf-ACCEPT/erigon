@@ -30,6 +30,7 @@ import (
 	"time"
 
 	"github.com/erigontech/erigon/eth/ethconfig/estimate"
+	rand2 "golang.org/x/exp/rand"
 
 	"github.com/c2h5oh/datasize"
 	"github.com/erigontech/mdbx-go/mdbx"
@@ -913,8 +914,8 @@ Loop:
 			aggTx.RestrictSubsetFileDeletions(false)
 			doms.SavePastChangesetAccumulator(b.Hash(), blockNum, changeset)
 			if !inMemExec && !isMining {
-				if blockNum%20 == 0 {
-					return fmt.Errorf("alex did break all the things")
+				if rand2.Int()%10 == 0 {
+					return fmt.Errorf("monkey in the datacenter")
 				}
 				log.Warn("[dbg] write changeset", "blockNum", blockNum)
 				if err := state2.WriteDiffSet(applyTx, blockNum, b.Hash(), changeset); err != nil {
