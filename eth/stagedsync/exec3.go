@@ -915,7 +915,7 @@ Loop:
 			aggTx.RestrictSubsetFileDeletions(false)
 			doms.SavePastChangesetAccumulator(b.Hash(), blockNum, changeset)
 			if !inMemExec && !isMining {
-				if jumpsSize == 0 && rand2.Int()%10 == 0 {
+				if jumpsSize < 10 && rand2.Int()%10 == 0 {
 					return fmt.Errorf("monkey in the datacenter")
 				}
 				log.Warn("[dbg] write changeset", "blockNum", blockNum)
