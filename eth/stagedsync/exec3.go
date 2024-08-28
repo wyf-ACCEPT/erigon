@@ -350,7 +350,7 @@ func ExecV3(ctx context.Context,
 		log.Info(fmt.Sprintf("[%s] starting", execStage.LogPrefix()),
 			"from", blockNum, "to", maxBlockNum, "fromTxNum", doms.TxNum(), "offsetFromBlockBeginning", offsetFromBlockBeginning, "initialCycle", initialCycle, "useExternalTx", useExternalTx)
 	}
-	log.Warn("[dbg] shouldGenerateChangesets", "s", shouldGenerateChangesets, "jump", jumpsSize, "maxBlockNum", blockNum, "blockNum")
+	log.Warn("[dbg] shouldGenerateChangesets", "s", shouldGenerateChangesets, "jump", jumpsSize, "maxBlockNum", maxBlockNum, "blockNum", blockNum)
 
 	agg.BuildFilesInBackground(outputTxNum.Load())
 
