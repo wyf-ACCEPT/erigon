@@ -343,6 +343,7 @@ func ExecV3(ctx context.Context,
 	if blockNum < cfg.blockReader.FrozenBlocks() {
 		shouldGenerateChangesets = false
 	}
+	log.Warn("[dbg] shouldGenerateChangesets", "s", shouldGenerateChangesets, "jump", maxBlockNum-blockNum)
 
 	if maxBlockNum-blockNum > 16 {
 		log.Info(fmt.Sprintf("[%s] starting", execStage.LogPrefix()),
