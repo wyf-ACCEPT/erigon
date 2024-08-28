@@ -916,7 +916,7 @@ Loop:
 				if blockNum%10 == 0 {
 					return fmt.Errorf("alex did break all the things")
 				}
-				log.Warn("[dbg] write changeset", blockNum)
+				log.Warn("[dbg] write changeset", "blockNum", blockNum)
 				if err := state2.WriteDiffSet(applyTx, blockNum, b.Hash(), changeset); err != nil {
 					return err
 				}
