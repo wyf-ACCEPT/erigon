@@ -283,7 +283,9 @@ func ExecV3(ctx context.Context,
 		}
 		{
 			_max, _ := txNumsReader.Max(applyTx, _blockNum)
+			log.Warn("[dbg] starting", "_blockNum", _blockNum, "_max", _max)
 			if doms.TxNum() == _max {
+				log.Warn("[dbg] starting increment???")
 				_blockNum++
 			}
 		}
