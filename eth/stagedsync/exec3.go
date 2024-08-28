@@ -345,12 +345,12 @@ func ExecV3(ctx context.Context,
 	if blockNum < cfg.blockReader.FrozenBlocks() {
 		shouldGenerateChangesets = false
 	}
-	log.Warn("[dbg] shouldGenerateChangesets", "s", shouldGenerateChangesets, "jump", jumpsSize, "maxBlockNum", blockNum, "blockNum")
 
 	if maxBlockNum-blockNum > 16 {
 		log.Info(fmt.Sprintf("[%s] starting", execStage.LogPrefix()),
 			"from", blockNum, "to", maxBlockNum, "fromTxNum", doms.TxNum(), "offsetFromBlockBeginning", offsetFromBlockBeginning, "initialCycle", initialCycle, "useExternalTx", useExternalTx)
 	}
+	log.Warn("[dbg] shouldGenerateChangesets", "s", shouldGenerateChangesets, "jump", jumpsSize, "maxBlockNum", blockNum, "blockNum")
 
 	agg.BuildFilesInBackground(outputTxNum.Load())
 
