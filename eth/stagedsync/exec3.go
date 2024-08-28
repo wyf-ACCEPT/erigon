@@ -1115,7 +1115,6 @@ func dumpPlainStateDebug(tx kv.RwTx, doms *state2.SharedDomains) {
 
 // flushAndCheckCommitmentV3 - does write state to db and then check commitment
 func flushAndCheckCommitmentV3(ctx context.Context, header *types.Header, applyTx kv.RwTx, doms *state2.SharedDomains, cfg ExecuteBlockCfg, e *StageState, maxBlockNum uint64, parallel bool, logger log.Logger, u Unwinder, inMemExec bool) (bool, error) {
-
 	// E2 state root check was in another stage - means we did flush state even if state root will not match
 	// And Unwind expecting it
 	if !parallel {
@@ -1134,11 +1133,11 @@ func flushAndCheckCommitmentV3(ctx context.Context, header *types.Header, applyT
 	if dbg.DiscardCommitment() {
 		return true, nil
 	}
-	if doms.BlockNum() != header.Number.Uint64() {
-		panic(fmt.Errorf("%d != %d", doms.BlockNum(), header.Number.Uint64()))
+	if doms.BlockNum() != maxBlockNum {
+		panic(fmt.Errorf("%d != %d", doms.BlockNum(), maxBlockNum))
 	}
 
-	rh, err := doms.ComputeCommitment(ctx, true, header.Number.Uint64(), e.LogPrefix())
+	rh, err := doms.ComputeCommitment(ctx, true, maxBlockNum, e.LogPrefix())
 	if err != nil {
 		return false, fmt.Errorf("StateV3.Apply: %w", err)
 	}
@@ -1147,7 +1146,7 @@ func flushAndCheckCommitmentV3(ctx context.Context, header *types.Header, applyT
 		return true, nil
 	}
 
-	if bytes.Equal(rh, header.Root.Bytes()) || header.Number.Uint64()%10 == 0 {
+	if bytes.Equal(rh, header.Root.Bytes()) || maxBlockNum%10 == 0 {
 		if !inMemExec {
 			if err := doms.Flush(ctx, applyTx); err != nil {
 				return false, err
@@ -1158,7 +1157,7 @@ func flushAndCheckCommitmentV3(ctx context.Context, header *types.Header, applyT
 		}
 		return true, nil
 	}
-	logger.Error(fmt.Sprintf("[%s] Wrong trie root of block %d: %x, expected (from header): %x. Block hash: %x", e.LogPrefix(), header.Number.Uint64(), rh, header.Root.Bytes(), header.Hash()))
+	logger.Error(fmt.Sprintf("[%s] Wrong trie root of block %d: %x, expected (from header): %x. Block hash: %x", e.LogPrefix(), maxBlockNum, rh, header.Root.Bytes(), header.Hash()))
 	if cfg.badBlockHalt {
 		return false, errors.New("wrong trie root")
 	}
