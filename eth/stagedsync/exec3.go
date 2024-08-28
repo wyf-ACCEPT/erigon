@@ -340,11 +340,12 @@ func ExecV3(ctx context.Context,
 	blockNum = doms.BlockNum()
 	outputTxNum.Store(doms.TxNum())
 
-	shouldGenerateChangesets := maxBlockNum-blockNum <= changesetBlockRange
+	jumpsSize := maxBlockNum - blockNum
+	shouldGenerateChangesets := jumpsSize <= changesetBlockRange
 	if blockNum < cfg.blockReader.FrozenBlocks() {
 		shouldGenerateChangesets = false
 	}
-	log.Warn("[dbg] shouldGenerateChangesets", "s", shouldGenerateChangesets, "jump", maxBlockNum-blockNum)
+	log.Warn("[dbg] shouldGenerateChangesets", "s", shouldGenerateChangesets, "jump", jumpsSize)
 
 	if maxBlockNum-blockNum > 16 {
 		log.Info(fmt.Sprintf("[%s] starting", execStage.LogPrefix()),
@@ -914,7 +915,7 @@ Loop:
 			aggTx.RestrictSubsetFileDeletions(false)
 			doms.SavePastChangesetAccumulator(b.Hash(), blockNum, changeset)
 			if !inMemExec && !isMining {
-				if rand2.Int()%10 == 0 {
+				if jumpsSize == 0 && rand2.Int()%10 == 0 {
 					return fmt.Errorf("monkey in the datacenter")
 				}
 				log.Warn("[dbg] write changeset", "blockNum", blockNum)

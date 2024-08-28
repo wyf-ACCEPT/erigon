@@ -529,9 +529,7 @@ func (s *Sync) runStage(stage *Stage, db kv.RwDB, txc wrap.TxContainer, initialC
 	}
 
 	if err = stage.Forward(badBlockUnwind, stageState, s, txc, s.logger); err != nil {
-		wrappedError := fmt.Errorf("[%s] %w", s.LogPrefix(), err)
-		s.logger.Debug("Error while executing stage", "err", wrappedError)
-		return wrappedError
+		return fmt.Errorf("[%s] %w", s.LogPrefix(), err)
 	}
 
 	took := time.Since(start)
