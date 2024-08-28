@@ -1155,13 +1155,14 @@ func flushAndCheckCommitmentV3(ctx context.Context, header *types.Header, applyT
 
 	if bytes.Equal(rh, header.Root.Bytes()) {
 		if !inMemExec {
-			panic(1)
 			if err := doms.Flush(ctx, applyTx); err != nil {
 				return false, err
 			}
 			if err = applyTx.(state2.HasAggTx).AggTx().(*state2.AggregatorRoTx).PruneCommitHistory(ctx, applyTx, nil); err != nil {
 				return false, err
 			}
+		} else {
+			panic(1)
 		}
 		return true, nil
 	}
