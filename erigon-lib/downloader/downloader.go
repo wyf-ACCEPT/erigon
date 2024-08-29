@@ -347,6 +347,8 @@ func New(ctx context.Context, cfg *downloadercfg.Cfg, logger log.Logger, verbosi
 		downloading:         map[string]*downloadInfo{},
 		webseedsDiscover:    discover,
 		logPrefix:           "",
+		seconds:             0,
+		testjson:            []charttest{},
 	}
 	d.webseeds.SetTorrent(d.torrentFS, snapLock.Downloads, cfg.DownloadTorrentFilesFromWebseed)
 
@@ -2346,9 +2348,9 @@ func (d *Downloader) ReCalcStats(interval time.Duration) {
 }
 
 type charttest struct {
-	Name    string    `json:"name"`
-	Bytes   uint64    `json:"bytes"`
-	Seconds time.Time `json:"increment"`
+	Name    string `json:"name"`
+	Bytes   uint64 `json:"bytes"`
+	Seconds uint64 `json:"seconds"`
 }
 
 func (d *Downloader) SaveStats() error {
@@ -2362,28 +2364,28 @@ func (d *Downloader) SaveStats() error {
 	data := charttest{
 		Name:    "Downloaded",
 		Bytes:   stats.BytesCompleted,
-		Seconds: d.startTime,
+		Seconds: d.seconds,
 	}
 	d.testjson = append(d.testjson, data)
 
 	compdata := charttest{
 		Name:    "Completed",
 		Bytes:   uint64(connStats.BytesCompleted.Int64()),
-		Seconds: d.startTime,
+		Seconds: d.seconds,
 	}
 	d.testjson = append(d.testjson, compdata)
 
 	fldata := charttest{
 		Name:    "Flushed",
 		Bytes:   stats.BytesFlushed,
-		Seconds: d.startTime,
+		Seconds: d.seconds,
 	}
 	d.testjson = append(d.testjson, fldata)
 
 	hsdata := charttest{
 		Name:    "Hashed",
 		Bytes:   stats.BytesHashed,
-		Seconds: d.startTime,
+		Seconds: d.seconds,
 	}
 	d.testjson = append(d.testjson, hsdata)
 
@@ -2441,6 +2443,9 @@ func (d *Downloader) ReadDataFromFile() error {
 	}
 	json.Unmarshal(data, &d.testjson)
 	d.logger.Info("[!!!!!ReadDataFromFile]", d.testjson)
+	if len(d.testjson) > 0 {
+		d.seconds = d.testjson[len(d.testjson)-1].Seconds
+	}
 
 	return nil
 }
