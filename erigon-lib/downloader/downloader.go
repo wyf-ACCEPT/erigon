@@ -99,6 +99,8 @@ type Downloader struct {
 
 	logPrefix string
 	startTime time.Time
+	seconds   uint64
+	testjson  []charttest
 }
 
 type downloadInfo struct {
@@ -1950,6 +1952,10 @@ func (d *Downloader) torrentInfo(name string) (*torrentInfo, error) {
 func (d *Downloader) ReCalcStats(interval time.Duration) {
 	d.lock.RLock()
 
+	if len(d.testjson) == 0 {
+		d.ReadDataFromFile()
+	}
+
 	torrentClient := d.torrentClient
 
 	peers := make(map[torrent.PeerID]struct{}, 16)
@@ -2328,7 +2334,102 @@ func (d *Downloader) ReCalcStats(interval time.Duration) {
 			"webseed-fails", stats.WebseedServerFails.Load(),
 			"webseed-bytes", common.ByteCount(uint64(stats.WebseedBytesDownload.Load())),
 			"localHashes", stats.LocalFileHashes, "localHashTime", stats.LocalFileHashTime)
+
+		d.SaveStats()
 	}
+}
+
+type charttest struct {
+	Name    string    `json:"name"`
+	Bytes   uint64    `json:"bytes"`
+	Seconds time.Time `json:"increment"`
+}
+
+func (d *Downloader) SaveStats() {
+	d.lock.RLock()
+	stats := d.stats
+	torrentClient := d.torrentClient
+	connStats := torrentClient.ConnStats()
+	d.lock.RUnlock()
+
+	d.seconds += 20
+	data := charttest{
+		Name:    "Downloaded",
+		Bytes:   stats.BytesCompleted,
+		Seconds: d.startTime,
+	}
+	d.testjson = append(d.testjson, data)
+
+	compdata := charttest{
+		Name:    "Completed",
+		Bytes:   uint64(connStats.BytesCompleted.Int64()),
+		Seconds: d.startTime,
+	}
+	d.testjson = append(d.testjson, compdata)
+
+	fldata := charttest{
+		Name:    "Flushed",
+		Bytes:   stats.BytesFlushed,
+		Seconds: d.startTime,
+	}
+	d.testjson = append(d.testjson, fldata)
+
+	hsdata := charttest{
+		Name:    "Hashed",
+		Bytes:   stats.BytesHashed,
+		Seconds: d.startTime,
+	}
+	d.testjson = append(d.testjson, hsdata)
+
+	jsonBytes1, _ := json.Marshal(d.testjson)
+	jsonStr1 := string(jsonBytes1)
+	//SaveDataToFile("/app/", "andjsondata.txt", jsonStr1)
+	SaveDataToFile("/Volumes/DATA/development/erigon/", "andjsondata.txt", jsonStr1)
+}
+
+func SaveDataToFile(filePath string, fileName string, data string) error {
+	//check is folder exists
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		err := os.MkdirAll(filePath, 0755)
+		if err != nil {
+			return err
+		}
+	}
+
+	fullPath := MakePath(filePath, fileName)
+
+	file, err := os.Create(fullPath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	_, err = file.WriteString(fmt.Sprintf("%v\n", data))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func MakePath(filePath string, fileName string) string {
+	if filePath[len(filePath)-1] == '/' {
+		filePath = filePath[:len(filePath)-1]
+	}
+
+	return fmt.Sprintf("%s/%s", filePath, fileName)
+}
+
+func (d *Downloader) ReadDataFromFile() {
+	// Read the file's content
+	data, err := os.ReadFile("/Volumes/DATA/development/erigon/andjsondata.txt")
+	if err != nil {
+		fmt.Println("File reading error", err)
+		return
+	}
+	fmt.Println("File content:")
+	json.Unmarshal(data, &d.testjson)
+	fmt.Println(d.testjson)
 }
 
 type filterWriter struct {
