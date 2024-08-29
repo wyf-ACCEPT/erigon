@@ -1955,7 +1955,7 @@ func (d *Downloader) ReCalcStats(interval time.Duration) {
 	if len(d.testjson) == 0 {
 		e := d.ReadDataFromFile()
 		if e != nil {
-			d.logger.Info("[1ReadDataFromFile]", e)
+			d.logger.Error("[1ReadDataFromFile]", e)
 		}
 	}
 
@@ -2340,7 +2340,7 @@ func (d *Downloader) ReCalcStats(interval time.Duration) {
 
 		fr := d.SaveStats()
 		if fr != nil {
-			d.logger.Info("[1ReadDataFromFile]", fr)
+			d.logger.Error("[1ReadDataFromFile]", fr)
 		}
 	}
 }
@@ -2389,7 +2389,7 @@ func (d *Downloader) SaveStats() error {
 
 	jsonBytes1, _ := json.Marshal(d.testjson)
 	jsonStr1 := string(jsonBytes1)
-	err := SaveDataToFile("/app/", "andjsondata", jsonStr1)
+	err := d.SaveDataToFile("/app/", "andjsondata", jsonStr1)
 	if err != nil {
 		return err
 	}
@@ -2398,7 +2398,7 @@ func (d *Downloader) SaveStats() error {
 	return nil
 }
 
-func SaveDataToFile(filePath string, fileName string, data string) error {
+func (d *Downloader) SaveDataToFile(filePath string, fileName string, data string) error {
 	//check is folder exists
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		err := os.MkdirAll(filePath, 0755)
@@ -2420,6 +2420,8 @@ func SaveDataToFile(filePath string, fileName string, data string) error {
 		return err
 	}
 
+	d.logger.Info("[!!!!!SaveDataToFile]", "file", fullPath)
+
 	return nil
 }
 
@@ -2437,9 +2439,8 @@ func (d *Downloader) ReadDataFromFile() error {
 	if err != nil {
 		return err
 	}
-	fmt.Println("File content:")
 	json.Unmarshal(data, &d.testjson)
-	d.logger.Info("[ReadDataFromFile]", d.testjson)
+	d.logger.Info("[!!!!!ReadDataFromFile]", d.testjson)
 
 	return nil
 }
