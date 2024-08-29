@@ -948,9 +948,9 @@ Loop:
 				if !skipPostEvaluation && rs.SizeEstimate() < commitThreshold {
 					break
 				}
-				//if !aggregatorRo.CanPrune(applyTx, outputTxNum.Load()) {
-				//	break
-				//}
+				if !aggregatorRo.CanPrune(applyTx, outputTxNum.Load()) {
+					break
+				}
 				var (
 					commitStart = time.Now()
 					tt          = time.Now()
