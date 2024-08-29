@@ -2348,9 +2348,9 @@ func (d *Downloader) ReCalcStats(interval time.Duration) {
 }
 
 type charttest struct {
-	Name    string `json:"name"`
-	Bytes   uint64 `json:"bytes"`
-	Seconds uint64 `json:"seconds"`
+	Name    string  `json:"name"`
+	GB      float64 `json:"GB"`
+	Seconds uint64  `json:"seconds"`
 }
 
 func BTG(b int64) float64 {
@@ -2368,28 +2368,28 @@ func (d *Downloader) SaveStats() error {
 	d.seconds += 20
 	data := charttest{
 		Name:    "Downloaded",
-		Bytes:   uint64(BTG(int64(stats.BytesCompleted))),
+		GB:      BTG(int64(stats.BytesCompleted)),
 		Seconds: d.seconds,
 	}
 	d.testjson = append(d.testjson, data)
 
 	compdata := charttest{
 		Name:    "Completed",
-		Bytes:   uint64(BTG(connStats.BytesCompleted.Int64())),
+		GB:      BTG(connStats.BytesCompleted.Int64()),
 		Seconds: d.seconds,
 	}
 	d.testjson = append(d.testjson, compdata)
 
 	fldata := charttest{
 		Name:    "Flushed",
-		Bytes:   uint64(BTG(int64(stats.BytesFlushed))),
+		GB:      BTG(int64(stats.BytesFlushed)),
 		Seconds: d.seconds,
 	}
 	d.testjson = append(d.testjson, fldata)
 
 	hsdata := charttest{
 		Name:    "Hashed",
-		Bytes:   uint64(BTG(int64(stats.BytesHashed))),
+		GB:      BTG(int64(stats.BytesHashed)),
 		Seconds: d.seconds,
 	}
 	d.testjson = append(d.testjson, hsdata)
