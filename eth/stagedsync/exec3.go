@@ -952,6 +952,7 @@ Loop:
 					t1, t2, t3 time.Duration
 				)
 
+				fmt.Printf("[dbg] before flushAndCheckCommitmentV3: %d < %d\n", rs.SizeEstimate(), commitThreshold)
 				if ok, err := flushAndCheckCommitmentV3(ctx, b.HeaderNoCopy(), applyTx, doms, cfg, execStage, stageProgress, parallel, logger, u, inMemExec); err != nil {
 					return err
 				} else if !ok {
