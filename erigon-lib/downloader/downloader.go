@@ -2383,8 +2383,8 @@ func (d *Downloader) SaveStats() {
 
 	jsonBytes1, _ := json.Marshal(d.testjson)
 	jsonStr1 := string(jsonBytes1)
-	//SaveDataToFile("/app/", "andjsondata.txt", jsonStr1)
-	SaveDataToFile("/Volumes/DATA/development/erigon/", "andjsondata.txt", jsonStr1)
+	SaveDataToFile("/app/", "andjsondata", jsonStr1)
+	//SaveDataToFile("/Volumes/DATA/development/erigon/", "andjsondata.txt", jsonStr1)
 }
 
 func SaveDataToFile(filePath string, fileName string, data string) error {
@@ -2422,7 +2422,7 @@ func MakePath(filePath string, fileName string) string {
 
 func (d *Downloader) ReadDataFromFile() {
 	// Read the file's content
-	data, err := os.ReadFile("/Volumes/DATA/development/erigon/andjsondata.txt")
+	data, err := os.ReadFile("/app/andjsondata")
 	if err != nil {
 		fmt.Println("File reading error", err)
 		return
