@@ -2390,8 +2390,10 @@ func (d *Downloader) SaveStats() {
 func SaveDataToFile(filePath string, fileName string, data string) error {
 	//check is folder exists
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		fmt.Println(err)
 		err := os.MkdirAll(filePath, 0755)
 		if err != nil {
+			fmt.Println(err)
 			return err
 		}
 	}
@@ -2400,12 +2402,14 @@ func SaveDataToFile(filePath string, fileName string, data string) error {
 
 	file, err := os.Create(fullPath)
 	if err != nil {
+		fmt.Println(err)
 		return err
 	}
 	defer file.Close()
 
 	_, err = file.WriteString(fmt.Sprintf("%v\n", data))
 	if err != nil {
+		fmt.Println(err)
 		return err
 	}
 
