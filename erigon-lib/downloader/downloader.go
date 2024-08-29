@@ -2361,8 +2361,6 @@ func BTG(b int64) float64 {
 func (d *Downloader) SaveStats() error {
 	d.lock.RLock()
 	stats := d.stats
-	torrentClient := d.torrentClient
-	connStats := torrentClient.ConnStats()
 	d.lock.RUnlock()
 
 	d.seconds += 20
