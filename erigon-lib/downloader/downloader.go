@@ -1953,7 +1953,10 @@ func (d *Downloader) ReCalcStats(interval time.Duration) {
 	d.lock.RLock()
 
 	if len(d.testjson) == 0 {
-		d.ReadDataFromFile()
+		e := d.ReadDataFromFile()
+		if e != nil {
+			d.logger.Info("[1ReadDataFromFile]", e)
+		}
 	}
 
 	torrentClient := d.torrentClient
@@ -2335,7 +2338,10 @@ func (d *Downloader) ReCalcStats(interval time.Duration) {
 			"webseed-bytes", common.ByteCount(uint64(stats.WebseedBytesDownload.Load())),
 			"localHashes", stats.LocalFileHashes, "localHashTime", stats.LocalFileHashTime)
 
-		d.SaveStats()
+		fr := d.SaveStats()
+		if fr != nil {
+			d.logger.Info("[1ReadDataFromFile]", fr)
+		}
 	}
 }
 
@@ -2345,7 +2351,7 @@ type charttest struct {
 	Seconds time.Time `json:"increment"`
 }
 
-func (d *Downloader) SaveStats() {
+func (d *Downloader) SaveStats() error {
 	d.lock.RLock()
 	stats := d.stats
 	torrentClient := d.torrentClient
@@ -2383,17 +2389,20 @@ func (d *Downloader) SaveStats() {
 
 	jsonBytes1, _ := json.Marshal(d.testjson)
 	jsonStr1 := string(jsonBytes1)
-	SaveDataToFile("/app/", "andjsondata", jsonStr1)
+	err := SaveDataToFile("/app/", "andjsondata", jsonStr1)
+	if err != nil {
+		return err
+	}
 	//SaveDataToFile("/Volumes/DATA/development/erigon/", "andjsondata.txt", jsonStr1)
+
+	return nil
 }
 
 func SaveDataToFile(filePath string, fileName string, data string) error {
 	//check is folder exists
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		fmt.Println(err)
 		err := os.MkdirAll(filePath, 0755)
 		if err != nil {
-			fmt.Println(err)
 			return err
 		}
 	}
@@ -2402,14 +2411,12 @@ func SaveDataToFile(filePath string, fileName string, data string) error {
 
 	file, err := os.Create(fullPath)
 	if err != nil {
-		fmt.Println(err)
 		return err
 	}
 	defer file.Close()
 
 	_, err = file.WriteString(fmt.Sprintf("%v\n", data))
 	if err != nil {
-		fmt.Println(err)
 		return err
 	}
 
@@ -2424,16 +2431,17 @@ func MakePath(filePath string, fileName string) string {
 	return fmt.Sprintf("%s/%s", filePath, fileName)
 }
 
-func (d *Downloader) ReadDataFromFile() {
+func (d *Downloader) ReadDataFromFile() error {
 	// Read the file's content
 	data, err := os.ReadFile("/app/andjsondata")
 	if err != nil {
-		fmt.Println("File reading error", err)
-		return
+		return err
 	}
 	fmt.Println("File content:")
 	json.Unmarshal(data, &d.testjson)
-	fmt.Println(d.testjson)
+	d.logger.Info("[ReadDataFromFile]", d.testjson)
+
+	return nil
 }
 
 type filterWriter struct {
