@@ -1957,7 +1957,7 @@ func (d *Downloader) ReCalcStats(interval time.Duration) {
 	if len(d.testjson) == 0 {
 		e := d.ReadDataFromFile()
 		if e != nil {
-			d.logger.Error("[1ReadDataFromFile]", e)
+			d.logger.Error("[ReadDataFromFile]", e)
 		}
 	}
 
@@ -2342,7 +2342,7 @@ func (d *Downloader) ReCalcStats(interval time.Duration) {
 
 		fr := d.SaveStats()
 		if fr != nil {
-			d.logger.Error("[1ReadDataFromFile]", fr)
+			d.logger.Error("[ReadDataFromFile]", fr)
 		}
 	}
 }
@@ -2351,6 +2351,11 @@ type charttest struct {
 	Name    string `json:"name"`
 	Bytes   uint64 `json:"bytes"`
 	Seconds uint64 `json:"seconds"`
+}
+
+func BTG(b int64) float64 {
+	gigabytes := float64(b) / (1024 * 1024 * 1024)
+	return gigabytes
 }
 
 func (d *Downloader) SaveStats() error {
@@ -2363,28 +2368,28 @@ func (d *Downloader) SaveStats() error {
 	d.seconds += 20
 	data := charttest{
 		Name:    "Downloaded",
-		Bytes:   stats.BytesCompleted,
+		Bytes:   uint64(BTG(int64(stats.BytesCompleted))),
 		Seconds: d.seconds,
 	}
 	d.testjson = append(d.testjson, data)
 
 	compdata := charttest{
 		Name:    "Completed",
-		Bytes:   uint64(connStats.BytesCompleted.Int64()),
+		Bytes:   uint64(BTG(connStats.BytesCompleted.Int64())),
 		Seconds: d.seconds,
 	}
 	d.testjson = append(d.testjson, compdata)
 
 	fldata := charttest{
 		Name:    "Flushed",
-		Bytes:   stats.BytesFlushed,
+		Bytes:   uint64(BTG(int64(stats.BytesFlushed))),
 		Seconds: d.seconds,
 	}
 	d.testjson = append(d.testjson, fldata)
 
 	hsdata := charttest{
 		Name:    "Hashed",
-		Bytes:   stats.BytesHashed,
+		Bytes:   uint64(BTG(int64(stats.BytesHashed))),
 		Seconds: d.seconds,
 	}
 	d.testjson = append(d.testjson, hsdata)
@@ -2422,8 +2427,6 @@ func (d *Downloader) SaveDataToFile(filePath string, fileName string, data strin
 		return err
 	}
 
-	d.logger.Info("[!!!!!SaveDataToFile]", "file", fullPath)
-
 	return nil
 }
 
@@ -2442,7 +2445,6 @@ func (d *Downloader) ReadDataFromFile() error {
 		return err
 	}
 	json.Unmarshal(data, &d.testjson)
-	d.logger.Info("[!!!!!ReadDataFromFile]", d.testjson)
 	if len(d.testjson) > 0 {
 		d.seconds = d.testjson[len(d.testjson)-1].Seconds
 	}
