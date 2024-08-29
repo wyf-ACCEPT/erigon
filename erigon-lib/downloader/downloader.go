@@ -2375,7 +2375,7 @@ func (d *Downloader) SaveStats() error {
 
 	compdata := charttest{
 		Name:    "Completed",
-		GB:      BTG(stats.BytesCompleted),
+		GB:      BTG(int64(stats.BytesCompleted)),
 		Seconds: d.seconds,
 	}
 	d.testjson = append(d.testjson, compdata)
