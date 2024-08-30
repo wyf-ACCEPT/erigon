@@ -242,12 +242,14 @@ func New(
 		return nil, err
 	}
 
-	defaultLimits := rcmgr.DefaultLimits.AutoScale()
+	defaultLimits := rcmgr.DefaultLimits
+	libp2p.SetDefaultServiceLimits(&defaultLimits)
+	scalingLimits := defaultLimits.AutoScale()
 	newLimit := rcmgr.PartialLimitConfig{
 		System: rcmgr.ResourceLimits{
 			StreamsInbound: 48,
 		},
-	}.Build(defaultLimits)
+	}.Build(scalingLimits)
 
 	rmgr, err := rcmgr.NewResourceManager(rcmgr.NewFixedLimiter(newLimit), rcmgr.WithTraceReporter(str))
 	if err != nil {
