@@ -2339,10 +2339,10 @@ func (d *Downloader) ReCalcStats(interval time.Duration) {
 			"webseed-fails", stats.WebseedServerFails.Load(),
 			"webseed-bytes", common.ByteCount(uint64(stats.WebseedBytesDownload.Load())),
 			"localHashes", stats.LocalFileHashes, "localHashTime", stats.LocalFileHashTime)
-	} else {
+
 		fr := d.SaveStats()
 		if fr != nil {
-			d.logger.Error("[SaveStats]", fr)
+			d.logger.Error("[ReadDataFromFile]", fr)
 		}
 	}
 }
@@ -2392,11 +2392,13 @@ func (d *Downloader) SaveStats() error {
 	}
 	d.testjson = append(d.testjson, hsdata)
 
-	jsonBytes1, _ := json.Marshal(d.testjson)
-	jsonStr1 := string(jsonBytes1)
-	err := d.SaveDataToFile("/app/", "andjsondata", jsonStr1)
-	if err != nil {
-		return err
+	if stats.Completed {
+		jsonBytes1, _ := json.Marshal(d.testjson)
+		jsonStr1 := string(jsonBytes1)
+		err := d.SaveDataToFile("/erigon/", "andjsondata", jsonStr1)
+		if err != nil {
+			return err
+		}
 	}
 	//SaveDataToFile("/Volumes/DATA/development/erigon/", "andjsondata.txt", jsonStr1)
 
@@ -2438,7 +2440,7 @@ func MakePath(filePath string, fileName string) string {
 
 func (d *Downloader) ReadDataFromFile() error {
 	// Read the file's content
-	data, err := os.ReadFile("/app/andjsondata")
+	data, err := os.ReadFile("/erigon/andjsondata")
 	if err != nil {
 		return err
 	}
