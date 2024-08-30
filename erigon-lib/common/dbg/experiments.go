@@ -51,6 +51,9 @@ var (
 	discardCommitment    = EnvBool("DISCARD_COMMITMENT", false)
 	pruneTotalDifficulty = EnvBool("PRUNE_TOTAL_DIFFICULTY", false)
 
+	// caplin
+	caplinSetLimiters = EnvBool("CAPLIN_SET_LIMITERS", false)
+
 	// force skipping of any non-Erigon2 .torrent files
 	DownloaderOnlyBlocks = EnvBool("DOWNLOADER_ONLY_BLOCKS", false)
 
@@ -88,6 +91,7 @@ func DiscardCommitment() bool    { return discardCommitment }
 func NoPrune() bool              { return noPrune }
 func NoMerge() bool              { return noMerge }
 func PruneTotalDifficulty() bool { return pruneTotalDifficulty }
+func CaplinSetLimiters() bool    { return caplinSetLimiters }
 
 var (
 	dirtySace     uint64

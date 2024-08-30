@@ -32,6 +32,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/prysmaticlabs/go-bitfield"
 
+	"github.com/erigontech/erigon-lib/common/dbg"
 	"github.com/erigontech/erigon-lib/kv"
 	"github.com/erigontech/erigon/cl/gossip"
 	"github.com/erigontech/erigon/cl/persistence/blob_storage"
@@ -241,21 +242,22 @@ func New(
 	if err != nil {
 		return nil, err
 	}
+	if dbg.CaplinSetLimiters() {
+		defaultLimits := rcmgr.DefaultLimits
+		libp2p.SetDefaultServiceLimits(&defaultLimits)
+		scalingLimits := defaultLimits.AutoScale()
+		newLimit := rcmgr.PartialLimitConfig{
+			System: rcmgr.ResourceLimits{
+				StreamsInbound: 48,
+			},
+		}.Build(scalingLimits)
 
-	defaultLimits := rcmgr.DefaultLimits
-	libp2p.SetDefaultServiceLimits(&defaultLimits)
-	scalingLimits := defaultLimits.AutoScale()
-	newLimit := rcmgr.PartialLimitConfig{
-		System: rcmgr.ResourceLimits{
-			StreamsInbound: 48,
-		},
-	}.Build(scalingLimits)
-
-	rmgr, err := rcmgr.NewResourceManager(rcmgr.NewFixedLimiter(newLimit), rcmgr.WithTraceReporter(str))
-	if err != nil {
-		return nil, err
+		rmgr, err := rcmgr.NewResourceManager(rcmgr.NewFixedLimiter(newLimit), rcmgr.WithTraceReporter(str))
+		if err != nil {
+			return nil, err
+		}
+		opts = append(opts, libp2p.ResourceManager(rmgr))
 	}
-	opts = append(opts, libp2p.ResourceManager(rmgr))
 
 	gater, err := NewGater(cfg)
 	if err != nil {
