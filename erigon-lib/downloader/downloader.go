@@ -2392,14 +2392,14 @@ func (d *Downloader) SaveStats() error {
 	}
 	d.testjson = append(d.testjson, hsdata)
 
-	if stats.Completed {
-		jsonBytes1, _ := json.Marshal(d.testjson)
-		jsonStr1 := string(jsonBytes1)
-		err := d.SaveDataToFile("/erigon/", "andjsondata", jsonStr1)
-		if err != nil {
-			return err
-		}
+	//if stats.Completed {
+	jsonBytes1, _ := json.Marshal(d.testjson)
+	jsonStr1 := string(jsonBytes1)
+	err := d.SaveDataToFile("/erigon/", "andjsondata", jsonStr1)
+	if err != nil {
+		return err
 	}
+	//}
 	//SaveDataToFile("/Volumes/DATA/development/erigon/", "andjsondata.txt", jsonStr1)
 
 	return nil
