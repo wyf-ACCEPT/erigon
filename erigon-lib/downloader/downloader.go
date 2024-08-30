@@ -2339,10 +2339,10 @@ func (d *Downloader) ReCalcStats(interval time.Duration) {
 			"webseed-fails", stats.WebseedServerFails.Load(),
 			"webseed-bytes", common.ByteCount(uint64(stats.WebseedBytesDownload.Load())),
 			"localHashes", stats.LocalFileHashes, "localHashTime", stats.LocalFileHashTime)
-
+	} else {
 		fr := d.SaveStats()
 		if fr != nil {
-			d.logger.Error("[ReadDataFromFile]", fr)
+			d.logger.Error("[SaveStats]", fr)
 		}
 	}
 }
