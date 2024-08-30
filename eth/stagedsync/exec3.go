@@ -1046,6 +1046,7 @@ Loop:
 
 	if u != nil && !u.HasUnwindPoint() {
 		if b != nil {
+			log.Warn("[dbg] end of stage flushAndCheckCommitmentV3", "bn", maxBlockNum)
 			_, err := flushAndCheckCommitmentV3(ctx, b.HeaderNoCopy(), applyTx, doms, cfg, execStage, stageProgress, parallel, logger, u, inMemExec)
 			if err != nil {
 				return err
