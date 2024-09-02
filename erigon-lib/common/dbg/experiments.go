@@ -64,7 +64,7 @@ var (
 	// Values from 1 to 4 makes sense since we have only 3 types of snapshots.
 	BuildSnapshotAllowance = EnvInt("SNAPSHOT_BUILD_SEMA_SIZE", 2) // allows 2 kind of snapshots to be built simultaneously (e.g Caplin+Domains)
 
-	SnapshotMadvRnd       = EnvBool("SNAPSHOT_MADV_RND", true)
+	SnapshotMadvRnd       = EnvBool("SNAPSHOT_MADV_RND", false)
 	KvMadvNormalNoLastLvl = EnvString("KV_MADV_NORMAL_NO_LAST_LVL", "") //TODO: move this logic - from hacks to app-level
 	KvMadvNormal          = EnvString("KV_MADV_NORMAL", "")
 	OnlyCreateDB          = EnvBool("ONLY_CREATE_DB", false)
