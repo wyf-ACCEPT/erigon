@@ -1957,7 +1957,7 @@ func (d *Downloader) ReCalcStats(interval time.Duration) {
 	if len(d.testjson) == 0 {
 		e := d.ReadDataFromFile()
 		if e != nil {
-			d.logger.Error("[ReadDataFromFile]", e)
+			d.logger.Error("[11 ReadDataFromFile]", e)
 		}
 	}
 
