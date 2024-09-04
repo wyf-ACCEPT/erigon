@@ -1434,24 +1434,24 @@ func (dt *DomainRoTx) getFromFiles(filekey []byte) (v []byte, found bool, fileSt
 	}
 
 	for i := len(dt.files) - 1; i >= 0; i-- {
-		//if dt.d.indexList&withExistence != 0 {
-		//	if dt.files[i].src.existence != nil {
-		//		if !dt.files[i].src.existence.ContainsHash(hi) {
-		//			if traceGetLatest == dt.name {
-		//				fmt.Printf("GetLatest(%s, %x) -> existence index %s -> false\n", dt.d.filenameBase, filekey, dt.files[i].src.existence.FileName)
-		//			}
-		//			continue
-		//		} else {
-		//			if traceGetLatest == dt.name {
-		//				fmt.Printf("GetLatest(%s, %x) -> existence index %s -> true\n", dt.d.filenameBase, filekey, dt.files[i].src.existence.FileName)
-		//			}
-		//		}
-		//	} else {
-		//		if traceGetLatest == dt.name {
-		//			fmt.Printf("GetLatest(%s, %x) -> existence index is nil %s\n", dt.name.String(), filekey, dt.files[i].src.decompressor.FileName())
-		//		}
-		//	}
-		//}
+		if dt.d.indexList&withExistence != 0 {
+			if dt.files[i].src.existence != nil {
+				if !dt.files[i].src.existence.ContainsHash(hi) {
+					if traceGetLatest == dt.name {
+						fmt.Printf("GetLatest(%s, %x) -> existence index %s -> false\n", dt.d.filenameBase, filekey, dt.files[i].src.existence.FileName)
+					}
+					continue
+				} else {
+					if traceGetLatest == dt.name {
+						fmt.Printf("GetLatest(%s, %x) -> existence index %s -> true\n", dt.d.filenameBase, filekey, dt.files[i].src.existence.FileName)
+					}
+				}
+			} else {
+				if traceGetLatest == dt.name {
+					fmt.Printf("GetLatest(%s, %x) -> existence index is nil %s\n", dt.name.String(), filekey, dt.files[i].src.decompressor.FileName())
+				}
+			}
+		}
 
 		v, found, err = dt.getFromFile(i, filekey)
 		if err != nil {
