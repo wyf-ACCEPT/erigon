@@ -1421,17 +1421,17 @@ func (dt *DomainRoTx) getFromFiles(filekey []byte) (v []byte, found bool, fileSt
 		return
 	}
 
-	//hi, lo := dt.ht.iit.hashKey(filekey)
-	//
-	//if dt.getFromFileCache == nil {
-	//	dt.getFromFileCache = dt.visible.newGetFromFileCache()
-	//}
-	//if dt.getFromFileCache != nil {
-	//	cv, ok := dt.getFromFileCache.Get(u128{hi: hi, lo: lo})
-	//	if ok {
-	//		return cv.v, true, dt.files[cv.lvl].startTxNum, dt.files[cv.lvl].endTxNum, nil
-	//	}
-	//}
+	hi, lo := dt.ht.iit.hashKey(filekey)
+
+	if dt.getFromFileCache == nil {
+		dt.getFromFileCache = dt.visible.newGetFromFileCache()
+	}
+	if dt.getFromFileCache != nil {
+		cv, ok := dt.getFromFileCache.Get(u128{hi: hi, lo: lo})
+		if ok {
+			return cv.v, true, dt.files[cv.lvl].startTxNum, dt.files[cv.lvl].endTxNum, nil
+		}
+	}
 
 	for i := len(dt.files) - 1; i >= 0; i-- {
 		//if dt.d.indexList&withExistence != 0 {
@@ -1467,18 +1467,18 @@ func (dt *DomainRoTx) getFromFiles(filekey []byte) (v []byte, found bool, fileSt
 			fmt.Printf("GetLatest(%s, %x) -> found in file %s\n", dt.name.String(), filekey, dt.files[i].src.decompressor.FileName())
 		}
 
-		//if dt.getFromFileCache != nil {
-		//	dt.getFromFileCache.Add(u128{hi: hi, lo: lo}, domainGetFromFileCacheItem{lvl: uint8(i), v: v})
-		//}
+		if dt.getFromFileCache != nil {
+			dt.getFromFileCache.Add(u128{hi: hi, lo: lo}, domainGetFromFileCacheItem{lvl: uint8(i), v: v})
+		}
 		return v, true, dt.files[i].startTxNum, dt.files[i].endTxNum, nil
 	}
 	if traceGetLatest == dt.name {
 		fmt.Printf("GetLatest(%s, %x) -> not found in %d files\n", dt.name.String(), filekey, len(dt.files))
 	}
 
-	//if dt.getFromFileCache != nil {
-	//	dt.getFromFileCache.Add(u128{hi: hi, lo: lo}, domainGetFromFileCacheItem{lvl: 0, v: nil})
-	//}
+	if dt.getFromFileCache != nil {
+		dt.getFromFileCache.Add(u128{hi: hi, lo: lo}, domainGetFromFileCacheItem{lvl: 0, v: nil})
+	}
 	return nil, false, 0, 0, nil
 }
 
@@ -1660,10 +1660,6 @@ func (dt *DomainRoTx) GetLatest(key1, key2 []byte, roTx kv.Tx) ([]byte, uint64, 
 		return nil, 0, false, fmt.Errorf("getFromFiles: %w", err)
 	}
 	return v, endTxNum / dt.d.aggregationStep, foundInFile, nil
-}
-
-func (dt *DomainRoTx) GetLatestFromFiles(key []byte) (v []byte, found bool, fileStartTxNum uint64, fileEndTxNum uint64, err error) {
-	return dt.getFromFiles(key)
 }
 
 func (dt *DomainRoTx) DomainRange(ctx context.Context, tx kv.Tx, fromKey, toKey []byte, ts uint64, asc order.By, limit int) (it stream.KV, err error) {
