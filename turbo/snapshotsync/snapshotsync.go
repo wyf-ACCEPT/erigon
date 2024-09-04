@@ -359,34 +359,30 @@ func WaitForDownloader(ctx context.Context, logPrefix string, dirs datadir.Dirs,
 	wlen := len(downloadRequest)
 	wg.Add(len(downloadRequest))
 	fmt.Println("1 WG len: ", wlen)
-	go func() {
-		stream, err := snapshotDownloader.TorrentCompleted(context.Background(), &proto_downloader.TorrentCompletedRequest{})
-		if err != nil {
-			log.Debug("[Downloader] Error while subscribing to TorrentCompleted: %v", err)
-			//mark everything as done
-			for i := 0; i < len(downloadRequest); i++ {
-				wg.Done()
-				wlen--
-				fmt.Println("2 WG len: ", wlen)
-			}
-
-			return
-		}
-
-		// Listen for messages from the server
-		for {
-			_, err := stream.Recv()
-
-			if err != nil {
-				log.Debug("[Downloader] Error while receiving message from TorrentCompleted: %v", err)
-				continue
-			}
-
+	stream, err := snapshotDownloader.TorrentCompleted(context.Background(), &proto_downloader.TorrentCompletedRequest{})
+	if err != nil {
+		log.Debug("[Downloader] Error while subscribing to TorrentCompleted: %v", err)
+		//mark everything as done
+		for i := 0; i < len(downloadRequest); i++ {
 			wg.Done()
 			wlen--
-			fmt.Println("3 WG len: ", wlen)
+			fmt.Println("2 WG len: ", wlen)
 		}
-	}()
+	} else {
+		go func() {
+			for {
+				_, err := stream.Recv()
+				if err != nil {
+					log.Debug("[Downloader] Error while receiving message from TorrentCompleted: %v", err)
+					continue
+				}
+
+				wg.Done()
+				wlen--
+				fmt.Println("3 WG len: ", wlen)
+			}
+		}()
+	}
 
 	wg.Wait()
 	fmt.Println("4 WG len: ", wlen)
