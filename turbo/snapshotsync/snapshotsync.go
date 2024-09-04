@@ -412,13 +412,13 @@ func WaitForDownloader(ctx context.Context, logPrefix string, dirs datadir.Dirs,
 
 	wg.Wait()
 	// Check once without delay, for faster erigon re-start
-	//completedResp, err := snapshotDownloader.Completed(ctx, &proto_downloader.CompletedRequest{})
-	//if err != nil {
-	//	return err
-	//}
+	completedResp, err := snapshotDownloader.Completed(ctx, &proto_downloader.CompletedRequest{})
+	if err != nil {
+		return err
+	}
 
 	// Print download progress until all segments are available
-	for !isCompleted {
+	for !isCompleted || !completedResp.Completed {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
