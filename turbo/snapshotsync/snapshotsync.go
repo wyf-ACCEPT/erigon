@@ -23,6 +23,7 @@ import (
 	"math"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/erigontech/erigon-lib/chain"
@@ -354,10 +355,12 @@ func WaitForDownloader(ctx context.Context, logPrefix string, dirs datadir.Dirs,
 
 	}
 
-	const checkInterval = 20 * time.Second
-	checkEvery := time.NewTicker(checkInterval)
-	defer checkEvery.Stop()
+	//const checkInterval = 20 * time.Second
+	//checkEvery := time.NewTicker(checkInterval)
+	//defer checkEvery.Stop()
 
+	var wg sync.WaitGroup
+	wg.Add(len(downloadRequest))
 	go func() {
 		completedArray := make([]string, 0)
 
@@ -369,17 +372,12 @@ func WaitForDownloader(ctx context.Context, logPrefix string, dirs datadir.Dirs,
 		// Listen for messages from the server
 		for {
 			msg, err := stream.Recv()
+
 			if err != nil {
 				log.Debug("[Downloader] Error while receiving message from TorrentCompleted: %v", err)
-				break
 			}
 
 			completedArray = append(completedArray, msg.Name)
-
-			//All files downloaded
-			if len(completedArray) == len(downloadRequest) {
-				break
-			}
 
 			log.Trace("[Downloader] Received torrent completed: %s at %s\n", msg.Name, msg.Hash)
 			//check is downloadRequest contains msg.Name
@@ -399,18 +397,20 @@ func WaitForDownloader(ctx context.Context, logPrefix string, dirs datadir.Dirs,
 
 			if !found {
 				log.Trace("[Downloader] Completed torrent name doesn't match with requested torrent %s\n", msg.Name)
+			} else {
+				wg.Done()
 			}
 		}
 	}()
 
 	// Check once without delay, for faster erigon re-start
-	completedResp, err := snapshotDownloader.Completed(ctx, &proto_downloader.CompletedRequest{})
-	if err != nil {
-		return err
-	}
+	//completedResp, err := snapshotDownloader.Completed(ctx, &proto_downloader.CompletedRequest{})
+	//if err != nil {
+	//	return err
+	//}
 
 	// Print download progress until all segments are available
-	for !completedResp.Completed {
+	/*for !isCompleted {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
@@ -420,7 +420,9 @@ func WaitForDownloader(ctx context.Context, logPrefix string, dirs datadir.Dirs,
 				log.Warn("Error while waiting for snapshots progress", "err", err)
 			}
 		}
-	}
+	}*/
+
+	wg.Wait()
 
 	if blockReader.FreezingCfg().Verify {
 		if _, err := snapshotDownloader.Verify(ctx, &proto_downloader.VerifyRequest{}); err != nil {
