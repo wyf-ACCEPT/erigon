@@ -1435,7 +1435,7 @@ func (dt *DomainRoTx) getFromFiles(filekey []byte) (v []byte, found bool, fileSt
 	}
 
 	for i := len(dt.files) - 1; i >= 0; i-- {
-		if useExistenceFilter && i != len(dt.files)-1 {
+		if useExistenceFilter && i != 0 {
 			if dt.files[i].src.existence != nil {
 				if !dt.files[i].src.existence.ContainsHash(hi) {
 					if traceGetLatest == dt.name {
