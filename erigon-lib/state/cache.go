@@ -76,9 +76,6 @@ func (v *domainVisible) newGetFromFileCache() *DomainGetFromFileCache {
 	if !domainGetFromFileCacheEnabled {
 		return nil
 	}
-	if v.name == kv.CommitmentDomain {
-		return nil
-	}
 	return v.caches.Get().(*DomainGetFromFileCache)
 }
 func (v *domainVisible) returnGetFromFileCache(c *DomainGetFromFileCache) {

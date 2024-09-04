@@ -1421,7 +1421,7 @@ func (dt *DomainRoTx) getFromFiles(filekey []byte) (v []byte, found bool, fileSt
 		return
 	}
 	useExistenceFilter := dt.d.indexList&withExistence != 0
-	useCache := dt.d.compression&CompressVals == 0
+	useCache := dt.d.compression&CompressVals == 0 && dt.name != kv.CommitmentDomain
 
 	hi, lo := dt.ht.iit.hashKey(filekey)
 	if useCache && dt.getFromFileCache == nil {
