@@ -23,7 +23,6 @@ import (
 	"math"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/erigontech/erigon-lib/chain"
@@ -355,37 +354,24 @@ func WaitForDownloader(ctx context.Context, logPrefix string, dirs datadir.Dirs,
 
 	}
 
-	var wg sync.WaitGroup
 	wlen := len(downloadRequest)
-	wg.Add(len(downloadRequest))
-	fmt.Println("1 WG len: ", wlen)
 	stream, err := snapshotDownloader.TorrentCompleted(context.Background(), &proto_downloader.TorrentCompletedRequest{})
 	if err != nil {
 		log.Debug("[Downloader] Error while subscribing to TorrentCompleted: %v", err)
-		//mark everything as done
-		for i := 0; i < len(downloadRequest); i++ {
-			wg.Done()
-			wlen--
-			fmt.Println("2 WG len: ", wlen)
-		}
 	} else {
-		go func() {
-			for {
-				_, err := stream.Recv()
-				if err != nil {
-					log.Debug("[Downloader] Error while receiving message from TorrentCompleted: %v", err)
-					continue
-				}
-
-				wg.Done()
-				wlen--
-				fmt.Println("3 WG len: ", wlen)
+		for {
+			_, err := stream.Recv()
+			if err != nil {
+				log.Debug("[Downloader] Error while receiving message from TorrentCompleted: %v", err)
+				continue
 			}
-		}()
-	}
 
-	wg.Wait()
-	fmt.Println("4 WG len: ", wlen)
+			wlen--
+			if wlen == 0 {
+				break
+			}
+		}
+	}
 
 	if blockReader.FreezingCfg().Verify {
 		if _, err := snapshotDownloader.Verify(ctx, &proto_downloader.VerifyRequest{}); err != nil {
