@@ -94,6 +94,11 @@ func (s *attestationService) ProcessMessage(ctx context.Context, subnet *uint64,
 		committeeIndex = att.AttestantionData().CommitteeIndex()
 		targetEpoch    = att.AttestantionData().Target().Epoch()
 	)
+
+	if !s.committeeSubscribe.NeedToAggregateNow(committeeIndex) {
+		return ErrIgnore
+	}
+
 	headState := s.syncedDataManager.HeadStateReader()
 	if headState == nil {
 		return ErrIgnore
@@ -217,7 +222,7 @@ func (s *attestationService) ProcessMessage(ctx context.Context, subnet *uint64,
 		return fmt.Errorf("invalid finalized checkpoint %w", ErrIgnore)
 	}
 
-	err = s.committeeSubscribe.CheckAggregateAttestation(att)
+	err = s.committeeSubscribe.AggregateAttestation(att)
 	if errors.Is(err, aggregation.ErrIsSuperset) {
 		return ErrIgnore
 	}
