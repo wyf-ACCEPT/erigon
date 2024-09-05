@@ -1137,7 +1137,13 @@ func (r *BlockReader) TxnByIdxInBlock(ctx context.Context, tx kv.Getter, blockNu
 }
 
 // TxnLookup - find blockNumber and txnID by txnHash
-func (r *BlockReader) TxnLookup(_ context.Context, tx kv.Getter, txnHash common.Hash) (uint64, bool, error) {
+func (r *BlockReader) TxnLookup(ctx context.Context, tx kv.Getter, txnHash common.Hash) (uint64, bool, error) {
+	var dbgPrefix string
+	dbgLogs := dbg.Enabled(ctx)
+	if dbgLogs {
+		dbgPrefix = fmt.Sprintf("[dbg] BlockReader(idxMax=%d,segMax=%d).TxnLookup(txnHash=%x) -> ", r.sn.idxMax.Load(), r.sn.segmentsMax.Load(), txnHash)
+	}
+
 	n, err := rawdb.ReadTxLookupEntry(tx, txnHash)
 	if err != nil {
 		return 0, false, err
@@ -1145,6 +1151,10 @@ func (r *BlockReader) TxnLookup(_ context.Context, tx kv.Getter, txnHash common.
 
 	if n != nil {
 		return *n, true, nil
+	} else {
+		if dbgLogs {
+			log.Info(dbgPrefix + "not found in db")
+		}
 	}
 
 	txns, release := r.sn.ViewType(coresnaptype.Transactions)
@@ -1152,6 +1162,11 @@ func (r *BlockReader) TxnLookup(_ context.Context, tx kv.Getter, txnHash common.
 	_, blockNum, ok, err := r.txnByHash(txnHash, txns, nil)
 	if err != nil {
 		return 0, false, err
+	}
+	if !ok {
+		if dbgLogs {
+			log.Info(dbgPrefix + "not found in files")
+		}
 	}
 
 	return blockNum, ok, nil
