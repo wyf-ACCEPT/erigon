@@ -134,6 +134,9 @@ func (c *CommitteeSubscribeMgmt) AddAttestationSubscription(ctx context.Context,
 	if _, err := c.sentinel.SetSubscribeExpiry(ctx, &request); err != nil {
 		return err
 	}
+	if p.IsAggregator {
+		log.Info("[test] Add attestation subscription", "slot", slot, "committeeIndex", cIndex, "isAggregator", p.IsAggregator, "validatorIndex", p.ValidatorIndex)
+	}
 	return nil
 }
 
