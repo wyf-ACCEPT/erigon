@@ -51,6 +51,10 @@ func ReadTxLookupEntry(db kv.Getter, txnHash libcommon.Hash) (*uint64, error) {
 	return &number, nil
 }
 
+func TxLookupCount(db kv.Tx) (uint64, error) {
+	return db.Count(kv.TxLookup)
+}
+
 // WriteTxLookupEntries stores a positional metadata for every transaction from
 // a block, enabling hash based transaction and receipt lookups.
 func WriteTxLookupEntries(db kv.Putter, block *types.Block) {

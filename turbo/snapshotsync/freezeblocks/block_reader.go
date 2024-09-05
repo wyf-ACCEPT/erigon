@@ -1153,7 +1153,11 @@ func (r *BlockReader) TxnLookup(ctx context.Context, tx kv.Getter, txnHash commo
 		return *n, true, nil
 	} else {
 		if dbgLogs {
-			log.Info(dbgPrefix + "not found in db")
+			var cnt uint64
+			if casted, ok := tx.(kv.Tx); ok {
+				cnt, _ = rawdb.TxLookupCount(casted)
+			}
+			log.Info(dbgPrefix+"not found in db", "txn_lokup_table_rows", cnt)
 		}
 	}
 
