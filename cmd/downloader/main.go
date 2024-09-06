@@ -242,6 +242,7 @@ func Downloader(ctx context.Context, logger log.Logger) error {
 	if seedbox {
 		snapcfg.LoadRemotePreverified()
 	}
+
 	cfg, err := downloadercfg.New(dirs, version, torrentLogLevel, downloadRate, uploadRate, torrentPort, torrentConnsPerFile, torrentDownloadSlots, staticPeers, webseedsList, chain, true, dbWritemap)
 	if err != nil {
 		return err

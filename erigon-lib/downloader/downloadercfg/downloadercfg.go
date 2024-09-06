@@ -17,6 +17,8 @@
 package downloadercfg
 
 import (
+	"context"
+	"fmt"
 	"net"
 	"net/url"
 	"os"
@@ -35,6 +37,7 @@ import (
 	"github.com/erigontech/erigon-lib/common/datadir"
 	"github.com/erigontech/erigon-lib/common/dbg"
 	"github.com/erigontech/erigon-lib/common/dir"
+	"github.com/erigontech/erigon-lib/diagnostics"
 	"github.com/erigontech/erigon-lib/log/v3"
 )
 
@@ -105,7 +108,17 @@ func Default() *torrent.ClientConfig {
 	return torrentConfig
 }
 
+func MbpsToBytesPerSecond(mbps float64) datasize.ByteSize {
+	return datasize.ByteSize(mbps * 125000)
+}
+
 func New(dirs datadir.Dirs, version string, verbosity lg.Level, downloadRate, uploadRate datasize.ByteSize, port, connsPerFile, downloadSlots int, staticPeers, webseeds []string, chainName string, lockSnapshots, mdbxWriteMap bool) (*Cfg, error) {
+	startspeedtesttime := time.Now()
+	fmt.Println("Starting speedtest start:", startspeedtesttime)
+	res := diagnostics.RunSpeedTest(context.Background(), webseeds)
+	fmt.Println("Speedtest result:", res.DownloadSpeed, "Mbps")
+	downloadRate = MbpsToBytesPerSecond(res.DownloadSpeed)
+
 	torrentConfig := Default()
 	//torrentConfig.PieceHashersPerTorrent = runtime.NumCPU()
 	torrentConfig.DataDir = dirs.Snap // `DataDir` of torrent-client-lib is different from Erigon's `DataDir`. Just same naming.

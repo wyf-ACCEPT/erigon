@@ -36,12 +36,12 @@ func (d *DiagnosticClient) setupSpeedtestDiagnostics(rootCtx context.Context) {
 		if d.speedTest {
 			d.networkSpeedMutex.Lock()
 			defer d.networkSpeedMutex.Unlock()
-			d.networkSpeed = d.runSpeedTest(rootCtx)
+			d.networkSpeed = RunSpeedTest(rootCtx, d.webseedsList)
 		}
 	}()
 }
 
-func (d *DiagnosticClient) runSpeedTest(rootCtx context.Context) NetworkSpeedTestResult {
+func RunSpeedTest(rootCtx context.Context, webseedsList []string) NetworkSpeedTestResult {
 	result := NetworkSpeedTestResult{
 		Latency:       time.Duration(0),
 		DownloadSpeed: float64(0),
@@ -49,7 +49,7 @@ func (d *DiagnosticClient) runSpeedTest(rootCtx context.Context) NetworkSpeedTes
 		PacketLoss:    float64(-1),
 	}
 
-	urlstr, err := speedtest.SelectSegmentFromWebseeds(d.webseedsList, cloudflareHeaders)
+	urlstr, err := speedtest.SelectSegmentFromWebseeds(webseedsList, cloudflareHeaders)
 	if err != nil {
 		log.Debug("[diagnostics] runSpeedTest", "err", err)
 		return result
