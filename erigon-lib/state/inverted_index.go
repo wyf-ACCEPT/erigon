@@ -55,6 +55,8 @@ import (
 	"github.com/erigontech/erigon-lib/seg"
 )
 
+var maxBitmapCardinalityIdx = 100
+
 type InvertedIndex struct {
 	iiCfg
 
@@ -432,8 +434,32 @@ func (w *invertedIndexBufferedWriter) Flush(ctx context.Context, tx kv.RwTx) err
 	if w.discard {
 		return nil
 	}
-
-	if err := w.index.Load(tx, w.indexTable, loadFunc, etl.TransformArgs{Quit: ctx.Done()}); err != nil {
+	reusableBitmap := roaring64.New() // Reuse bitmap to avoid allocations
+	var prevK []byte
+	if err := w.index.Load(tx, w.indexTable, func(k, v []byte, table etl.CurrentTableReader, next etl.LoadNextFunc) error {
+		if prevK == nil {
+			prevBitmapBytes, err := table.Get(k)
+			if err != nil {
+				return err
+			}
+			if _, err := reusableBitmap.FromUnsafeBytes(common.Copy(prevBitmapBytes)); err != nil {
+				return err
+			}
+		}
+		if prevK != nil && !bytes.Equal(prevK, k) {
+			enc, err := reusableBitmap.ToBytes()
+			if err != nil {
+				return err
+			}
+			reusableBitmap.RunOptimize() // Optimize before writing to disk
+			if err := next(prevK, prevK, enc); err != nil {
+				return err
+			}
+			reusableBitmap.Clear()
+		}
+		reusableBitmap.Add(binary.BigEndian.Uint64(v))
+		return nil
+	}, etl.TransformArgs{Quit: ctx.Done()}); err != nil {
 		return err
 	}
 	if err := w.indexKeys.Load(tx, w.indexKeysTable, loadFunc, etl.TransformArgs{Quit: ctx.Done()}); err != nil {
