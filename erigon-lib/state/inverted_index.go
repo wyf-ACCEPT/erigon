@@ -55,7 +55,7 @@ import (
 	"github.com/erigontech/erigon-lib/seg"
 )
 
-var maxBitmapCardinalityIdx = 100
+const maxBitmapCardinalityIdx = 256
 
 type InvertedIndex struct {
 	iiCfg
@@ -430,36 +430,125 @@ func (w *invertedIndexBufferedWriter) add(key, indexKey []byte) error {
 	return nil
 }
 
-func (w *invertedIndexBufferedWriter) Flush(ctx context.Context, tx kv.RwTx) error {
+func seekLastDupsort(c kv.CursorDupSort, key []byte) ([]byte, error) {
+	_, _, err := c.SeekExact(key)
+	if err != nil {
+		return nil, err
+	}
+	return c.LastDup()
+}
+
+func (w *invertedIndexBufferedWriter) flushIndexTable(ctx context.Context, tx kv.RwTx) error {
 	if w.discard {
 		return nil
 	}
 	reusableBitmap := roaring64.New() // Reuse bitmap to avoid allocations
-	var prevK []byte
-	if err := w.index.Load(tx, w.indexTable, func(k, v []byte, table etl.CurrentTableReader, next etl.LoadNextFunc) error {
-		if prevK == nil {
-			prevBitmapBytes, err := table.Get(k)
-			if err != nil {
-				return err
-			}
-			if _, err := reusableBitmap.FromUnsafeBytes(common.Copy(prevBitmapBytes)); err != nil {
+	var (
+		prevK             []byte
+		readBitmapBuffer  []byte
+		writeBitmapBuffer []byte
+	)
+
+	cursor, err := tx.RwCursorDupSort(w.indexTable)
+	if err != nil {
+		return err
+	}
+	defer cursor.Close()
+
+	// swapOutBitmapToKey - is a function that swaps out the current bitmap to a new key
+	swapOutBitmapToKey := func(k []byte, bmp *roaring64.Bitmap) error {
+		prevBitmapBytes, err := seekLastDupsort(cursor, k)
+		if err != nil {
+			return err
+		}
+		if len(prevBitmapBytes) == 0 {
+			bmp.Clear()
+		} else {
+			readBitmapBuffer = append(readBitmapBuffer[:0], prevBitmapBytes...)
+			if _, err := bmp.FromUnsafeBytes(readBitmapBuffer); err != nil {
 				return err
 			}
 		}
-		if prevK != nil && !bytes.Equal(prevK, k) {
-			enc, err := reusableBitmap.ToBytes()
-			if err != nil {
+		prevK = append(prevK[:0], k...) // Do this so that the next branch is not executed
+		if bmp.GetCardinality() >= maxBitmapCardinalityIdx {
+			if err := cursor.Put(k, []byte{1}); err != nil { // Add a bullshit value that will be removed later
 				return err
 			}
-			reusableBitmap.RunOptimize() // Optimize before writing to disk
-			if err := next(prevK, prevK, enc); err != nil {
+			if _, _, err := cursor.SeekBothExact(k, []byte{1}); err != nil {
+				return err
+			}
+			bmp.Clear()
+		}
+		return nil
+	}
+
+	flushBitmapToKey := func(k []byte, bmp *roaring64.Bitmap) error {
+		if err := cursor.DeleteCurrent(); err != nil {
+			return err
+		}
+		binary.BigEndian.AppendUint64(writeBitmapBuffer[:0], bmp.Minimum())
+		enc, err := reusableBitmap.ToBytes()
+		if err != nil {
+			return err
+		}
+		writeBitmapBuffer = append(writeBitmapBuffer[:8], enc...)
+		if err := cursor.Put(k, writeBitmapBuffer); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	if err := w.index.Load(tx, w.indexTable, func(k, v []byte, table etl.CurrentTableReader, next etl.LoadNextFunc) error {
+		if prevK == nil {
+			if err := swapOutBitmapToKey(k, reusableBitmap); err != nil {
+				return err
+			}
+		}
+		// There are some special cases now to handle:
+		// 1: if the key is not the same as the previous key, we need to write the previous key and bitmap to the database and start a new bitmap
+		// 2: if the cardinality of the bitmap is too large, we need to write the previous key and bitmap to the database and start a new bitmap
+		if !bytes.Equal(prevK, k) {
+			// If this is simply saving we are simply overwriting the previous cursor entry
+			if err := flushBitmapToKey(prevK, reusableBitmap); err != nil {
+				return err
+			}
+			// move to the next key after we are done writing the previous key
+			if err := swapOutBitmapToKey(k, reusableBitmap); err != nil {
+				return err
+			}
+		} else if reusableBitmap.GetCardinality() > maxBitmapCardinalityIdx {
+			if err := flushBitmapToKey(prevK, reusableBitmap); err != nil {
+				return err
+			}
+			if err := cursor.Put(k, []byte{1}); err != nil { // Add a bullshit value that will be removed later
+				return err
+			}
+			if _, _, err := cursor.SeekBothExact(k, []byte{1}); err != nil {
 				return err
 			}
 			reusableBitmap.Clear()
 		}
+
 		reusableBitmap.Add(binary.BigEndian.Uint64(v))
+		prevK = append(prevK[:0], k...)
 		return nil
 	}, etl.TransformArgs{Quit: ctx.Done()}); err != nil {
+		return err
+	}
+	if reusableBitmap.GetCardinality() > 0 {
+		if err := flushBitmapToKey(prevK, reusableBitmap); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (w *invertedIndexBufferedWriter) Flush(ctx context.Context, tx kv.RwTx) error {
+	if w.discard {
+		return nil
+	}
+
+	if err := w.flushIndexTable(ctx, tx); err != nil {
 		return err
 	}
 	if err := w.indexKeys.Load(tx, w.indexKeysTable, loadFunc, etl.TransformArgs{Quit: ctx.Done()}); err != nil {
