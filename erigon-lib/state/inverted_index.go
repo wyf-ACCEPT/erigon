@@ -431,11 +431,11 @@ func (w *invertedIndexBufferedWriter) add(key, indexKey []byte) error {
 }
 
 func seekLastDupsort(c kv.CursorDupSort, key []byte) ([]byte, error) {
-	k, _, err := c.SeekExact(key)
+	k, v, err := c.SeekExact(key)
 	if err != nil {
 		return nil, err
 	}
-	if k == nil {
+	if k == nil || v == nil {
 		return nil, nil
 	}
 	return c.LastDup()
@@ -484,8 +484,8 @@ func (w *invertedIndexBufferedWriter) flushIndexTable(ctx context.Context, tx kv
 		return nil
 	}
 
-	flushBitmapToKey := func(k []byte, bmp *roaring64.Bitmap, overwrite bool) error {
-		if overwrite {
+	flushBitmapToKey := func(k []byte, bmp *roaring64.Bitmap) error {
+		if overwriteEntry {
 			if err := cursor.DeleteCurrent(); err != nil {
 				return err
 			}
@@ -513,7 +513,7 @@ func (w *invertedIndexBufferedWriter) flushIndexTable(ctx context.Context, tx kv
 		// 2: if the cardinality of the bitmap is too large, we need to write the previous key and bitmap to the database and start a new bitmap
 		if !bytes.Equal(prevK, k) {
 			// If this is simply saving we are simply overwriting the previous cursor entry
-			if err := flushBitmapToKey(prevK, reusableBitmap, overwriteEntry); err != nil {
+			if err := flushBitmapToKey(prevK, reusableBitmap); err != nil {
 				return err
 			}
 			// move to the next key after we are done writing the previous key
@@ -521,7 +521,7 @@ func (w *invertedIndexBufferedWriter) flushIndexTable(ctx context.Context, tx kv
 				return err
 			}
 		} else if reusableBitmap.GetCardinality() > maxBitmapCardinalityIdx {
-			if err := flushBitmapToKey(prevK, reusableBitmap, overwriteEntry); err != nil {
+			if err := flushBitmapToKey(prevK, reusableBitmap); err != nil {
 				return err
 			}
 			overwriteEntry = false
@@ -535,7 +535,7 @@ func (w *invertedIndexBufferedWriter) flushIndexTable(ctx context.Context, tx kv
 		return err
 	}
 	if reusableBitmap.GetCardinality() > 0 {
-		if err := flushBitmapToKey(prevK, reusableBitmap, overwriteEntry); err != nil {
+		if err := flushBitmapToKey(prevK, reusableBitmap); err != nil {
 			return err
 		}
 	}
