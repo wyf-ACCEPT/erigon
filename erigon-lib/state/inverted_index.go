@@ -466,11 +466,11 @@ func (w *invertedIndexBufferedWriter) flushIndexTable(ctx context.Context, tx kv
 		if err != nil {
 			return err
 		}
-		prevBitmapBytes = prevBitmapBytes[8:]
 		if len(prevBitmapBytes) == 0 {
 			overwriteEntry = false
 			bmp.Clear()
 		} else {
+			prevBitmapBytes = prevBitmapBytes[8:] // first 8 bytes are the txnNum min
 			readBitmapBuffer = append(readBitmapBuffer[:0], prevBitmapBytes...)
 			if _, err := bmp.FromUnsafeBytes(readBitmapBuffer); err != nil {
 				return err
