@@ -431,9 +431,12 @@ func (w *invertedIndexBufferedWriter) add(key, indexKey []byte) error {
 }
 
 func seekLastDupsort(c kv.CursorDupSort, key []byte) ([]byte, error) {
-	_, _, err := c.SeekExact(key)
+	k, _, err := c.SeekExact(key)
 	if err != nil {
 		return nil, err
+	}
+	if k == nil {
+		return nil, nil
 	}
 	return c.LastDup()
 }
@@ -455,6 +458,8 @@ func (w *invertedIndexBufferedWriter) flushIndexTable(ctx context.Context, tx kv
 	}
 	defer cursor.Close()
 
+	var overwriteEntry bool
+
 	// swapOutBitmapToKey - is a function that swaps out the current bitmap to a new key
 	swapOutBitmapToKey := func(k []byte, bmp *roaring64.Bitmap) error {
 		prevBitmapBytes, err := seekLastDupsort(cursor, k)
@@ -462,29 +467,28 @@ func (w *invertedIndexBufferedWriter) flushIndexTable(ctx context.Context, tx kv
 			return err
 		}
 		if len(prevBitmapBytes) == 0 {
+			overwriteEntry = false
 			bmp.Clear()
 		} else {
 			readBitmapBuffer = append(readBitmapBuffer[:0], prevBitmapBytes...)
 			if _, err := bmp.FromUnsafeBytes(readBitmapBuffer); err != nil {
 				return err
 			}
+			overwriteEntry = true
 		}
 		prevK = append(prevK[:0], k...) // Do this so that the next branch is not executed
 		if bmp.GetCardinality() >= maxBitmapCardinalityIdx {
-			if err := cursor.Put(k, []byte{1}); err != nil { // Add a bullshit value that will be removed later
-				return err
-			}
-			if _, _, err := cursor.SeekBothExact(k, []byte{1}); err != nil {
-				return err
-			}
 			bmp.Clear()
+			overwriteEntry = false
 		}
 		return nil
 	}
 
-	flushBitmapToKey := func(k []byte, bmp *roaring64.Bitmap) error {
-		if err := cursor.DeleteCurrent(); err != nil {
-			return err
+	flushBitmapToKey := func(k []byte, bmp *roaring64.Bitmap, overwrite bool) error {
+		if overwrite {
+			if err := cursor.DeleteCurrent(); err != nil {
+				return err
+			}
 		}
 		binary.BigEndian.AppendUint64(writeBitmapBuffer[:0], bmp.Minimum())
 		enc, err := reusableBitmap.ToBytes()
@@ -509,7 +513,7 @@ func (w *invertedIndexBufferedWriter) flushIndexTable(ctx context.Context, tx kv
 		// 2: if the cardinality of the bitmap is too large, we need to write the previous key and bitmap to the database and start a new bitmap
 		if !bytes.Equal(prevK, k) {
 			// If this is simply saving we are simply overwriting the previous cursor entry
-			if err := flushBitmapToKey(prevK, reusableBitmap); err != nil {
+			if err := flushBitmapToKey(prevK, reusableBitmap, overwriteEntry); err != nil {
 				return err
 			}
 			// move to the next key after we are done writing the previous key
@@ -517,15 +521,10 @@ func (w *invertedIndexBufferedWriter) flushIndexTable(ctx context.Context, tx kv
 				return err
 			}
 		} else if reusableBitmap.GetCardinality() > maxBitmapCardinalityIdx {
-			if err := flushBitmapToKey(prevK, reusableBitmap); err != nil {
+			if err := flushBitmapToKey(prevK, reusableBitmap, overwriteEntry); err != nil {
 				return err
 			}
-			if err := cursor.Put(k, []byte{1}); err != nil { // Add a bullshit value that will be removed later
-				return err
-			}
-			if _, _, err := cursor.SeekBothExact(k, []byte{1}); err != nil {
-				return err
-			}
+			overwriteEntry = false
 			reusableBitmap.Clear()
 		}
 
@@ -536,7 +535,7 @@ func (w *invertedIndexBufferedWriter) flushIndexTable(ctx context.Context, tx kv
 		return err
 	}
 	if reusableBitmap.GetCardinality() > 0 {
-		if err := flushBitmapToKey(prevK, reusableBitmap); err != nil {
+		if err := flushBitmapToKey(prevK, reusableBitmap, overwriteEntry); err != nil {
 			return err
 		}
 	}
