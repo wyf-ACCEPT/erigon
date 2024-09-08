@@ -451,6 +451,8 @@ func (w *invertedIndexBufferedWriter) flushIndexTable(ctx context.Context, tx kv
 		readBitmapBuffer  []byte
 		writeBitmapBuffer []byte
 	)
+	var totalBytes uint64
+	var totalNumbers uint64
 
 	cursor, err := tx.RwCursorDupSort(w.indexTable)
 	if err != nil {
@@ -491,6 +493,7 @@ func (w *invertedIndexBufferedWriter) flushIndexTable(ctx context.Context, tx kv
 				return err
 			}
 		}
+		reusableBitmap.RunOptimize()
 		writeBitmapBuffer = binary.BigEndian.AppendUint64(writeBitmapBuffer[:0], bmp.Minimum())
 		enc, err := reusableBitmap.ToBytes()
 		if err != nil {
