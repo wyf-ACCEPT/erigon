@@ -490,7 +490,7 @@ func (w *invertedIndexBufferedWriter) flushIndexTable(ctx context.Context, tx kv
 				return err
 			}
 		}
-		binary.BigEndian.AppendUint64(writeBitmapBuffer[:0], bmp.Minimum())
+		writeBitmapBuffer = binary.BigEndian.AppendUint64(writeBitmapBuffer[:0], bmp.Minimum())
 		enc, err := reusableBitmap.ToBytes()
 		if err != nil {
 			return err
