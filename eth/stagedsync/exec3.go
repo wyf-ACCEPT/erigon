@@ -677,9 +677,11 @@ func ExecV3(ctx context.Context,
 
 Loop:
 	for ; blockNum <= maxBlockNum; blockNum++ {
+		fmt.Println("NOTSO-YO", blockNum, maxBlockNum)
 		// set shouldGenerateChangesets=true if we are at last n blocks from maxBlockNum. this is as a safety net in chains
 		// where during initial sync we can expect bogus blocks to be imported.
 		if !shouldGenerateChangesets && blockNum > cfg.blockReader.FrozenBlocks() && blockNum+changesetSafeRange >= maxBlockNum {
+			fmt.Println("YO", blockNum, maxBlockNum)
 			aggTx := applyTx.(state2.HasAggTx).AggTx().(*state2.AggregatorRoTx)
 			aggTx.RestrictSubsetFileDeletions(true)
 			start := time.Now()
