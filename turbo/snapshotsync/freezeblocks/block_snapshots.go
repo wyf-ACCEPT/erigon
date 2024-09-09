@@ -1555,7 +1555,7 @@ func (br *BlockRetire) retireBlocks(ctx context.Context, minBlockNum uint64, max
 		} else if !has {
 			return false, nil
 		}
-		logger.Log(lvl, "[snapshots] Retire Blocks", "range",
+		logger.Warn("[snapshots] Retire Blocks", "range",
 			fmt.Sprintf("%s-%s", common2.PrettyCounter(blockFrom), common2.PrettyCounter(blockTo)))
 		// in future we will do it in background
 		if err := DumpBlocks(ctx, blockFrom, blockTo, br.chainConfig, tmpDir, snapshots.Dir(), db, workers, lvl, logger, blockReader); err != nil {
