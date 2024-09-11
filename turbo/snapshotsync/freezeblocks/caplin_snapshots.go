@@ -375,13 +375,13 @@ func (s *CaplinSnapshots) ReopenFolder() error {
 func (s *CaplinSnapshots) closeWhatNotInList(l []string) {
 	toClose := make([]*DirtySegment, 0)
 	if s == nil {
-		panic(1)
+		panic(222)
 	}
 	if s.BeaconBlocks == nil {
-		panic(1)
+		panic(333)
 	}
 	if s.BeaconBlocks.DirtySegments == nil {
-		panic(1)
+		panic(444)
 	}
 	s.BeaconBlocks.DirtySegments.Walk(func(segments []*DirtySegment) bool {
 	Loop1:
