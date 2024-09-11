@@ -2522,6 +2522,7 @@ func (s *RoSnapshots) ViewSingleFile(t snaptype.Type, blockNum uint64) (segment 
 		return nil, false, noop
 	}
 
+	fmt.Printf("alex00: %d\n", segs.maxVisibleBlock.Load())
 	if blockNum > segs.maxVisibleBlock.Load() {
 		return nil, false, noop
 	}
