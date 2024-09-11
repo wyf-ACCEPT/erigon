@@ -678,15 +678,17 @@ func (s *RoSnapshots) idxAvailability() uint64 {
 // - user must be able: delete any snapshot file and Erigon will self-heal by re-downloading
 // - RPC return Nil for historical blocks if snapshots are not open
 func (s *RoSnapshots) OptimisticReopenWithDB(db kv.RoDB) {
-	var snList []string
-	_ = db.View(context.Background(), func(tx kv.Tx) (err error) {
-		snList, _, err = rawdb.ReadSnapshots(tx)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-	_ = s.ReopenList(snList, true)
+	_ = s.ReopenFolder()
+
+	//var snList []string
+	//_ = db.View(context.Background(), func(tx kv.Tx) (err error) {
+	//	snList, _, err = rawdb.ReadSnapshots(tx)
+	//	if err != nil {
+	//		return err
+	//	}
+	//	return nil
+	//})
+	//_ = s.ReopenList(snList, true)
 }
 
 func (s *RoSnapshots) LS() {
