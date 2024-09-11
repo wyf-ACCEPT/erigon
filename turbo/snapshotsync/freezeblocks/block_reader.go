@@ -560,11 +560,11 @@ func (r *BlockReader) CanonicalHash(ctx context.Context, tx kv.Getter, blockHeig
 
 	header, _, err := r.headerFromSnapshot(blockHeight, seg, nil)
 	if err != nil {
-		panic(1)
+		panic(11)
 		return h, false, err
 	}
 	if header == nil {
-		panic(2)
+		panic(22)
 		return h, false, nil
 	}
 	h = header.Hash()
