@@ -4,9 +4,6 @@ on:
   schedule:
     - cron: '0 8 * * *'  # Run every day at 8:00 UTC
   workflow_dispatch:     # Run manually
-  push:
-    branches:
-      - qa_tests_rpc_integration_v3  # only to debug the workflow
 
 jobs:
   integration-test-suite:
@@ -25,7 +22,7 @@ jobs:
       - name: Checkout RPC Tests Repository & Install Requirements
         run: |
           rm -rf ${{ runner.workspace }}/rpc-tests
-          git -c advice.detachedHead=false clone --depth 1 --branch v0.42.0 https://github.com/erigontech/rpc-tests ${{runner.workspace}}/rpc-tests
+          git -c advice.detachedHead=false clone --depth 1 --branch v0.47.0 https://github.com/erigontech/rpc-tests ${{runner.workspace}}/rpc-tests
           cd ${{ runner.workspace }}/rpc-tests
           pip3 install -r requirements.txt
 
