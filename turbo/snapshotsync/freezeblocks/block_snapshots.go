@@ -601,12 +601,15 @@ func (s *RoSnapshots) recalcVisibleFiles() {
 		dirtySegments.Walk(func(segs []*DirtySegment) bool {
 			for _, seg := range segs {
 				if seg.canDelete.Load() {
+					fmt.Printf("[dbg] can del: %s, %s\n", segtype.String(), seg.FileName())
 					continue
 				}
 				if seg.Decompressor == nil {
+					fmt.Printf("[dbg] Decompressor is nil: %s, %s\n", segtype.String(), seg.FileName())
 					continue
 				}
 				if seg.indexes == nil {
+					fmt.Printf("[dbg] idx is nil: %s, %s\n", segtype.String(), seg.FileName())
 					continue
 				}
 				for len(newVisibleSegments) > 0 && newVisibleSegments[len(newVisibleSegments)-1].src.isSubSetOf(seg) {
