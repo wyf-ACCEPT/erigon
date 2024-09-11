@@ -498,6 +498,7 @@ func newRoSnapshots(cfg ethconfig.BlocksFreezing, snapDir string, types []snapty
 
 	s := &RoSnapshots{dir: snapDir, cfg: cfg, segments: segs, logger: logger, types: types}
 	s.segmentsMin.Store(segmentsMin)
+	s.recalcVisibleFiles()
 
 	return s
 }
@@ -2414,6 +2415,7 @@ func (m *Merger) merge(ctx context.Context, v *View, toMerge []*DirtySegment, ta
 	if err != nil {
 		return nil, err
 	}
+	defer f.Close()
 	if m.noFsync {
 		f.DisableFsync()
 	}
