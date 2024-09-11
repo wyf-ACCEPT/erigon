@@ -631,6 +631,7 @@ func (s *RoSnapshots) recalcVisibleFiles() {
 		if len(newVisibleSegments) > 0 {
 			to = newVisibleSegments[len(newVisibleSegments)-1].to - 1
 		}
+		fmt.Printf("[dbg] new visible: %s, %d\n", segtype.String(), to)
 		maxVisibleBlocks = append(maxVisibleBlocks, to)
 		return true
 	})
