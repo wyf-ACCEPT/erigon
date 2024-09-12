@@ -150,10 +150,8 @@ func NotifyNewHeaders(ctx context.Context, finishStageBeforeSync uint64, finishS
 	}
 	// Notify all headers we have (either canonical or not) in a maximum range span of 1024
 	var notifyFrom uint64
-	var isUnwind bool
 	if unwindTo != nil && *unwindTo != 0 && (*unwindTo) < finishStageBeforeSync {
 		notifyFrom = *unwindTo
-		isUnwind = true
 	} else {
 		heightSpan := finishStageAfterSync - finishStageBeforeSync
 		if heightSpan > 1024 {
@@ -190,16 +188,7 @@ func NotifyNewHeaders(ctx context.Context, finishStageBeforeSync uint64, finishS
 		notifier.OnNewHeader(headersRlp)
 		headerTiming := time.Since(t)
 
-		t = time.Now()
-		if notifier.HasLogSubsriptions() {
-			logs, err := ReadLogs(tx, notifyFrom, isUnwind, blockReader)
-			if err != nil {
-				return err
-			}
-			notifier.OnLogs(logs)
-		}
-		logTiming := time.Since(t)
-		logger.Debug("RPC Daemon notified of new headers", "from", notifyFrom-1, "to", notifyTo, "amount", len(headersRlp), "hash", notifyToHash, "header sending", headerTiming, "log sending", logTiming)
+		logger.Debug("RPC Daemon notified of new headers", "from", notifyFrom-1, "to", notifyTo, "amount", len(headersRlp), "hash", notifyToHash, "header sending", headerTiming)
 	}
 	return nil
 }
