@@ -172,6 +172,8 @@ func NotifyNewHeaders(ctx context.Context, finishStageBeforeSync uint64, finishS
 		if blockNum > finishStageAfterSync { //[from,to)
 			return nil
 		}
+		fmt.Printf("[dbg] notify header: %d\n", blockNum)
+
 		notifyTo = blockNum
 		notifyToHash = libcommon.BytesToHash(hash)
 		headerRLP := rawdb.ReadHeaderRLP(tx, notifyToHash, notifyTo)
