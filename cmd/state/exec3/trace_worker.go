@@ -22,7 +22,6 @@ import (
 	"github.com/erigontech/erigon-lib/chain"
 	"github.com/erigontech/erigon-lib/common"
 	"github.com/erigontech/erigon-lib/kv"
-
 	"github.com/erigontech/erigon/consensus"
 	"github.com/erigontech/erigon/core"
 	"github.com/erigontech/erigon/core/state"
@@ -30,6 +29,7 @@ import (
 	"github.com/erigontech/erigon/core/vm"
 	"github.com/erigontech/erigon/core/vm/evmtypes"
 	"github.com/erigontech/erigon/turbo/services"
+	"github.com/erigontech/erigon/turbo/shards"
 	"github.com/erigontech/erigon/turbo/transactions"
 )
 
@@ -45,6 +45,7 @@ type Resetable interface {
 
 type TraceWorker struct {
 	stateReader  *state.HistoryReaderV3
+	stateWriter  state.StateWriter
 	engine       consensus.EngineReader
 	headerReader services.HeaderReader
 	tx           kv.Getter
@@ -66,6 +67,9 @@ type TraceWorker struct {
 func NewTraceWorker(tx kv.TemporalTx, cc *chain.Config, engine consensus.EngineReader, br services.HeaderReader, tracer GenericTracer) *TraceWorker {
 	stateReader := state.NewHistoryReaderV3()
 	stateReader.SetTx(tx)
+	stateCache := shards.NewStateCache(32, 0 /* no limit */) // this cache living only during current RPC call, but required to store state writes
+	cachedReader := state.NewCachedReader(stateReader, stateCache)
+	cachedWriter := state.NewCachedWriter(noop, stateCache)
 
 	ie := &TraceWorker{
 		tx:           tx,
@@ -73,10 +77,11 @@ func NewTraceWorker(tx kv.TemporalTx, cc *chain.Config, engine consensus.EngineR
 		chainConfig:  cc,
 		headerReader: br,
 		stateReader:  stateReader,
+		stateWriter:  cachedWriter,
 		tracer:       tracer,
 		evm:          vm.NewEVM(evmtypes.BlockContext{}, evmtypes.TxContext{}, nil, cc, vm.Config{}),
 		vmConfig:     &vm.Config{},
-		ibs:          state.New(stateReader),
+		ibs:          state.New(cachedReader),
 	}
 	if tracer != nil {
 		ie.vmConfig = &vm.Config{Debug: true, Tracer: tracer}
