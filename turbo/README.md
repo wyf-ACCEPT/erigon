@@ -19,4 +19,4 @@ Our own binary [`erigon`](../cmd/erigon) is built using it.
 
 * [`erigoncustom`](../cmd/erigoncustom/main.go) - a very simple example of adding a custom stage, a custom bucket and a custom command-line parameter
 
-* [erigon-examples](https://github.com/mandrigin/turbo-api-examples) - a series of examples for Erigon api
+* [erigon-examples](https://github.com/mandrigin/turbo-api-examples) - a series of examples for Erigon API
