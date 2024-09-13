@@ -74,10 +74,10 @@ func (e *ExtraData) EncodingSizeSSZ() int {
 
 // HashSSZ returns the Merkle Root of the ExtraData byte slice.
 func (e *ExtraData) HashSSZ() ([32]byte, error) {
-	leaves := make([]byte, length.Hash*2)
-	copy(leaves, e.data[:e.l])
+	var leaves [length.Hash * 2]byte
+	copy(leaves[:], e.data[:e.l])
 	binary.LittleEndian.PutUint64(leaves[length.Hash:], uint64(e.l))
-	if err := merkle_tree.MerkleRootFromFlatLeaves(leaves, leaves); err != nil {
+	if err := merkle_tree.MerkleRootFromFlatLeaves(leaves[:], leaves[:]); err != nil {
 		return [32]byte{}, err
 	}
 	return common.BytesToHash(leaves[:length.Hash]), nil

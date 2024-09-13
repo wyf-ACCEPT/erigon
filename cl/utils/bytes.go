@@ -41,9 +41,9 @@ func BytesToBytes4(b []byte) (ret [4]byte) {
 }
 
 func Uint64ToLE(i uint64) []byte {
-	buf := make([]byte, 8)
-	binary.LittleEndian.PutUint64(buf, i)
-	return buf
+	var buf [8]byte
+	binary.LittleEndian.PutUint64(buf[:], i)
+	return buf[:]
 }
 
 func DecompressSnappy(data []byte) ([]byte, error) {

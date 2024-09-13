@@ -805,9 +805,9 @@ func TestCloseWaitsAfterTxBegin(t *testing.T) {
 
 // u64tob converts a uint64 into an 8-byte slice.
 func u64tob(v uint64) []byte {
-	b := make([]byte, 8)
-	binary.BigEndian.PutUint64(b, v)
-	return b
+	var b [8]byte
+	binary.BigEndian.PutUint64(b[:], v)
+	return b[:]
 }
 
 // Ensure two functions can perform updates in a single batch.

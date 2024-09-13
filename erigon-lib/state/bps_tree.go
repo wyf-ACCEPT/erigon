@@ -164,9 +164,9 @@ type Node struct {
 }
 
 func encodeListNodes(nodes []Node, w io.Writer) error {
-	numBuf := make([]byte, 8)
-	binary.BigEndian.PutUint64(numBuf, uint64(len(nodes)))
-	if _, err := w.Write(numBuf); err != nil {
+	var numBuf [8]byte
+	binary.BigEndian.PutUint64(numBuf[:], uint64(len(nodes)))
+	if _, err := w.Write(numBuf[:]); err != nil {
 		return err
 	}
 
