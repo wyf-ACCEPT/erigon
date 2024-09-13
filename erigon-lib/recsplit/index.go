@@ -183,7 +183,7 @@ func OpenIndex(indexFilePath string) (id *Index, err error) {
 	idx.enums = features&Enums != No
 	idx.lessFalsePositives = features&LessFalsePositives != No
 	offset++
-	fmt.Println("Processing", idx.fileName, idx.enums, idx.keysAdded)
+	fmt.Println("Processing", idx.fileName, "idx.enums", idx.enums, "idx.keysAdded", idx.keyCount)
 	if idx.enums && idx.keyCount > 0 {
 		var size int
 		idx.offsetEf, size = eliasfano32.ReadEliasFano(idx.data[offset:])
