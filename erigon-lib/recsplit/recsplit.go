@@ -686,7 +686,6 @@ func (rs *RecSplit) Build(ctx context.Context) error {
 	if err := rs.indexW.WriteByte(byte(features)); err != nil {
 		return fmt.Errorf("writing enums = true: %w", err)
 	}
-	fmt.Println("Processing", rs.indexFileName, rs.enums, rs.keysAdded)
 	if rs.enums && rs.keysAdded > 0 {
 		// Write out elias fano for offsets
 		if err := rs.offsetEf.Write(rs.indexW); err != nil {
