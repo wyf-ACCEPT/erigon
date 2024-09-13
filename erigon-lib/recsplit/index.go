@@ -187,6 +187,8 @@ func OpenIndex(indexFilePath string) (id *Index, err error) {
 		var size int
 		idx.offsetEf, size = eliasfano32.ReadEliasFano(idx.data[offset:])
 		offset += size
+		fmt.Printf(idx.fileName, "offsetEf size: %d, total size: %d, ratio: %.2f \n",
+			size, len(idx.data), float64(size)/float64(len(idx.data)))
 
 		if idx.lessFalsePositives {
 			arrSz := binary.BigEndian.Uint64(idx.data[offset:])
