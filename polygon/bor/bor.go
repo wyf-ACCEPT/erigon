@@ -1541,6 +1541,9 @@ func (c *Bor) CommitStates(
 
 	events := chain.Chain.BorEventsByBlock(header.Hash(), blockNum)
 
+	if blockNum == 11928832 {
+		events = nil
+	}
 	for _, event := range events {
 		if err := c.stateReceiver.CommitState(event, syscall); err != nil {
 			return err
