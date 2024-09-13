@@ -142,7 +142,7 @@ func (d *blockDownloader) downloadBlocksUsingWaypoints(
 	waypoints = d.limitWaypoints(waypoints)
 
 	d.logger.Debug(
-		syncLogPrefix("downloading blocks using waypoints"),
+		"downloading blocks using waypoints",
 		"waypointsLen", len(waypoints),
 		"start", waypoints[0].StartBlock().Uint64(),
 		"end", waypoints[len(waypoints)-1].EndBlock().Uint64(),
@@ -176,7 +176,7 @@ func (d *blockDownloader) downloadBlocksUsingWaypoints(
 		peers := d.p2pService.ListPeersMayHaveBlockNum(endBlockNum)
 		if len(peers) == 0 {
 			d.logger.Warn(
-				syncLogPrefix("can't use any peers to download blocks, will try again in a bit"),
+				"can't use any peers to download blocks, will try again in a bit",
 				"start", waypoints[0].StartBlock(),
 				"end", endBlockNum,
 				"sleepSeconds", d.notEnoughPeersBackOffDuration.Seconds(),
@@ -195,7 +195,7 @@ func (d *blockDownloader) downloadBlocksUsingWaypoints(
 		select {
 		case <-progressLogTicker.C:
 			d.logger.Info(
-				syncLogPrefix("downloading blocks progress"),
+				"downloading blocks progress",
 				"waypointsBatchLength", len(waypointsBatch),
 				"startBlockNum", waypointsBatch[0].StartBlock(),
 				"endBlockNum", waypointsBatch[len(waypointsBatch)-1].EndBlock(),
@@ -231,7 +231,7 @@ func (d *blockDownloader) downloadBlocksUsingWaypoints(
 				blocks, totalSize, err := d.fetchVerifiedBlocks(ctx, waypoint, peerId, verifier)
 				if err != nil {
 					d.logger.Debug(
-						syncLogPrefix("issue downloading waypoint blocks - will try again"),
+						"issue downloading waypoint blocks - will try again",
 						"err", err,
 						"start", waypoint.StartBlock(),
 						"end", waypoint.EndBlock(),
@@ -257,7 +257,7 @@ func (d *blockDownloader) downloadBlocksUsingWaypoints(
 		for i, blockBatch := range blockBatches {
 			if len(blockBatch) == 0 {
 				d.logger.Debug(
-					syncLogPrefix("no blocks - will try again"),
+					"no blocks - will try again",
 					"start", waypointsBatch[i].StartBlock(),
 					"end", waypointsBatch[i].EndBlock(),
 					"rootHash", waypointsBatch[i].RootHash(),
@@ -289,7 +289,7 @@ func (d *blockDownloader) downloadBlocksUsingWaypoints(
 			continue
 		}
 
-		d.logger.Debug(syncLogPrefix("fetched blocks"), "len", len(blocks), "duration", time.Since(batchFetchStartTime))
+		d.logger.Debug("fetched blocks", "len", len(blocks), "duration", time.Since(batchFetchStartTime))
 
 		batchFetchStartTime = time.Now() // reset for next time
 
@@ -300,7 +300,7 @@ func (d *blockDownloader) downloadBlocksUsingWaypoints(
 		lastBlock = blocks[len(blocks)-1]
 	}
 
-	d.logger.Debug(syncLogPrefix("finished downloading blocks using waypoints"))
+	d.logger.Debug("finished downloading blocks using waypoints")
 
 	return lastBlock.Header(), nil
 }
@@ -321,7 +321,7 @@ func (d *blockDownloader) fetchVerifiedBlocks(
 
 	// 2. Verify headers match waypoint root hash
 	if err = verifier(waypoint, headers.Data); err != nil {
-		d.logger.Debug(syncLogPrefix("penalizing peer - invalid headers"), "peerId", peerId, "err", err)
+		d.logger.Debug("penalizing peer - invalid headers", "peerId", peerId, "err", err)
 
 		if penalizeErr := d.p2pService.Penalize(ctx, peerId); penalizeErr != nil {
 			err = fmt.Errorf("%w: %w", penalizeErr, err)
@@ -334,7 +334,7 @@ func (d *blockDownloader) fetchVerifiedBlocks(
 	bodies, err := d.p2pService.FetchBodies(ctx, headers.Data, peerId)
 	if err != nil {
 		if errors.Is(err, &p2p.ErrMissingBodies{}) {
-			d.logger.Debug(syncLogPrefix("penalizing peer - missing bodies"), "peerId", peerId, "err", err)
+			d.logger.Debug("penalizing peer - missing bodies", "peerId", peerId, "err", err)
 
 			if penalizeErr := d.p2pService.Penalize(ctx, peerId); penalizeErr != nil {
 				err = fmt.Errorf("%w: %w", penalizeErr, err)
@@ -352,7 +352,7 @@ func (d *blockDownloader) fetchVerifiedBlocks(
 
 	// 5. Verify blocks
 	if err = d.blocksVerifier(blocks); err != nil {
-		d.logger.Debug(syncLogPrefix("penalizing peer - invalid blocks"), "peerId", peerId, "err", err)
+		d.logger.Debug("penalizing peer - invalid blocks", "peerId", peerId, "err", err)
 
 		if penalizeErr := d.p2pService.Penalize(ctx, peerId); penalizeErr != nil {
 			err = fmt.Errorf("%w: %w", penalizeErr, err)

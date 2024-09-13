@@ -77,7 +77,7 @@ func NewSync(
 		heimdallSync:      heimdallSync,
 		bridgeSync:        bridgeSync,
 		events:            events,
-		logger:            logger,
+		logger:            logger.New().WithPrefix("sync"),
 	}
 }
 
@@ -110,7 +110,7 @@ func (s *Sync) handleMilestoneTipMismatch(
 	oldTipNum := oldTip.Number.Uint64()
 
 	s.logger.Debug(
-		syncLogPrefix("local chain tip does not match the milestone, unwinding to the previous verified milestone"),
+		"local chain tip does not match the milestone, unwinding to the previous verified milestone",
 		"oldTipNum", oldTipNum,
 		"milestoneId", milestone.Id,
 		"milestoneStart", milestone.StartBlock(),
@@ -154,7 +154,7 @@ func (s *Sync) applyNewMilestoneOnTip(
 	}
 
 	s.logger.Debug(
-		syncLogPrefix("applying new milestone event"),
+		"applying new milestone event",
 		"milestoneStartBlockNum", milestone.StartBlock().Uint64(),
 		"milestoneEndBlockNum", milestone.EndBlock().Uint64(),
 		"milestoneRootHash", milestone.RootHash(),
@@ -185,7 +185,7 @@ func (s *Sync) applyNewBlockOnTip(
 	}
 
 	s.logger.Debug(
-		syncLogPrefix("applying new block event"),
+		"applying new block event",
 		"blockNum", newBlockHeaderNum,
 		"blockHash", newBlockHeader.Hash(),
 		"parentBlockHash", newBlockHeader.ParentHash,
@@ -199,7 +199,7 @@ func (s *Sync) applyNewBlockOnTip(
 		if err != nil {
 			if s.ignoreFetchBlocksErrOnTipEvent(err) {
 				s.logger.Debug(
-					syncLogPrefix("applyNewBlockOnTip: failed to fetch complete blocks, ignoring event"),
+					"applyNewBlockOnTip: failed to fetch complete blocks, ignoring event",
 					"err", err,
 					"peerId", event.PeerId,
 					"lastBlockNum", newBlockHeaderNum,
@@ -216,12 +216,12 @@ func (s *Sync) applyNewBlockOnTip(
 
 	if err := s.blocksVerifier(blockChain); err != nil {
 		s.logger.Debug(
-			syncLogPrefix("applyNewBlockOnTip: invalid new block event from peer, penalizing and ignoring"),
+			"applyNewBlockOnTip: invalid new block event from peer, penalizing and ignoring",
 			"err", err,
 		)
 
 		if err = s.p2pService.Penalize(ctx, event.PeerId); err != nil {
-			s.logger.Debug(syncLogPrefix("applyNewBlockOnTip: issue with penalizing peer"), "err", err)
+			s.logger.Debug("applyNewBlockOnTip: issue with penalizing peer", "err", err)
 		}
 
 		return nil
@@ -236,7 +236,7 @@ func (s *Sync) applyNewBlockOnTip(
 	newConnectedHeaders, err := ccBuilder.Connect(ctx, headerChain)
 	if err != nil {
 		s.logger.Debug(
-			syncLogPrefix("applyNewBlockOnTip: couldn't connect a header to the local chain tip, ignoring"),
+			"applyNewBlockOnTip: couldn't connect a header to the local chain tip, ignoring",
 			"err", err,
 		)
 
@@ -271,7 +271,7 @@ func (s *Sync) applyNewBlockHashesOnTip(
 		}
 
 		s.logger.Debug(
-			syncLogPrefix("applying new block hash event"),
+			"applying new block hash event",
 			"blockNum", headerHashNum.Number,
 			"blockHash", headerHashNum.Hash,
 		)
@@ -280,7 +280,7 @@ func (s *Sync) applyNewBlockHashesOnTip(
 		if err != nil {
 			if s.ignoreFetchBlocksErrOnTipEvent(err) {
 				s.logger.Debug(
-					syncLogPrefix("applyNewBlockHashesOnTip: failed to fetch complete blocks, ignoring event"),
+					"applyNewBlockHashesOnTip: failed to fetch complete blocks, ignoring event",
 					"err", err,
 					"peerId", event.PeerId,
 					"lastBlockNum", headerHashNum.Number,
@@ -310,7 +310,7 @@ func (s *Sync) applyNewBlockHashesOnTip(
 //
 
 func (s *Sync) Run(ctx context.Context) error {
-	s.logger.Debug(syncLogPrefix("running sync component"))
+	s.logger.Debug("running sync component")
 
 	tip, err := s.syncToTip(ctx)
 	if err != nil {
@@ -361,7 +361,7 @@ func (s *Sync) syncToTip(ctx context.Context) (*types.Header, error) {
 
 	blocks := tip.Number.Uint64() - start.Number.Uint64()
 	s.logger.Info(
-		syncLogPrefix("sync to tip finished"),
+		"sync to tip finished",
 		"time", common.PrettyAge(startTime),
 		"blocks", blocks,
 		"blk/sec", uint64(float64(blocks)/time.Since(startTime).Seconds()),

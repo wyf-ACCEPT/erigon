@@ -108,14 +108,22 @@ type Logger interface {
 	Error(msg string, ctx ...interface{})
 	Crit(msg string, ctx ...interface{})
 	Log(level Lvl, msg string, ctx ...interface{})
+
+	// WithPrefix allows the logger to set a prefix for all logs
+	WithPrefix(prefix string) Logger
 }
 
 type logger struct {
-	ctx []interface{}
-	h   *swapHandler
+	ctx    []interface{}
+	h      *swapHandler
+	prefix string
 }
 
 func (l *logger) write(msg string, lvl Lvl, ctx []interface{}) {
+	if l.prefix != "" {
+		msg = fmt.Sprintf("[%s] %s", l.prefix, msg)
+	}
+
 	l.h.Log(&Record{
 		Time: time.Now(),
 		Lvl:  lvl,
@@ -131,9 +139,18 @@ func (l *logger) write(msg string, lvl Lvl, ctx []interface{}) {
 }
 
 func (l *logger) New(ctx ...interface{}) Logger {
-	child := &logger{newContext(l.ctx, ctx), new(swapHandler)}
+	child := &logger{
+		ctx:    newContext(l.ctx, ctx),
+		h:      new(swapHandler),
+		prefix: l.prefix,
+	}
 	child.SetHandler(l.h)
 	return child
+}
+
+func (l *logger) WithPrefix(prefix string) Logger {
+	l.prefix = prefix
+	return l
 }
 
 func newContext(prefix []interface{}, suffix []interface{}) []interface{} {

@@ -23,7 +23,7 @@ func init() {
 		StderrHandler = StreamHandler(colorable.NewColorableStderr(), TerminalFormat())
 	}
 
-	root = &logger{[]interface{}{}, new(swapHandler)}
+	root = &logger{[]interface{}{}, new(swapHandler), ""}
 	root.SetHandler(LvlFilterHandler(LvlWarn, StdoutHandler))
 }
 
@@ -80,6 +80,6 @@ func Log(level Lvl, msg string, ctx ...interface{}) {
 // SetRootHandler recreates root logger and set h as multihandler along with existed root handler
 func SetRootHandler(h Handler) {
 	oldHandler := root.GetHandler()
-	root = &logger{[]interface{}{}, new(swapHandler)}
+	root = &logger{[]interface{}{}, new(swapHandler), ""}
 	root.SetHandler(MultiHandler(oldHandler, h))
 }

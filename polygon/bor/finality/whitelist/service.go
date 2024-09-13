@@ -21,6 +21,7 @@ import (
 
 	"github.com/erigontech/erigon-lib/common"
 	"github.com/erigontech/erigon-lib/kv"
+	"github.com/erigontech/erigon-lib/log/v3"
 	"github.com/erigontech/erigon/core/types"
 	"github.com/erigontech/erigon/polygon/bor/finality/rawdb"
 )
@@ -84,6 +85,7 @@ func NewService(db kv.RwDB) *Service {
 		},
 
 		&milestone{
+			logger: log.New().WithPrefix("bor"),
 			finality: finality[*rawdb.Milestone]{
 				doExist:  milestoneDoExist,
 				Number:   milestoneNumber,

@@ -41,7 +41,7 @@ func AssembleReader(ctx context.Context, dataDir string, logger log.Logger, stat
 func NewReader(store Store, logger log.Logger, stateReceiverContractAddress string) *Reader {
 	return &Reader{
 		store:              store,
-		logger:             logger,
+		logger:             logger.New().WithPrefix("reader"),
 		stateClientAddress: libcommon.HexToAddress(stateReceiverContractAddress),
 	}
 }
@@ -65,7 +65,7 @@ func (r *Reader) Events(ctx context.Context, blockNum uint64) ([]*types.Message,
 		return nil, err
 	}
 
-	r.logger.Debug(bridgeLogPrefix(fmt.Sprintf("got %v events for block %v", len(events), blockNum)))
+	r.logger.Debug(fmt.Sprintf("got %v events for block %v", len(events), blockNum))
 
 	// convert to message
 	for _, event := range events {

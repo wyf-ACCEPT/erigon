@@ -409,7 +409,7 @@ func New(
 		stateReceiver:  genesisContracts,
 		HeimdallClient: heimdallClient,
 		execCtx:        context.Background(),
-		logger:         logger,
+		logger:         logger.New().WithPrefix("bor"),
 		closeCh:        make(chan struct{}),
 		bridgeReader:   bridgeReader,
 		spanReader:     spanReader,
@@ -1056,21 +1056,21 @@ func (c *Bor) Finalize(config *chain.Config, header *types.Header, state *state.
 			// check and commit span
 			if err := c.checkAndCommitSpan(state, header, cx, syscall); err != nil {
 				err := fmt.Errorf("Finalize.checkAndCommitSpan: %w", err)
-				c.logger.Error("[bor] committing span", "err", err)
+				c.logger.Error("committing span", "err", err)
 				return nil, types.Receipts{}, nil, err
 			}
 
 			// commit states
 			if err := c.CommitStates(state, header, cx, syscall); err != nil {
 				err := fmt.Errorf("Finalize.CommitStates: %w", err)
-				c.logger.Error("[bor] Error while committing states", "err", err)
+				c.logger.Error("Error while committing states", "err", err)
 				return nil, types.Receipts{}, nil, err
 			}
 		}
 	}
 
 	if err := c.changeContractCodeIfNeeded(headerNumber, state); err != nil {
-		c.logger.Error("[bor] Error changing contract code", "err", err)
+		c.logger.Error("Error changing contract code", "err", err)
 		return nil, types.Receipts{}, nil, err
 	}
 
@@ -1089,7 +1089,7 @@ func (c *Bor) changeContractCodeIfNeeded(headerNumber uint64, state *state.Intra
 			}
 
 			for addr, account := range allocs {
-				c.logger.Trace("[bor] change contract code", "address", addr)
+				c.logger.Trace("change contract code", "address", addr)
 				state.SetCode(addr, account.Code)
 			}
 		}
@@ -1123,20 +1123,20 @@ func (c *Bor) FinalizeAndAssemble(chainConfig *chain.Config, header *types.Heade
 			// check and commit span
 			if err := c.checkAndCommitSpan(state, header, cx, syscall); err != nil {
 				err := fmt.Errorf("FinalizeAndAssemble.checkAndCommitSpan: %w", err)
-				c.logger.Error("[bor] committing span", "err", err)
+				c.logger.Error("committing span", "err", err)
 				return nil, nil, types.Receipts{}, err
 			}
 			// commit states
 			if err := c.CommitStates(state, header, cx, syscall); err != nil {
 				err := fmt.Errorf("FinalizeAndAssemble.CommitStates: %w", err)
-				c.logger.Error("[bor] committing states", "err", err)
+				c.logger.Error("committing states", "err", err)
 				return nil, nil, types.Receipts{}, err
 			}
 		}
 	}
 
 	if err := c.changeContractCodeIfNeeded(headerNumber, state); err != nil {
-		c.logger.Error("[bor] Error changing contract code", "err", err)
+		c.logger.Error("Error changing contract code", "err", err)
 		return nil, nil, types.Receipts{}, err
 	}
 
@@ -1179,7 +1179,7 @@ func (c *Bor) Seal(chain consensus.ChainHeaderReader, blockWithReceipts *types.B
 
 	// For 0-period chains, refuse to seal empty blocks (no reward but would spin sealing)
 	if c.config.CalculatePeriod(number) == 0 && len(block.Transactions()) == 0 {
-		c.logger.Trace("[bor] Sealing paused, waiting for transactions")
+		c.logger.Trace("Sealing paused, waiting for transactions")
 		return nil
 	}
 
@@ -1211,11 +1211,11 @@ func (c *Bor) Seal(chain consensus.ChainHeaderReader, blockWithReceipts *types.B
 
 	go func() {
 		// Wait until sealing is terminated or delay timeout.
-		c.logger.Info("[bor] Waiting for slot to sign and propagate", "number", number, "hash", header.Hash, "delay", libcommon.PrettyDuration(delay), "TxCount", block.Transactions().Len(), "Signer", signer)
+		c.logger.Info("Waiting for slot to sign and propagate", "number", number, "hash", header.Hash, "delay", libcommon.PrettyDuration(delay), "TxCount", block.Transactions().Len(), "Signer", signer)
 
 		select {
 		case <-stop:
-			c.logger.Info("[bor] Stopped sealing operation for block", "number", number)
+			c.logger.Info("Stopped sealing operation for block", "number", number)
 			results <- nil
 			return
 		case <-time.After(delay):
@@ -1228,7 +1228,7 @@ func (c *Bor) Seal(chain consensus.ChainHeaderReader, blockWithReceipts *types.B
 
 			if wiggle > 0 {
 				c.logger.Info(
-					"[bor] Sealed out-of-turn",
+					"Sealed out-of-turn",
 					"number", number,
 					"wiggle", libcommon.PrettyDuration(wiggle),
 					"delay", delay,
@@ -1237,7 +1237,7 @@ func (c *Bor) Seal(chain consensus.ChainHeaderReader, blockWithReceipts *types.B
 				)
 			} else {
 				c.logger.Info(
-					"[bor] Sealed in-turn",
+					"Sealed in-turn",
 					"number", number,
 					"delay", delay,
 					"headerDifficulty", header.Difficulty,

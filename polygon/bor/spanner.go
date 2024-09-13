@@ -59,7 +59,7 @@ func NewChainSpanner(validatorSet ABI, chainConfig *chain.Config, withoutHeimdal
 		validatorSet:    validatorSet,
 		chainConfig:     chainConfig,
 		borConfig:       borConfig,
-		logger:          logger,
+		logger:          logger.New().WithPrefix("bor"),
 		withoutHeimdall: withoutHeimdall,
 	}
 }
@@ -71,7 +71,7 @@ func (c *ChainSpanner) GetCurrentSpan(syscall consensus.SystemCall) (*heimdall.S
 
 	data, err := c.validatorSet.Pack(method)
 	if err != nil {
-		c.logger.Error("[bor] Unable to pack txn for getCurrentSpan", "error", err)
+		c.logger.Error("Unable to pack txn for getCurrentSpan", "error", err)
 		return nil, err
 	}
 
@@ -160,7 +160,7 @@ func (c *ChainSpanner) CommitSpan(heimdallSpan heimdall.Span, syscall consensus.
 		return err
 	}
 
-	c.logger.Trace("[bor] ✅ Committing new span",
+	c.logger.Trace("✅ Committing new span",
 		"id", heimdallSpan.Id,
 		"startBlock", heimdallSpan.StartBlock,
 		"endBlock", heimdallSpan.EndBlock,
@@ -177,7 +177,7 @@ func (c *ChainSpanner) CommitSpan(heimdallSpan heimdall.Span, syscall consensus.
 		producerBytes,
 	)
 	if err != nil {
-		c.logger.Error("[bor] Unable to pack txn for commitSpan", "error", err)
+		c.logger.Error("Unable to pack txn for commitSpan", "error", err)
 		return err
 	}
 

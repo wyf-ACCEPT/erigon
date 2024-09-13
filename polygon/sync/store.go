@@ -98,7 +98,7 @@ func (s *executionClientStore) Flush(ctx context.Context) error {
 }
 
 func (s *executionClientStore) Run(ctx context.Context) error {
-	s.logger.Debug(syncLogPrefix("running execution client store component"))
+	s.logger.Debug("running execution client store component")
 
 	for {
 		select {
@@ -141,7 +141,7 @@ func (s *executionClientStore) insertBlocks(ctx context.Context, blocks []*types
 		return err
 	}
 
-	s.logger.Debug(syncLogPrefix("inserted blocks"), "len", len(blocks), "duration", time.Since(insertStartTime))
+	s.logger.Debug("inserted blocks", "len", len(blocks), "duration", time.Since(insertStartTime))
 
 	return nil
 }
@@ -169,7 +169,7 @@ func (s *executionClientStore) bridgeReplayInitialBlockIfNeeded(ctx context.Cont
 	}
 
 	s.logger.Debug(
-		syncLogPrefix("replaying initial block for bridge store"),
+		"replaying initial block for bridge store",
 		"blockNum", initialHeader.Number.Uint64(),
 	)
 
@@ -190,7 +190,7 @@ func (s *executionClientStore) bridgeReplayInitialBlockIfNeeded(ctx context.Cont
 
 	blocksCount := executionTipNum - initialBlockNum
 	s.logger.Debug(
-		syncLogPrefix("replaying post initial blocks for bridge store to fill gap with execution"),
+		"replaying post initial blocks for bridge store to fill gap with execution",
 		"blocks", blocksCount,
 		"executionTip", executionTipNum,
 	)

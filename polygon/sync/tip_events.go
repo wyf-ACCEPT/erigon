@@ -108,7 +108,7 @@ func (te *TipEvents) Events() <-chan Event {
 }
 
 func (te *TipEvents) Run(ctx context.Context) error {
-	te.logger.Debug(syncLogPrefix("running tip events component"))
+	te.logger.Debug("running tip events component")
 
 	newBlockObserverCancel := te.p2pObserverRegistrar.RegisterNewBlockObserver(func(message *p2p.DecodedInboundMessage[*eth.NewBlockPacket]) {
 		te.events.PushEvent(Event{

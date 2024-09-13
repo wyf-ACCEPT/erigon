@@ -50,7 +50,7 @@ func Assemble(dataDir string, logger log.Logger, borConfig *borcfg.BorConfig, ev
 func NewBridge(store Store, logger log.Logger, borConfig *borcfg.BorConfig, eventFetcher eventFetcher, reader *Reader) *Bridge {
 	return &Bridge{
 		store:                        store,
-		logger:                       logger,
+		logger:                       logger.New().WithPrefix("bridge"),
 		borConfig:                    borConfig,
 		eventFetcher:                 eventFetcher,
 		stateReceiverContractAddress: libcommon.HexToAddress(borConfig.StateReceiverContract),
@@ -107,7 +107,7 @@ func (b *Bridge) Run(ctx context.Context) error {
 
 	// start syncing
 	b.logger.Debug(
-		bridgeLogPrefix("running bridge component"),
+		"running bridge component",
 		"lastFetchedEventID", lastFetchedEventID,
 		"lastProcessedEventID", lastProcessedEventID,
 		"lastProcessedBlockNum", lastProcessedBlockInfo.BlockNum,
@@ -131,7 +131,7 @@ func (b *Bridge) Run(ctx context.Context) error {
 		if err != nil {
 			if errors.Is(err, context.DeadlineExceeded) {
 				b.logger.Warn(
-					bridgeLogPrefix("scraper transient err occurred"),
+					"scraper transient err occurred",
 					"from", from,
 					"to", to.Format(time.RFC3339),
 					"err", err,
@@ -175,7 +175,7 @@ func (b *Bridge) Run(ctx context.Context) error {
 		select {
 		case <-logTicker.C:
 			b.logger.Debug(
-				bridgeLogPrefix("fetched new events periodic progress"),
+				"fetched new events periodic progress",
 				"count", len(events),
 				"lastFetchedEventID", lastFetchedEventID,
 				"lastFetchedEventTime", lastFetchedEvent.Time.Format(time.RFC3339),
@@ -236,7 +236,7 @@ func (b *Bridge) ProcessNewBlocks(ctx context.Context, blocks []*types.Block) er
 	}
 
 	b.logger.Debug(
-		bridgeLogPrefix("processing new blocks"),
+		"processing new blocks",
 		"from", blocks[0].NumberU64(),
 		"to", blocks[len(blocks)-1].NumberU64(),
 		"lastProcessedBlockNum", lastProcessedBlockInfo.BlockNum,
@@ -290,7 +290,7 @@ func (b *Bridge) ProcessNewBlocks(ctx context.Context, blocks []*types.Block) er
 
 		if endID > 0 {
 			b.logger.Debug(
-				bridgeLogPrefix("mapping events to block"),
+				"mapping events to block",
 				"blockNum", blockNum,
 				"start", startID,
 				"end", endID,
@@ -338,7 +338,7 @@ func (b *Bridge) Synchronize(ctx context.Context, blockNum uint64) error {
 	defer b.synchronizeMu.Unlock()
 
 	b.logger.Debug(
-		bridgeLogPrefix("synchronizing events..."),
+		"synchronizing events...",
 		"blockNum", blockNum,
 		"lastProcessedBlockNum", b.lastProcessedBlockInfo.Load().BlockNum,
 	)
@@ -380,7 +380,7 @@ func (b *Bridge) waitForScraper(ctx context.Context, toTime uint64) error {
 	for !reachedTip && toTime > lastFetchedEventTime {
 		if shouldLog {
 			b.logger.Debug(
-				bridgeLogPrefix("waiting for event scrapping to catch up"),
+				"waiting for event scrapping to catch up",
 				"reachedTip", reachedTip,
 				"lastFetchedEventTime", lastFetchedEventTime,
 				"toTime", toTime,
@@ -416,7 +416,7 @@ func (b *Bridge) waitForProcessedBlock(ctx context.Context, blockNum uint64) err
 	for blockNum > lastProcessedBlockNum {
 		if shouldLog {
 			b.logger.Debug(
-				bridgeLogPrefix("waiting for block processing to catch up"),
+				"waiting for block processing to catch up",
 				"blockNum", blockNum,
 				"lastProcessedBlockNum", lastProcessedBlockNum,
 			)
