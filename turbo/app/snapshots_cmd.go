@@ -40,6 +40,7 @@ import (
 
 	"golang.org/x/sync/semaphore"
 
+	"github.com/erigontech/erigon-lib/chain/networkname"
 	"github.com/erigontech/erigon-lib/common"
 	"github.com/erigontech/erigon-lib/common/datadir"
 	"github.com/erigontech/erigon-lib/common/dbg"
@@ -255,6 +256,7 @@ var snapshotCommand = cli.Command{
 				&cli.StringFlag{Name: "check", Usage: fmt.Sprintf("one of: %s", integrity.AllChecks)},
 				&cli.BoolFlag{Name: "failFast", Value: true, Usage: "to stop after 1st problem or print WARN log and continue check"},
 				&cli.Uint64Flag{Name: "fromStep", Value: 0, Usage: "skip files before given step"},
+				&cli.StringFlag{Name: "heimdallUrl", Value: "", Usage: "optional heimdallUrl"},
 			}),
 		},
 		{
@@ -531,7 +533,22 @@ func doIntegrity(cliCtx *cli.Context) error {
 			if err := integrity.NoGapsInBorEvents(ctx, chainDB, blockReader, 0, 0, failFast); err != nil {
 				return err
 			}
+		case integrity.BorSpans:
+			heimdallUrl := cliCtx.String("heimdallUrl")
+			if heimdallUrl == "" {
+				switch chainConfig.ChainName {
+				case networkname.AmoyChainName:
+					heimdallUrl = "https://heimdall-api-amoy.polygon.technology"
+				case networkname.BorMainnetChainName:
+					heimdallUrl = "https://heimdall-api.polygon.technology"
+				default:
+					panic(fmt.Sprintf("unknown chain name: %s", chainConfig.ChainName))
+				}
+			}
 
+			if err := integrity.BorSpansCheck(ctx, logger, blockReader, failFast, heimdallUrl); err != nil {
+				return err
+			}
 		default:
 			return fmt.Errorf("unknown check: %s", chk)
 		}
