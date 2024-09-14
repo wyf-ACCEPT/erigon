@@ -46,13 +46,16 @@ func BorSpansCheck(ctx context.Context, logger log.Logger, blockReader services.
 			continue
 		}
 
+		logger.Warn("found span mismatch", "spanId", spanId)
 		diffs = append(diffs, spanId)
 		if failFast {
 			break
 		}
 	}
 	if len(diffs) > 0 {
-		return fmt.Errorf("spans in snapshots differ from source for: %v", diffs)
+		err := fmt.Errorf("spans in snapshots differ from source for: %v", diffs)
+		logger.Error(err.Error())
+		return err
 	}
 
 	return nil
