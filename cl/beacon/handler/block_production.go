@@ -1125,8 +1125,20 @@ func (a *ApiHandler) findBestAttestationsForBlockProduction(
 	sort.Slice(attestationCandidates, func(i, j int) bool {
 		return attestationCandidates[i].reward > attestationCandidates[j].reward
 	})
+
+	type key struct {
+		slot      uint64
+		committee uint64
+	}
+	seen := make(map[key]bool)
 	ret := solid.NewDynamicListSSZ[*solid.Attestation](int(a.beaconChainCfg.MaxAttestations))
 	for _, candidate := range attestationCandidates {
+		data := candidate.attestation.AttestantionData()
+		k := key{slot: data.Slot(), committee: data.CommitteeIndex()}
+		if seen[k] {
+			// only pick the one with the highest reward, skip the rest
+			continue
+		}
 		ret.Append(candidate.attestation)
 		if ret.Len() >= int(a.beaconChainCfg.MaxAttestations) {
 			break
