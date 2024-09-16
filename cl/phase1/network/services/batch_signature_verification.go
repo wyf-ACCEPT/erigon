@@ -66,25 +66,26 @@ func (b *BatchSignatureVerifier) Start() {
 func (b *BatchSignatureVerifier) start(inputCh <-chan *AggregateVerificationData) {
 	ticker := time.NewTicker(batchCheckInterval)
 	aggregateVerificationData := make([]*AggregateVerificationData, 0, 128)
+	size := uint64(0)
 	for {
 		select {
 		case <-b.ctx.Done():
 			return
 		case verification := <-inputCh:
-			b.size += uint64(len(verification.Signatures))
+			size += uint64(len(verification.Signatures))
 			aggregateVerificationData = append(aggregateVerificationData, verification)
-			if b.size > BatchSignatureVerificationThreshold {
+			if size > BatchSignatureVerificationThreshold {
 				b.processSignatureVerification(aggregateVerificationData)
 				aggregateVerificationData = make([]*AggregateVerificationData, 0, 128)
 				ticker.Reset(batchCheckInterval)
-				b.size = uint64(0)
+				size = uint64(0)
 			}
 		case <-ticker.C:
 			if len(aggregateVerificationData) != 0 {
 				b.processSignatureVerification(aggregateVerificationData)
 				aggregateVerificationData = make([]*AggregateVerificationData, 0, 128)
 				ticker.Reset(batchCheckInterval)
-				b.size = uint64(0)
+				size = uint64(0)
 			}
 		}
 	}
