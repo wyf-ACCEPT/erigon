@@ -15,7 +15,7 @@ const (
 )
 
 var (
-	batchCheckInterval          = 100 * time.Millisecond
+	batchCheckInterval          = 500 * time.Millisecond
 	blsVerifyMultipleSignatures = bls.VerifyMultipleSignatures
 )
 
@@ -24,7 +24,6 @@ type BatchSignatureVerifier struct {
 	verifyAndExecute            chan *AggregateVerificationData
 	verifyAndExecuteAggregation chan *AggregateVerificationData
 	ctx                         context.Context
-	size                        uint64
 }
 
 // each AggregateVerification request has sentinel.SentinelClient and *sentinel.GossipData
