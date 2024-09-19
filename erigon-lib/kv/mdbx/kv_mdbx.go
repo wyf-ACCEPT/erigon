@@ -138,10 +138,22 @@ func (opts MdbxOpts) InMem(tmpDir string) MdbxOpts {
 			panic(err)
 		}
 	}
-	path, err := os.MkdirTemp(tmpDir, "erigon-memdb-")
+
+	var path string
+	var err error
+
+	if tmpDir == "/tmp" {
+		path = "/tmp/erigon-memdb-persistent"
+		err = os.MkdirAll(path, 0755)
+		fmt.Println("[info] created:", path)
+	} else {
+		path, err = os.MkdirTemp(tmpDir, "erigon-memdb-")
+		fmt.Println("[info] created genesis temp file:", path)
+	}
 	if err != nil {
 		panic(err)
 	}
+
 	opts.path = path
 	opts.inMem = true
 	opts.flags = mdbx.UtterlyNoSync | mdbx.NoMetaSync | mdbx.NoMemInit
@@ -726,12 +738,14 @@ func (db *MdbxKV) Close() {
 	db.env.Close()
 	db.env = nil
 
-	if db.opts.inMem {
-		if err := os.RemoveAll(db.opts.path); err != nil {
-			db.log.Warn("failed to remove in-mem db file", "err", err)
-		}
-	}
-	removeFromPathDbMap(db.path)
+	fmt.Println("[info] not delete: ", db.opts.path)
+
+	// if db.opts.inMem {
+	// 	if err := os.RemoveAll(db.opts.path); err != nil {
+	// 		db.log.Warn("failed to remove in-mem db file", "err", err)
+	// 	}
+	// }
+	// removeFromPathDbMap(db.path)
 }
 
 func (db *MdbxKV) BeginRo(ctx context.Context) (txn kv.Tx, err error) {
