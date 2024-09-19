@@ -2,7 +2,6 @@ package parallel_tests
 
 import (
 	"crypto/ecdsa"
-	"crypto/rand"
 	"math/big"
 	"testing"
 
@@ -15,6 +14,21 @@ import (
 	"github.com/ledgerwatch/erigon/crypto"
 	"github.com/ledgerwatch/erigon/params"
 )
+
+type deterministicReader struct {
+	currentNumber int
+}
+
+func (r *deterministicReader) Read(p []byte) (n int, err error) {
+	for i := range p {
+		p[i] = byte(r.currentNumber >> (i * 8) & 0xff)
+	}
+	return len(p), nil
+}
+
+func newDeterministicReader(start int) *deterministicReader {
+	return &deterministicReader{currentNumber: start}
+}
 
 var excessBlobGas = uint64(50000)
 var context = evmtypes.BlockContext{
@@ -35,7 +49,9 @@ func generateAccounts(count int) ([]*ecdsa.PrivateKey, []libcommon.Address, erro
 	privateKeys := make([]*ecdsa.PrivateKey, count)
 	addresses := make([]libcommon.Address, count)
 	for i := 0; i < count; i++ {
-		pk, err := ecdsa.GenerateKey(crypto.S256(), rand.Reader)
+		pk, err := ecdsa.GenerateKey(
+			crypto.S256(), newDeterministicReader(i+0xdeadbeef),
+		)
 		if err != nil {
 			return nil, nil, err
 		}

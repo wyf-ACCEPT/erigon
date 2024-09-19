@@ -4,9 +4,11 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"math"
 	"math/big"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/holiman/uint256"
 	"github.com/stretchr/testify/require"
@@ -17,10 +19,29 @@ import (
 	"github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/core/vm"
 	"github.com/ledgerwatch/erigon/core/vm/evmtypes"
+	"github.com/ledgerwatch/erigon/crypto"
 	"github.com/ledgerwatch/erigon/params"
 	"github.com/ledgerwatch/erigon/tests"
+	"github.com/ledgerwatch/erigon/turbo/rpchelper"
 	"github.com/ledgerwatch/erigon/turbo/stages/mock"
 )
+
+func logMeanAndStd(values []int64) {
+	var sum int64
+	var variance int64
+	for _, value := range values {
+		sum += value
+	}
+	mean := sum / int64(len(values))
+	for _, value := range values {
+		variance += (value - mean) * (value - mean)
+	}
+	std := math.Sqrt(float64(variance) / float64(len(values)))
+	fmt.Printf(
+		"Average duration in %d runs: %v ± %v\n",
+		len(values), time.Duration(mean), time.Duration(std),
+	)
+}
 
 func encodeCalldata(addrs []libcommon.Address) []byte {
 	lengthArray := make([]byte, 8)
@@ -38,7 +59,7 @@ func encodeCalldata(addrs []libcommon.Address) []byte {
 
 func TestMultipleCounter(t *testing.T) {
 
-	ADDRESS_NUM := 20000
+	ADDRESS_NUM := 10000
 	BATCH_SIZE := 200
 
 	// ============================================================
@@ -62,9 +83,23 @@ func TestMultipleCounter(t *testing.T) {
 	}
 
 	statedb, _ := tests.MakePreState(rules, tx, alloc, context.BlockNumber)
+
+	// r := rpchelper.NewLatestStateReader(tx)
+	// statedb := state.New(r)
+
 	evm := vm.NewEVM(context, evmtypes.TxContext{
 		GasPrice: uint256.NewInt((1)),
 	}, statedb, params.AllProtocolChanges, vm.Config{})
+
+	contractAddrTmp := crypto.CreateAddress(sendersAddr[0], 1)
+
+	static0 := append(hexutil.MustDecode("0xf07ec373"), leftPadBytes(sendersAddr[0].Bytes(), 32)...)
+	ret0, _, err0 := evm.StaticCall(vm.AccountRef(sendersAddr[0]), contractAddrTmp, static0, 5000000)
+	if err0 != nil {
+		t.Fatalf("failed to call contract (0): %v", err0)
+	} else {
+		fmt.Printf("Counter for [%s]: %s\n", sendersAddr[0], hex.EncodeToString(ret0))
+	}
 
 	// ============================================================
 	// Deploy contract
@@ -96,29 +131,45 @@ func TestMultipleCounter(t *testing.T) {
 		}
 	}
 
-	// var txc wrap.TxContainer
-	// txc.Tx = tx
-	// domains, _ := state2.NewSharedDomains(tx, log.New())
-	// defer domains.Close()
-	// defer domains.Flush(context2.Background(), tx)
-	// txc.Doms = domains
+	// ============================================================
+	// Duration test for commit block
+	fmt.Println("Current block number: ", context.BlockNumber)
+	stateWriter := rpchelper.NewLatestStateWriter(tx, context.BlockNumber+1)
+	statedb.CommitBlock(rules, stateWriter)
+	statedb.FinalizeTx(rules, stateWriter)
+	tx.Commit()
 
-	// stateWriter := rpchelper.NewLatestStateWriter(txc, nil, context.BlockNumber-1)
-	// statedb.CommitBlock(rules, stateWriter)
+	fmt.Println("Current block number: ", context.BlockNumber)
+
+	// for name, stateWriter := range map[string]state.StateWriter{
+	// 	"Plain State Writer":            rpchelper.NewLatestStateWriter(tx, context.BlockNumber+1),
+	// 	"Plain State Writer no history": state.NewPlainStateWriterNoHistory(tx),
+	// 	// "Redis State Writer":            state.NewPlainStateWriterNoHistory(NewRedisDB()),
+	// } {
+	// 	fmt.Printf("\n========== %s ==========\n", name)
+	// 	durationList := make([]int64, 10)
+	// 	for i := 0; i < 10; i += 1 {
+	// 		timeStart := time.Now()
+	// 		statedb.CommitBlock(rules, stateWriter)
+	// 		statedb.FinalizeTx(rules, stateWriter)
+	// 		tx.Commit()
+	// 		duration := time.Since(timeStart)
+	// 		durationList[i] = int64(duration)
+	// 	}
+	// 	logMeanAndStd(durationList)
+	// }
 
 	// ============================================================
 	// Multiple counter - read function
 	static1 := append(hexutil.MustDecode("0xf07ec373"), leftPadBytes(sendersAddr[0].Bytes(), 32)...)
 	static2 := append(hexutil.MustDecode("0xf07ec373"), leftPadBytes(sendersAddr[ADDRESS_NUM-1].Bytes(), 32)...)
-	ret1, gas1, err1 := evm.StaticCall(vm.AccountRef(sendersAddr[0]), contractAddr, static1, 5000000)
-	ret2, gas2, err2 := evm.StaticCall(vm.AccountRef(sendersAddr[0]), contractAddr, static2, 5000000)
+	ret1, _, err1 := evm.StaticCall(vm.AccountRef(sendersAddr[0]), contractAddr, static1, 5000000)
+	ret2, _, err2 := evm.StaticCall(vm.AccountRef(sendersAddr[0]), contractAddr, static2, 5000000)
 	if err1 != nil || err2 != nil {
 		t.Fatalf("failed to call contract (1): %v", err1)
 		t.Fatalf("failed to call contract (2): %v", err2)
 	} else {
-		fmt.Println("View result 1:", hex.EncodeToString(ret1))
-		fmt.Println("View result 2:", hex.EncodeToString(ret2))
-		fmt.Println("Gas left 1:", gas1)
-		fmt.Println("Gas left 2:", gas2)
+		fmt.Printf("Counter for [%s]: %s\n", sendersAddr[0], hex.EncodeToString(ret1))
+		fmt.Printf("Counter for [%s]: %s\n", sendersAddr[ADDRESS_NUM-1], hex.EncodeToString(ret2))
 	}
 }
