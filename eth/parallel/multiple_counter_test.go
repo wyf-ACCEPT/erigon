@@ -4,8 +4,6 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
-	"math"
-	"math/big"
 	"os"
 	"testing"
 	"time"
@@ -16,32 +14,14 @@ import (
 	libcommon "github.com/ledgerwatch/erigon-lib/common"
 	"github.com/ledgerwatch/erigon-lib/common/hexutil"
 
-	"github.com/ledgerwatch/erigon/core/types"
+	"github.com/ledgerwatch/erigon/core/state"
 	"github.com/ledgerwatch/erigon/core/vm"
 	"github.com/ledgerwatch/erigon/core/vm/evmtypes"
 	"github.com/ledgerwatch/erigon/crypto"
 	"github.com/ledgerwatch/erigon/params"
-	"github.com/ledgerwatch/erigon/tests"
 	"github.com/ledgerwatch/erigon/turbo/rpchelper"
 	"github.com/ledgerwatch/erigon/turbo/stages/mock"
 )
-
-func logMeanAndStd(values []int64) {
-	var sum int64
-	var variance int64
-	for _, value := range values {
-		sum += value
-	}
-	mean := sum / int64(len(values))
-	for _, value := range values {
-		variance += (value - mean) * (value - mean)
-	}
-	std := math.Sqrt(float64(variance) / float64(len(values)))
-	fmt.Printf(
-		"Average duration in %d runs: %v ± %v\n",
-		len(values), time.Duration(mean), time.Duration(std),
-	)
-}
 
 func encodeCalldata(addrs []libcommon.Address) []byte {
 	lengthArray := make([]byte, 8)
@@ -73,19 +53,21 @@ func TestMultipleCounter(t *testing.T) {
 	// Generate addresses & allocate balance
 	sendersPk, sendersAddr, _ := generateAccounts(ADDRESS_NUM)
 
-	alloc := types.GenesisAlloc{}
-	for i := 0; i < ADDRESS_NUM; i++ {
-		alloc[sendersAddr[i]] = types.GenesisAccount{
-			Nonce:   1,
-			Code:    []byte{},
-			Balance: big.NewInt(500000000000000),
-		}
-	}
+	// alloc := types.GenesisAlloc{}
+	// for i := 0; i < ADDRESS_NUM; i++ {
+	// 	alloc[sendersAddr[i]] = types.GenesisAccount{
+	// 		Nonce:   1,
+	// 		Code:    []byte{},
+	// 		Balance: big.NewInt(500000000000000),
+	// 	}
+	// }
 
-	statedb, _ := tests.MakePreState(rules, tx, alloc, context.BlockNumber)
+	// statedb, _ := tests.MakePreState(rules, tx, alloc, context.BlockNumber)
 
+	timeStart := time.Now()
+	r := state.NewPlainStateReader(NewRedisDB())
 	// r := rpchelper.NewLatestStateReader(tx)
-	// statedb := state.New(r)
+	statedb := state.New(r)
 
 	evm := vm.NewEVM(context, evmtypes.TxContext{
 		GasPrice: uint256.NewInt((1)),
@@ -93,13 +75,22 @@ func TestMultipleCounter(t *testing.T) {
 
 	contractAddrTmp := crypto.CreateAddress(sendersAddr[0], 1)
 
-	static0 := append(hexutil.MustDecode("0xf07ec373"), leftPadBytes(sendersAddr[0].Bytes(), 32)...)
-	ret0, _, err0 := evm.StaticCall(vm.AccountRef(sendersAddr[0]), contractAddrTmp, static0, 5000000)
-	if err0 != nil {
-		t.Fatalf("failed to call contract (0): %v", err0)
-	} else {
-		fmt.Printf("Counter for [%s]: %s\n", sendersAddr[0], hex.EncodeToString(ret0))
+	for i := 0; i < ADDRESS_NUM; i += 1 {
+		static := append(hexutil.MustDecode("0xf07ec373"), leftPadBytes(sendersAddr[i].Bytes(), 32)...)
+		_, _, err := evm.StaticCall(vm.AccountRef(sendersAddr[0]), contractAddrTmp, static, 5000000)
+		if err != nil {
+			t.Fatalf("failed to call contract: %v", err)
+		}
 	}
+	fmt.Println("Duration for reading all counters: ", time.Since(timeStart))
+
+	// static0 := append(hexutil.MustDecode("0xf07ec373"), leftPadBytes(sendersAddr[0].Bytes(), 32)...)
+	// ret0, _, err0 := evm.StaticCall(vm.AccountRef(sendersAddr[0]), contractAddrTmp, static0, 5000000)
+	// if err0 != nil {
+	// 	t.Fatalf("failed to call contract (0): %v", err0)
+	// } else {
+	// 	fmt.Printf("Counter for [%s]: %s\n", sendersAddr[0], hex.EncodeToString(ret0))
+	// }
 
 	// ============================================================
 	// Deploy contract
@@ -140,6 +131,9 @@ func TestMultipleCounter(t *testing.T) {
 	tx.Commit()
 
 	fmt.Println("Current block number: ", context.BlockNumber)
+
+	stateWriterRedis := state.NewPlainStateWriterNoHistory(NewRedisDB())
+	statedb.CommitBlock(rules, stateWriterRedis)
 
 	// for name, stateWriter := range map[string]state.StateWriter{
 	// 	"Plain State Writer":            rpchelper.NewLatestStateWriter(tx, context.BlockNumber+1),

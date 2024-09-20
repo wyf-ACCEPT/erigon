@@ -2,8 +2,11 @@ package parallel_tests
 
 import (
 	"crypto/ecdsa"
+	"fmt"
+	"math"
 	"math/big"
 	"testing"
+	"time"
 
 	"github.com/holiman/uint256"
 	libcommon "github.com/ledgerwatch/erigon-lib/common"
@@ -106,4 +109,21 @@ func leftPadBytes(slice []byte, length int) []byte {
 	padded := make([]byte, length)
 	copy(padded[length-len(slice):], slice)
 	return padded
+}
+
+func logMeanAndStd(values []int64) {
+	var sum int64
+	var variance int64
+	for _, value := range values {
+		sum += value
+	}
+	mean := sum / int64(len(values))
+	for _, value := range values {
+		variance += (value - mean) * (value - mean)
+	}
+	std := math.Sqrt(float64(variance) / float64(len(values)))
+	fmt.Printf(
+		"Average duration in %d runs: %v ± %v\n",
+		len(values), time.Duration(mean), time.Duration(std),
+	)
 }
