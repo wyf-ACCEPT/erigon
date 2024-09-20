@@ -2,6 +2,7 @@ package parallel_tests
 
 import (
 	"crypto/ecdsa"
+	"encoding/binary"
 	"fmt"
 	"math"
 	"math/big"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/holiman/uint256"
 	libcommon "github.com/ledgerwatch/erigon-lib/common"
+	"github.com/ledgerwatch/erigon-lib/common/hexutil"
 	"github.com/ledgerwatch/erigon/core"
 	"github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/core/vm"
@@ -18,20 +20,8 @@ import (
 	"github.com/ledgerwatch/erigon/params"
 )
 
-type deterministicReader struct {
-	currentNumber int
-}
-
-func (r *deterministicReader) Read(p []byte) (n int, err error) {
-	for i := range p {
-		p[i] = byte(r.currentNumber >> (i * 8) & 0xff)
-	}
-	return len(p), nil
-}
-
-func newDeterministicReader(start int) *deterministicReader {
-	return &deterministicReader{currentNumber: start}
-}
+var ADDRESS_NUM = 10000
+var BATCH_SIZE = 200
 
 var excessBlobGas = uint64(50000)
 var context = evmtypes.BlockContext{
@@ -47,6 +37,21 @@ var context = evmtypes.BlockContext{
 }
 var signer = types.LatestSignerForChainID(big.NewInt(1))
 var rules = params.AllProtocolChanges.Rules(context.BlockNumber, context.Time)
+
+type deterministicReader struct {
+	currentNumber int
+}
+
+func (r *deterministicReader) Read(p []byte) (n int, err error) {
+	for i := range p {
+		p[i] = byte(r.currentNumber >> (i * 8) & 0xff)
+	}
+	return len(p), nil
+}
+
+func newDeterministicReader(start int) *deterministicReader {
+	return &deterministicReader{currentNumber: start}
+}
 
 func generateAccounts(count int) ([]*ecdsa.PrivateKey, []libcommon.Address, error) {
 	privateKeys := make([]*ecdsa.PrivateKey, count)
@@ -126,4 +131,18 @@ func logMeanAndStd(values []int64) {
 		"Average duration in %d runs: %v ± %v\n",
 		len(values), time.Duration(mean), time.Duration(std),
 	)
+}
+
+func encodeCalldata(addrs []libcommon.Address) []byte {
+	lengthArray := make([]byte, 8)
+	binary.BigEndian.PutUint64(lengthArray, uint64(len(addrs)))
+	data := hexutil.MustDecode("0x5437ab8c")
+	data = append(data, hexutil.MustDecode(
+		"0x0000000000000000000000000000000000000000000000000000000000000020",
+	)...)
+	data = append(data, leftPadBytes(lengthArray, 32)...)
+	for _, addr := range addrs {
+		data = append(data, leftPadBytes(addr.Bytes(), 32)...)
+	}
+	return data
 }
