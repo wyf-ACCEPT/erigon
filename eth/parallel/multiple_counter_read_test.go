@@ -32,7 +32,7 @@ func TestMultipleCounterRead(t *testing.T) {
 	// Generate addresses & allocate balance
 	_, sendersAddr, _ := generateAccounts(ADDRESS_NUM)
 
-	// r := rpchelper.NewLatestStateReader(tx)
+	// r := state.NewPlainStateReader(tx)
 	r := state.NewPlainStateReader(NewRedisDB())
 	// cachedbreader, _ := LoadMapFromFile("./cachedb_data.gob")
 	// r := state.NewPlainStateReader(cachedbreader)

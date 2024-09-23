@@ -15,7 +15,6 @@ import (
 	"github.com/ledgerwatch/erigon/core/vm/evmtypes"
 	"github.com/ledgerwatch/erigon/params"
 	"github.com/ledgerwatch/erigon/tests"
-	"github.com/ledgerwatch/erigon/turbo/rpchelper"
 	"github.com/ledgerwatch/erigon/turbo/stages/mock"
 	"github.com/stretchr/testify/require"
 )
@@ -79,14 +78,14 @@ func TestMultipleCounterWrite(t *testing.T) {
 	// ============================================================
 	// Duration test for commit block
 	fmt.Println("Current block number: ", context.BlockNumber)
-	stateWriter := rpchelper.NewLatestStateWriter(tx, context.BlockNumber+1)
+	stateWriter := state.NewPlainStateWriterNoHistory(tx)
 	statedb.CommitBlock(rules, stateWriter)
-	statedb.FinalizeTx(rules, stateWriter)
-	tx.Commit()
 	fmt.Println("Write to disk success: MDBX")
 
 	stateWriterRedis := state.NewPlainStateWriterNoHistory(NewRedisDB())
 	statedb.CommitBlock(rules, stateWriterRedis)
+	statedb.FinalizeTx(rules, stateWriterRedis)
+	tx.Commit()
 	fmt.Println("Write to disk success: Redis")
 
 	cachedb := NewCacheDB()
